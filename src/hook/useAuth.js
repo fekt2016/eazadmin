@@ -1,0 +1,109 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { authApi } from "../service/adminApi";
+
+const TOKEN_KEY = "admin_token";
+
+function getToken() {
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+function clearToken() {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem("current_role");
+}
+
+function validateToken(token) {
+  if (!token) return false;
+  try {
+    const [, payloadB64] = token.split(".");
+    const { exp } = JSON.parse(atob(payloadB64));
+    return exp * 1000 > Date.now();
+  } catch {
+    return false;
+  }
+}
+
+export default function useAuth() {
+  const queryClient = useQueryClient();
+  const token = getToken();
+
+  // 1️⃣ Fetch current admin user
+  const {
+    data: adminData,
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ["adminAuth"],
+    queryFn: async () => {
+      if (!validateToken(token)) {
+        clearToken();
+        return null;
+      }
+      try {
+        const response = await authApi.getCurrentUser();
+
+        return response; // Return user object directly
+      } catch (error) {
+        if (error.response?.status === 401) {
+          clearToken();
+        }
+        throw error;
+      }
+    },
+    enabled: !!token,
+    staleTime: 1000 * 60 * 10, // 10 minutes
+    retry: false,
+  });
+
+  // 2️⃣ LOGIN mutation
+  const login = useMutation({
+    mutationFn: authApi.login,
+    onSuccess: (response) => {
+      const { token: newToken, user } = response.data;
+      if (!validateToken(newToken)) {
+        throw new Error("Invalid token received");
+      }
+      localStorage.setItem(TOKEN_KEY, newToken);
+      localStorage.setItem("current_role", "admin");
+      queryClient.setQueryData(["adminAuth"], user); // Set user object directly
+    },
+  });
+
+  // 3️⃣ REGISTER mutation
+  const register = useMutation({
+    mutationFn: authApi.register,
+    onSuccess: (response) => {
+      const { token: newToken, user } = response.data;
+      if (!validateToken(newToken)) {
+        throw new Error("Invalid token received");
+      }
+      localStorage.setItem(TOKEN_KEY, newToken);
+      localStorage.setItem("current_role", "admin");
+      queryClient.setQueryData(["adminAuth"], user); // Set user object directly
+    },
+  });
+
+  // 4️⃣ LOGOUT mutation
+  const logout = useMutation({
+    mutationFn: authApi.logout,
+    onSuccess: () => {
+      clearToken();
+      queryClient.removeQueries(["adminAuth"]);
+    },
+    onError: () => {
+      clearToken();
+      queryClient.removeQueries(["adminAuth"]);
+    },
+  });
+
+  return {
+    adminData, // User object (or null)
+    isLoading, // Loading state
+    isError, // Error state
+    // isAuthenticated: !!data, // True if user exists
+    // isAdmin: data?.role === "admin",
+    login,
+    register,
+    logout,
+  };
+}
