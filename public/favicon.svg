@@ -1,0 +1,26 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle for better visibility -->
+  <circle cx="64" cy="64" r="60" fill="#ffc400" opacity="0.1"/>
+  
+  <!-- Modern Shopping Cart Icon -->
+  <g transform="translate(24, 24)">
+    <!-- Cart Base -->
+    <rect x="8" y="40" width="48" height="40" rx="5" fill="#ffc400" opacity="0.2"/>
+    <rect x="8" y="40" width="48" height="40" rx="5" fill="none" stroke="#ffc400" stroke-width="5"/>
+    
+    <!-- Cart Handle -->
+    <path d="M16 40 L16 16 C16 11.6 19.6 8 24 8 L40 8 C44.4 8 48 11.6 48 16 L48 40" 
+          fill="none" 
+          stroke="#ffc400" 
+          stroke-width="6" 
+          stroke-linecap="round"/>
+    
+    <!-- Shopping Items -->
+    <circle cx="24" cy="56" r="7" fill="#ffc400"/>
+    <circle cx="40" cy="56" r="7" fill="#ffc400"/>
+    
+    <!-- Cart Wheels -->
+    <circle cx="20" cy="72" r="5" fill="#ffc400" opacity="0.7"/>
+    <circle cx="44" cy="72" r="5" fill="#ffc400" opacity="0.7"/>
+  </g>
+</svg>

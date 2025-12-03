@@ -1,27 +1,79 @@
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, Navigate } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { PATHS } from "./routhPath";
-import { LoadingSpinner } from "../components/LoadingSpinner";
+import { LoadingSpinner } from '../shared/components/LoadingSpinner';
 import ProtectedRoute from "../routes/ProtectedRoute";
-import ProductDetail from "../pages/ProductDetail";
 
-const AdminLogin = lazy(() => import("../pages/AdminLogin"));
-const Dashboard = lazy(() => import("../pages/Dashboard"));
-const DashboardLayout = lazy(() => import("../layout/DashboardLayout"));
-const OrdersPage = lazy(() => import("../pages/OrdersPage"));
-const AllProductPage = lazy(() => import("../pages/AllProductPage"));
-const CategoryPage = lazy(() => import("../pages/CategoryPage"));
-const UsersPage = lazy(() => import("../pages/UsersPage"));
-const PaymentPage = lazy(() => import("../pages/PaymentPage"));
-const SellerRequests = lazy(() => import("../pages/SellerRequest"));
-const ChatSupportPage = lazy(() => import("../pages/ChatSupportPage"));
-const UsersActivityPage = lazy(() => import("../pages/UsersActivityPage"));
-const OrderDetail = lazy(() => import("../pages/OrderDetail"));
+const ProductDetail = lazy(() => import("../features/products/ProductDetail"));
+const AdminLogin = lazy(() => import("../pages/auth/AdminLogin"));
+const Dashboard = lazy(() => import("../features/Dashboard"));
+const DashboardLayout = lazy(() => import("../shared/layout/DashboardLayout"));
+const OrdersPage = lazy(() => import("../features/orders/OrdersPage"));
+const AllProductPage = lazy(() => import("../features/products/AllProductPage"));
+const CategoryPage = lazy(() => import("../features/categories/CategoryPage"));
+const UsersPage = lazy(() => import("../features/users/UsersPage"));
+const UserDetail = lazy(() => import("../features/users/UserDetail"));
+const PaymentPage = lazy(() => import("../features/payment/PaymentPage"));
+const PaymentRequestDetail = lazy(() => import("../features/payment/PaymentRequestDetail"));
+const SellerRequests = lazy(() => import("../features/sellers/SellerRequest"));
+const SellerBalancesPage = lazy(() => import("../features/sellers/SellerBalancesPage"));
+const ChatSupportPage = lazy(() => import("../features/settings/ChatSupportPage"));
+const UsersActivityPage = lazy(() => import("../features/users/UsersActivityPage"));
+const OrderDetail = lazy(() => import("../features/orders/OrderDetail"));
+const ShippingRatesPage = lazy(() => import("../features/shipping/ShippingRatesPage"));
+const AdminOrderStatusPage = lazy(() => import("../features/orders/AdminOrderStatusPage"));
+const DistanceOverviewPage = lazy(() => import("../features/shipping/DistanceOverviewPage"));
+const EazShopProductsPage = lazy(() => import("../features/eazshop/EazShopProductsPage"));
+const EazShopShippingFeesPage = lazy(() => import("../features/eazshop/EazShopShippingFeesPage"));
+const PickupCentersPage = lazy(() => import("../features/eazshop/PickupCentersPage"));
+const ReviewsPage = lazy(() => import("../features/reviews/ReviewsPage"));
+const TrackingPage = lazy(() => import("../features/orders/TrackingPage"));
+const ActivityLogs = lazy(() => import("../pages/ActivityLogs"));
+const PlatformSettings = lazy(() => import("../pages/settings/PlatformSettings"));
+const DeviceSessionsPage = lazy(() => import("../features/sessions/DeviceSessionsPage"));
+const RefundsPage = lazy(() => import("../features/refunds/RefundsPage"));
+const RefundDetailPage = lazy(() => import("../features/refunds/pages/RefundDetailPage"));
+const BalanceHistoryPage = lazy(() => import("../features/history/BalanceHistoryPage"));
+const AdminSupportPage = lazy(() => import("../pages/support/AdminSupportPage"));
+const AdminTicketsPage = lazy(() => import("../pages/support/AdminTicketsPage"));
+const AdminTicketDetailPage = lazy(() => import("../pages/support/AdminTicketDetailPage"));
+const SitemapPage = lazy(() => import("../pages/sitemap/SitemapPage"));
+
+
+const AdminCatchAll = () => {
+  const currentPath = window.location.pathname;
+
+  // For unknown admin routes, show 404
+  return (
+    <div style={{ padding: '50px', textAlign: 'center' }}>
+      <h1>404 - Admin Route Not Found</h1>
+      <p>This is the admin dashboard. The route you're looking for may be in the main customer app.</p>
+      <p style={{ marginTop: '20px', color: '#666' }}>
+        Current path: <code>{currentPath}</code>
+      </p>
+    </div>
+  );
+};
 
 export default function AdminRoutes() {
+
+  
   return (
     <Routes>
+      {/* Admin login route */}
       <Route path={PATHS.LOGIN} element={<AdminLogin />} />
+      
+      {/* Tracking detail page - accessible at /tracking/:trackingNumber */}
+      <Route 
+        path={PATHS.TRACKING_REDIRECT} 
+        element={
+          <ProtectedRoute>
+            <Suspense fallback={<LoadingSpinner />}>
+              <TrackingPage />
+            </Suspense>
+          </ProtectedRoute>
+        } 
+      />
       <Route
         path={PATHS.DASHBOARD}
         element={
@@ -40,6 +92,23 @@ export default function AdminRoutes() {
             </Suspense>
           }
         />
+        {/* Order detail routes - more specific routes must come first */}
+        <Route
+          path={PATHS.ORDERDETAILS}
+          element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <OrderDetail />
+            </Suspense>
+          }
+        />
+        <Route
+          path={PATHS.ORDER_DETAIL}
+          element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <OrderDetail />
+            </Suspense>
+          }
+        />
         <Route
           path={PATHS.ORDERS}
           element={
@@ -49,7 +118,7 @@ export default function AdminRoutes() {
           }
         />
         <Route
-          path={PATHS.ORDERDETAILS}
+          path={PATHS.ORDER_DETAIL}
           element={
             <Suspense fallback={<LoadingSpinner />}>
               <OrderDetail />
@@ -80,6 +149,11 @@ export default function AdminRoutes() {
             </Suspense>
           }
         />
+        {/* Redirect category/:id to categories page */}
+        <Route
+          path="category/:id"
+          element={<Navigate to={`/dashboard/${PATHS.CATEGORY}`} replace />}
+        />
         <Route
           path={PATHS.USERS}
           element={
@@ -89,10 +163,50 @@ export default function AdminRoutes() {
           }
         />
         <Route
+          path={PATHS.USERDETAIL}
+          element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <UserDetail />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/dashboard/sellers/balances"
+          element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <SellerBalancesPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path={PATHS.SELLERDETAIL}
+          element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <UserDetail />
+            </Suspense>
+          }
+        />
+        <Route
+          path={PATHS.ADMINDETAIL}
+          element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <UserDetail />
+            </Suspense>
+          }
+        />
+        <Route
           path={PATHS.PAYMENTS}
           element={
             <Suspense fallback={<LoadingSpinner />}>
               <PaymentPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path={PATHS.PAYMENTDETAIL}
+          element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <PaymentRequestDetail />
             </Suspense>
           }
         />
@@ -120,7 +234,155 @@ export default function AdminRoutes() {
             </Suspense>
           }
         />
+        <Route
+          path={PATHS.SHIPPING_RATES}
+          element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <ShippingRatesPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path={PATHS.ORDER_STATUS}
+          element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <AdminOrderStatusPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path={PATHS.DISTANCE_OVERVIEW}
+          element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <DistanceOverviewPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path={PATHS.EAZSHOP_PRODUCTS}
+          element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <EazShopProductsPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path={PATHS.EAZSHOP_SHIPPING_FEES}
+          element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <EazShopShippingFeesPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path={PATHS.EAZSHOP_PICKUP_CENTERS}
+          element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <PickupCentersPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path={PATHS.REVIEWS}
+          element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <ReviewsPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path={PATHS.ACTIVITY_LOGS}
+          element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <ActivityLogs />
+            </Suspense>
+          }
+        />
+        <Route
+          path={PATHS.TRACKING}
+          element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <TrackingPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path={PATHS.PLATFORM_SETTINGS}
+          element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <PlatformSettings />
+            </Suspense>
+          }
+        />
+        <Route
+          path={PATHS.DEVICE_SESSIONS}
+          element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <DeviceSessionsPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path={PATHS.REFUNDS}
+          element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <RefundsPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path={PATHS.REFUND_DETAIL}
+          element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <RefundDetailPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path={PATHS.BALANCE_HISTORY}
+          element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <BalanceHistoryPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path={PATHS.SUPPORT}
+          element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <AdminSupportPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path={PATHS.SUPPORT_TICKETS}
+          element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <AdminTicketsPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path={PATHS.TICKET_DETAIL}
+          element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <AdminTicketDetailPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path={PATHS.SITEMAP}
+          element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <SitemapPage />
+            </Suspense>
+          }
+        />
       </Route>
+      <Route
+        path="*"
+        element={<AdminCatchAll />}
+      />
     </Routes>
   );
 }
