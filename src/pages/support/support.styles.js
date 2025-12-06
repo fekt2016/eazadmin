@@ -35,7 +35,9 @@ export const Breadcrumb = styled(motion.nav)`
   font-size: 1.4rem;
 `;
 
-export const BreadcrumbLink = styled(Link)`
+export const BreadcrumbLink = styled(Link).withConfig({
+  shouldForwardProp: (prop) => prop !== '$active',
+})`
   color: ${props => props.$active ? '#1a202c' : '#64748b'};
   text-decoration: none;
   font-weight: ${props => props.$active ? '600' : '400'};
@@ -44,6 +46,12 @@ export const BreadcrumbLink = styled(Link)`
   &:hover {
     color: #3B82F6;
   }
+`;
+
+// Separate component for non-link breadcrumb items
+export const BreadcrumbItem = styled.span`
+  color: ${props => props.$active ? '#1a202c' : '#64748b'};
+  font-weight: ${props => props.$active ? '600' : '400'};
 `;
 
 export const BreadcrumbSeparator = styled.span`

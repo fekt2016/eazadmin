@@ -170,6 +170,33 @@ const useProduct = () => {
     });
   };
 
+  // Approve product mutation
+  const approveProduct = useMutation({
+    mutationFn: ({ productId, notes }) => productService.approveProduct(productId, notes),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["pendingProducts"] });
+    },
+  });
+
+  // Reject product mutation
+  const rejectProduct = useMutation({
+    mutationFn: ({ productId, notes, reason }) => productService.rejectProduct(productId, notes, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["pendingProducts"] });
+    },
+  });
+
+  // Get pending products query
+  const getPendingProducts = (params = {}) => {
+    return useQuery({
+      queryKey: ["pendingProducts", params],
+      queryFn: () => productService.getPendingProducts(params),
+      staleTime: 1000 * 60 * 2, // 2 minutes
+    });
+  };
+
   return {
     getProducts,
     useGetProductById,
@@ -178,6 +205,7 @@ const useProduct = () => {
     useGetAllPublicProductBySeller,
     getProductCountByCategory,
     useSimilarProduct,
+    getPendingProducts,
     createProduct: {
       mutate: createProduct.mutate,
       isPending: createProduct.isPending,
@@ -192,6 +220,18 @@ const useProduct = () => {
       mutate: deleteProduct.mutate,
       isLoading: deleteProduct.isLoading,
       error: deleteProduct.error,
+    },
+    approveProduct: {
+      mutate: approveProduct.mutate,
+      mutateAsync: approveProduct.mutateAsync,
+      isPending: approveProduct.isPending,
+      error: approveProduct.error,
+    },
+    rejectProduct: {
+      mutate: rejectProduct.mutate,
+      mutateAsync: rejectProduct.mutateAsync,
+      isPending: rejectProduct.isPending,
+      error: rejectProduct.error,
     },
   };
 };

@@ -5,6 +5,7 @@ import { useEazShop } from "../../shared/hooks/useEazShop";
 import { useMemo, useState } from "react";
 import { LoadingSpinner } from "../../shared/components/LoadingSpinner";
 import { PATHS } from "../../routes/routhPath";
+import { toast } from "react-toastify";
 
 export default function EazShopProductsPage() {
   const navigate = useNavigate();
@@ -232,7 +233,17 @@ export default function EazShopProductsPage() {
                   >
                     <FiEye />
                   </ActionButton>
-                  <ActionButton title="Edit">
+                  <ActionButton 
+                    title="Edit"
+                    onClick={() =>
+                      navigate(
+                        `/dashboard/${PATHS.PRODUCTDETAILS.replace(
+                          ":id",
+                          product._id || product.id
+                        )}`
+                      )
+                    }
+                  >
                     <FiEdit />
                   </ActionButton>
                 </ActionButtons>
@@ -257,7 +268,10 @@ export default function EazShopProductsPage() {
           </NoResultsMessage>
           {products.length === 0 && (
             <NoResultsAction>
-              <CreateButton onClick={() => {/* TODO: Add create product modal */}}>
+              <CreateButton onClick={() => {
+                toast.info('EazShop product creation is managed through the product management system. Please use the Products page to create new products.');
+                navigate(`/dashboard/${PATHS.PRODUCTS}`);
+              }}>
                 Create EazShop Product
               </CreateButton>
             </NoResultsAction>

@@ -1,7 +1,36 @@
+import { useMemo } from 'react';
 import styled from "styled-components";
-import { FaBell } from "react-icons/fa";
+import { useUnreadCount } from '../hooks/notifications/useNotifications';
+import NotificationDropdown from '../components/NotificationDropdown';
 
 const Header = ({ user }) => {
+  const { data: unreadData, isLoading, error } = useUnreadCount();
+  
+  // FIX: Extract unread count from response - handle different possible response structures
+  const unreadCount = useMemo(() => {
+    if (!unreadData) return 0;
+    
+    // Backend returns: { status: 'success', data: { unreadCount: number } }
+    const count = unreadData?.data?.unreadCount ?? 
+                  unreadData?.data?.data?.unreadCount ?? 
+                  unreadData?.unreadCount ?? 
+                  0;
+    
+    // Ensure it's a valid number
+    const numCount = Number(count) || 0;
+    
+    // Debug logging (remove in production)
+    if (process.env.NODE_ENV === 'development' && !isLoading) {
+      console.log('[Admin Header] Unread count debug:', {
+        unreadData,
+        extractedCount: numCount,
+        rawData: unreadData
+      });
+    }
+    
+    return numCount;
+  }, [unreadData, isLoading]);
+
   return (
     <Container>
       <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
@@ -14,10 +43,7 @@ const Header = ({ user }) => {
         </SearchBar> */}
       </div>
       <TopbarRight>
-        <IconButton>
-          <FaBell />
-          <NotificationBadge>3</NotificationBadge>
-        </IconButton>
+        <NotificationDropdown unreadCount={unreadCount} />
         <UserProfile>
           <UserAvatar>{user.avatar}</UserAvatar>
           <div style={{ display: "flex", flexDirection: "column" }}>
@@ -52,31 +78,6 @@ const UserAvatar = styled.div`
   font-size: 18px;
 `;
 
-const NotificationBadge = styled.span`
-  position: absolute;
-  top: -5px;
-  right: -5px;
-  background: ${({ theme }) => theme.danger};
-  color: white;
-  font-size: 10px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-`;
-const IconButton = styled.button`
-  position: relative;
-  background: ${({ theme }) => theme.light};
-  border: none;
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  cursor: pointer;
-  font-size: 18px;
-  color: ${({ theme }) => theme.dark};
-`;
 const TopbarRight = styled.div`
   display: flex;
   align-items: center;

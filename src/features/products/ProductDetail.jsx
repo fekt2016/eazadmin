@@ -17,12 +17,14 @@ import {
 import useProduct from "../../shared/hooks/useProduct";
 import { LoadingSpinner } from "../../shared/components/LoadingSpinner";
 import { PATHS } from "../../routes/routhPath";
+import { toast } from "react-toastify";
 
 export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { useGetProductById } = useProduct();
+  const { useGetProductById, approveProduct } = useProduct();
   const { data: productData, isLoading, error } = useGetProductById(id);
+  const approveMutation = approveProduct;
   const [selectedImage, setSelectedImage] = useState(0);
 
   const product = useMemo(() => {
@@ -50,6 +52,23 @@ export default function ProductDetail() {
   const variants = useMemo(() => {
     return product?.variants || [];
   }, [product]);
+
+  // Check if product is pending approval
+  const isPendingApproval = useMemo(() => {
+    return product?.moderationStatus === 'pending' || product?.moderationStatus === 'PENDING';
+  }, [product]);
+
+  // Handle approve product
+  const handleApproveProduct = async () => {
+    if (window.confirm(`Approve product "${product.name}"?`)) {
+      try {
+        await approveMutation.mutateAsync({ productId: id, notes: "" });
+        toast.success("Product approved successfully!");
+      } catch (error) {
+        toast.error("Failed to approve product: " + (error.response?.data?.message || error.message || "Unknown error"));
+      }
+    }
+  };
 
   const attributeKeys = useMemo(() => {
     if (!variants.length) return [];
@@ -100,6 +119,14 @@ export default function ProductDetail() {
           </TitleSection>
         </HeaderLeft>
         <HeaderActions>
+          {isPendingApproval && (
+            <ApproveButton 
+              onClick={handleApproveProduct}
+              disabled={approveMutation.isPending}
+            >
+              <FaCheck /> {approveMutation.isPending ? 'Approving...' : 'Approve Product'}
+            </ApproveButton>
+          )}
           <ActionButton onClick={() => navigate(`/dashboard/${PATHS.PRODUCTS}`)}>
             <FaEdit /> Edit
           </ActionButton>
@@ -423,6 +450,29 @@ const DeleteButton = styled.button`
 
   &:hover {
     background: #dc2626;
+  }
+`;
+
+const ApproveButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: #10b981;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: #059669;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 `;
 

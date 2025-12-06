@@ -17,6 +17,7 @@ import {
   SupportContainer,
   Breadcrumb,
   BreadcrumbLink,
+  BreadcrumbItem,
   BreadcrumbSeparator,
   SectionWrapper,
   HeroSection,
@@ -154,7 +155,7 @@ const AdminSupportPage = () => {
         <BreadcrumbSeparator>
           <FaChevronRight />
         </BreadcrumbSeparator>
-        <BreadcrumbLink as="span" $active>Support</BreadcrumbLink>
+        <BreadcrumbItem $active>Support</BreadcrumbItem>
       </Breadcrumb>
 
       {/* Hero Section */}
@@ -320,7 +321,6 @@ const AdminSupportPage = () => {
           {adminTools.map((tool, index) => (
             <ToolCard
               key={index}
-              as={Link}
               to={tool.path}
               variants={itemVariants}
               whileHover={{ y: -4, transition: { duration: 0.2 } }}

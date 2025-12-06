@@ -1,6 +1,6 @@
 import styled from "styled-components";
 // import { Search, MoreVert, Visibility, Edit, Delete } from '@mui/icons-material';
-import { FiEdit, FiEye, FiSearch, FiTrash2 } from "react-icons/fi";
+import { FiEdit, FiEye, FiSearch, FiTrash2, FiCheck, FiX } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import useProduct from "../../shared/hooks/useProduct";
 import { useEazShop } from "../../shared/hooks/useEazShop";
@@ -12,18 +12,100 @@ import { FaAward } from "react-icons/fa";
 
 export default function AllProductPage() {
   const navigate = useNavigate();
-  const { getProducts } = useProduct();
+  const { getProducts, approveProduct, rejectProduct } = useProduct();
   const { data, isLoading: productLoading, error: productError } = getProducts;
+  
+  // Debug: Log the raw response
+  console.log("🔍 [AllProductPage] Raw API response:", data);
+  console.log("🔍 [AllProductPage] Response structure:", {
+    status: data?.status,
+    results: data?.results,
+    total: data?.total,
+    hasData: !!data?.data,
+    dataKeys: data?.data ? Object.keys(data.data) : [],
+    hasNestedData: !!data?.data?.data,
+    nestedDataLength: data?.data?.data?.length,
+    nestedDataType: Array.isArray(data?.data?.data) ? 'array' : typeof data?.data?.data,
+    nestedDataPreview: data?.data?.data ? (Array.isArray(data.data.data) ? `Array[${data.data.data.length}]` : JSON.stringify(data.data.data).substring(0, 100)) : 'null'
+  });
+  
+  // Expand data.data to see what's inside
+  if (data?.data) {
+    console.log("🔍 [AllProductPage] data.data contents:", data.data);
+    console.log("🔍 [AllProductPage] data.data.data:", data.data.data);
+  }
+  console.log("🔍 [AllProductPage] Loading:", productLoading);
+  console.log("🔍 [AllProductPage] Error:", productError);
   const { useMarkProductAsEazShop } = useEazShop();
   const markAsEazShopMutation = useMarkProductAsEazShop();
 
-  const products = useMemo(() => data?.results || [], [data]);
-  console.log("products", products);
+  const products = useMemo(() => {
+    // Handle different response structures
+    if (!data) {
+      console.log("⚠️ [AllProductPage] No data received");
+      return [];
+    }
+    
+    console.log("📦 [AllProductPage] Raw data structure:", JSON.stringify(data, null, 2));
+    
+    // Backend returns: { status: 'success', results: number, total: number, data: { data: products[] } }
+    // Check for nested data.data.data (from getAllProduct controller)
+    if (data.data?.data && Array.isArray(data.data.data)) {
+      console.log("✅ [AllProductPage] Found products at data.data.data:", data.data.data.length);
+      return data.data.data;
+    }
+    
+    // Check for data.data.products
+    if (data.data?.products && Array.isArray(data.data.products)) {
+      console.log("✅ [AllProductPage] Found products at data.data.products:", data.data.products.length);
+      return data.data.products;
+    }
+    
+    // Check for data.products
+    if (data.products && Array.isArray(data.products)) {
+      console.log("✅ [AllProductPage] Found products at data.products:", data.products.length);
+      return data.products;
+    }
+    
+    // Check for data.results (if it's an array, not just a count)
+    if (data.results && Array.isArray(data.results)) {
+      console.log("✅ [AllProductPage] Found products at data.results:", data.results.length);
+      return data.results;
+    }
+    
+    // Check if data itself is an array
+    if (Array.isArray(data)) {
+      console.log("✅ [AllProductPage] Data is array:", data.length);
+      return data;
+    }
+    
+    // Check for data.data as array
+    if (data.data && Array.isArray(data.data)) {
+      console.log("✅ [AllProductPage] Found products at data.data:", data.data.length);
+      return data.data;
+    }
+    
+    // If results is 0, it means no products found (not a structure issue)
+    if (data.results === 0 || data.total === 0) {
+      console.warn("⚠️ [AllProductPage] API returned 0 products. This could mean:");
+      console.warn("  1. No products exist in database");
+      console.warn("  2. User is not authenticated as admin (filtering to approved only)");
+      console.warn("  3. All products are filtered out by moderation status");
+      console.warn("  Check authentication and database");
+    } else {
+      console.warn("⚠️ [AllProductPage] Could not extract products from data structure:", data);
+    }
+    return [];
+  }, [data]);
   // const [products, setProducts] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [moderationFilter, setModerationFilter] = useState("all"); // New filter for moderation status
+  const [activeTab, setActiveTab] = useState("all"); // Tab: "all", "approved", "unapproved"
   const [page, setPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [rejectModal, setRejectModal] = useState({ open: false, productId: null, productName: "" });
+  const [rejectReason, setRejectReason] = useState("");
   const [sortConfig, setSortConfig] = useState({
     key: null,
     direction: "ascending",
@@ -67,7 +149,17 @@ export default function AllProductPage() {
 
     const matchesStatus =
       statusFilter === "all" || (product.status || "active") === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesModeration =
+      moderationFilter === "all" || (product.moderationStatus || "pending") === moderationFilter;
+    
+    // Tab filtering - handle null/undefined moderationStatus
+    const moderationStatus = (product.moderationStatus || "").toLowerCase();
+    const matchesTab = 
+      activeTab === "all" ||
+      (activeTab === "approved" && (moderationStatus === "approved")) ||
+      (activeTab === "unapproved" && (moderationStatus === "pending" || moderationStatus === "rejected" || !moderationStatus));
+    
+    return matchesSearch && matchesStatus && matchesModeration && matchesTab;
   });
 
   // Pagination
@@ -95,11 +187,78 @@ export default function AllProductPage() {
     }
   };
 
+  const handleApproveProduct = async (productId, productName) => {
+    if (window.confirm(`Approve product "${productName}"?`)) {
+      try {
+        await approveProduct.mutateAsync({ productId, notes: "" });
+        toast.success("Product approved successfully!");
+      } catch (error) {
+        toast.error("Failed to approve product: " + (error.response?.data?.message || error.message || "Unknown error"));
+      }
+    }
+  };
+
+  const handleRejectProduct = async () => {
+    if (!rejectReason.trim()) {
+      toast.error("Please provide a rejection reason");
+      return;
+    }
+
+    try {
+      await rejectProduct.mutateAsync({ 
+        productId: rejectModal.productId, 
+        reason: rejectReason,
+        notes: rejectReason 
+      });
+      toast.success("Product rejected successfully!");
+      setRejectModal({ open: false, productId: null, productName: "" });
+      setRejectReason("");
+    } catch (error) {
+      toast.error("Failed to reject product: " + (error.response?.data?.message || error.message || "Unknown error"));
+    }
+  };
+
+  const openRejectModal = (productId, productName) => {
+    setRejectModal({ open: true, productId, productName });
+    setRejectReason("");
+  };
+
+  const closeRejectModal = () => {
+    setRejectModal({ open: false, productId: null, productName: "" });
+    setRejectReason("");
+  };
+
   const handlePageChange = (newPage) => {
     setPage(newPage);
   };
+  
   if (productLoading) return <LoadingSpinner />;
-  if (productError) return <div>Error: {productError.message}</div>;
+  if (productError) {
+    return (
+      <DashboardContainer>
+        <div style={{ padding: '2rem', textAlign: 'center' }}>
+          <h2>Error loading products</h2>
+          <p>{productError.message}</p>
+        </div>
+      </DashboardContainer>
+    );
+  }
+  
+  // Debug info
+  console.log("Total products:", products.length);
+  console.log("Filtered products:", filteredProducts.length);
+  console.log("Current products:", currentProducts.length);
+  console.log("Active tab:", activeTab);
+  // Count products by tab - handle null/undefined moderationStatus
+  const approvedCount = products.filter(p => {
+    const status = (p.moderationStatus || "").toLowerCase();
+    return status === "approved";
+  }).length;
+  const unapprovedCount = products.filter(p => {
+    const status = (p.moderationStatus || "").toLowerCase();
+    return status === "pending" || status === "rejected" || !status;
+  }).length;
+
   return (
     <DashboardContainer>
       <Header>
@@ -123,8 +282,40 @@ export default function AllProductPage() {
             <option value="inactive">Inactive</option>
             <option value="outOfStock">Out of Stock</option>
           </FilterSelect>
+          <FilterSelect
+            value={moderationFilter}
+            onChange={(e) => setModerationFilter(e.target.value)}
+          >
+            <option value="all">All Moderation</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </FilterSelect>
         </Controls>
       </Header>
+      
+      {/* Tabs */}
+      <TabsContainer>
+        <TabButton 
+          $active={activeTab === "all"}
+          onClick={() => setActiveTab("all")}
+        >
+          All Products ({products.length})
+        </TabButton>
+        <TabButton 
+          $active={activeTab === "approved"}
+          onClick={() => setActiveTab("approved")}
+        >
+          Approved ({approvedCount})
+        </TabButton>
+        <TabButton 
+          $active={activeTab === "unapproved"}
+          onClick={() => setActiveTab("unapproved")}
+        >
+          Unapproved ({unapprovedCount})
+        </TabButton>
+      </TabsContainer>
+
       <ProductTable>
         <TableHeader>
           <HeaderRow>
@@ -151,21 +342,29 @@ export default function AllProductPage() {
             </SortableHeader>
             <HeaderCell>CATEGORY</HeaderCell>
             <HeaderCell>STATUS</HeaderCell>
+            <HeaderCell>MODERATION</HeaderCell>
             <HeaderCell>ACTIONS</HeaderCell>
           </HeaderRow>
         </TableHeader>
 
         <TableBody>
-          {currentProducts.map((product) => {
-            console.log("product", product);
-            return (
-              <TableRow key={product.id}>
+          {currentProducts.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={9} style={{ textAlign: 'center', padding: '2rem' }}>
+                No products found. {products.length === 0 ? 'No products loaded from API.' : `Filtered from ${products.length} total products.`}
+              </TableCell>
+            </TableRow>
+          ) : (
+            currentProducts.map((product) => {
+              const productId = product.id || product._id;
+              return (
+                <TableRow key={productId}>
                 <TableCell>
                   <ProductImage src={product.imageCover} alt={product.name} />
                 </TableCell>
                 <TableCell>
                   <ProductName>{product.name}</ProductName>
-                  <ProductId>ID: {product.id}</ProductId>
+                  <ProductId>ID: {product.id || product._id}</ProductId>
                 </TableCell>
                 <TableCell>
                   <SellerInfo>{product.seller?.shopName || "N/A"}</SellerInfo>
@@ -191,14 +390,42 @@ export default function AllProductPage() {
                   </StatusPill>
                 </TableCell>
                 <TableCell>
+                  <ModerationPill status={product.moderationStatus || "pending"}>
+                    {product.moderationStatus || "pending"}
+                  </ModerationPill>
+                </TableCell>
+                <TableCell>
                   <ActionButtons>
+                    {product.moderationStatus === "pending" && (
+                      <>
+                        <ActionButton
+                          title="Approve Product"
+                          $approve
+                          onClick={() => handleApproveProduct(product.id || product._id, product.name)}
+                          disabled={approveProduct.isPending}
+                        >
+                          <FiCheck />
+                        </ActionButton>
+                        <ActionButton
+                          title="Reject Product"
+                          $reject
+                          onClick={() => openRejectModal(product.id || product._id, product.name)}
+                          disabled={rejectProduct.isPending}
+                        >
+                          <FiX />
+                        </ActionButton>
+                      </>
+                    )}
                     <ActionButton
                       title="View"
                       onClick={() => navigate(`/dashboard/${PATHS.PRODUCTDETAILS.replace(':id', product.id || product._id)}`)}
                     >
                       <FiEye />
                     </ActionButton>
-                    <ActionButton title="Edit">
+                    <ActionButton 
+                      title="Edit"
+                      onClick={() => navigate(`/dashboard/${PATHS.PRODUCTDETAILS.replace(':id', product.id || product._id)}`)}
+                    >
                       <FiEdit />
                     </ActionButton>
                     {!product.isEazShopProduct && (
@@ -221,8 +448,9 @@ export default function AllProductPage() {
                   </ActionButtons>
                 </TableCell>
               </TableRow>
-            );
-          })}
+              );
+            })
+          )}
         </TableBody>
       </ProductTable>
       {filteredProducts.length === 0 ? (
@@ -260,6 +488,42 @@ export default function AllProductPage() {
             </PageButton>
           </PageControls>
         </Pagination>
+      )}
+
+      {/* Reject Product Modal */}
+      {rejectModal.open && (
+        <ModalOverlay onClick={closeRejectModal}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
+            <ModalHeader>
+              <ModalTitle>Reject Product</ModalTitle>
+              <CloseButton onClick={closeRejectModal}>×</CloseButton>
+            </ModalHeader>
+            <ModalBody>
+              <p>Product: <strong>{rejectModal.productName}</strong></p>
+              <p style={{ marginBottom: "1rem", color: "#64748b" }}>
+                Please provide a reason for rejecting this product:
+              </p>
+              <RejectTextarea
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="Enter rejection reason (e.g., Product violates guidelines, Incomplete information, etc.)"
+                rows={4}
+              />
+            </ModalBody>
+            <ModalFooter>
+              <ModalButton $cancel onClick={closeRejectModal}>
+                Cancel
+              </ModalButton>
+              <ModalButton 
+                $confirm 
+                onClick={handleRejectProduct}
+                disabled={!rejectReason.trim() || rejectProduct.isPending}
+              >
+                {rejectProduct.isPending ? "Rejecting..." : "Reject Product"}
+              </ModalButton>
+            </ModalFooter>
+          </ModalContent>
+        </ModalOverlay>
       )}
     </DashboardContainer>
   );
@@ -463,9 +727,11 @@ const ActionButtons = styled.div`
 `;
 
 const ActionButton = styled.button`
-  background: ${({ danger, $eazshop }) => 
+  background: ${({ danger, $eazshop, $approve, $reject }) => 
     danger ? "#fee2e2" : 
     $eazshop ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" : 
+    $approve ? "#dcfce7" :
+    $reject ? "#fee2e2" :
     "#eff6ff"};
   border: none;
   border-radius: 8px;
@@ -474,16 +740,20 @@ const ActionButton = styled.button`
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: ${({ danger, $eazshop }) => 
+  color: ${({ danger, $eazshop, $approve, $reject }) => 
     danger ? "#b91c1c" : 
     $eazshop ? "white" : 
+    $approve ? "#166534" :
+    $reject ? "#b91c1c" :
     "#2563eb"};
   transition: all 0.2s ease;
 
   &:hover:not(:disabled) {
-    background: ${({ danger, $eazshop }) => 
+    background: ${({ danger, $eazshop, $approve, $reject }) => 
       danger ? "#fecaca" : 
       $eazshop ? "linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)" : 
+      $approve ? "#bbf7d0" :
+      $reject ? "#fecaca" :
       "#dbeafe"};
     transform: translateY(-1px);
   }
@@ -499,6 +769,152 @@ const ActionButton = styled.button`
 
   svg {
     font-size: 1.1rem;
+  }
+`;
+
+const ModerationPill = styled.span`
+  display: inline-block;
+  padding: 0.4rem 0.8rem;
+  border-radius: 12px;
+  font-weight: 500;
+  font-size: 0.85rem;
+  text-transform: capitalize;
+  background: ${({ status }) =>
+    status === "approved"
+      ? "#dcfce7"
+      : status === "rejected"
+      ? "#fee2e2"
+      : "#fef9c3"};
+  color: ${({ status }) =>
+    status === "approved"
+      ? "#166534"
+      : status === "rejected"
+      ? "#b91c1c"
+      : "#854d0e"};
+`;
+
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+`;
+
+const ModalContent = styled.div`
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+`;
+
+const ModalHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+`;
+
+const ModalTitle = styled.h2`
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1e293b;
+`;
+
+const CloseButton = styled.button`
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #f1f5f9;
+    color: #64748b;
+  }
+`;
+
+const ModalBody = styled.div`
+  padding: 1.5rem;
+`;
+
+const RejectTextarea = styled.textarea`
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 100px;
+  color: #334155;
+
+  &:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  }
+
+  &::placeholder {
+    color: #94a3b8;
+  }
+`;
+
+const ModalFooter = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  border-top: 1px solid #e2e8f0;
+`;
+
+const ModalButton = styled.button`
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+
+  ${({ $cancel }) =>
+    $cancel
+      ? `
+    background: #f1f5f9;
+    color: #475569;
+    
+    &:hover {
+      background: #e2e8f0;
+    }
+  `
+      : `
+    background: #dc2626;
+    color: white;
+    
+    &:hover:not(:disabled) {
+      background: #b91c1c;
+    }
+  `}
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 `;
 
@@ -532,6 +948,36 @@ const PageInfo = styled.div`
 const PageControls = styled.div`
   display: flex;
   gap: 0.5rem;
+`;
+
+const TabsContainer = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid #e2e8f0;
+  background: white;
+  padding: 0 1rem;
+  border-radius: 12px 12px 0 0;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+`;
+
+const TabButton = styled.button`
+  padding: 1rem 1.5rem;
+  background: none;
+  border: none;
+  border-bottom: 3px solid ${({ $active }) => ($active ? "#6366f1" : "transparent")};
+  color: ${({ $active }) => ($active ? "#6366f1" : "#64748b")};
+  font-weight: ${({ $active }) => ($active ? "600" : "500")};
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  bottom: -2px;
+
+  &:hover {
+    color: #6366f1;
+    background: #f8fafc;
+  }
 `;
 
 const PageButton = styled.button`

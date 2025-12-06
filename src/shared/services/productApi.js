@@ -15,8 +15,46 @@ export const productService = {
 
   // Additional common product service methods
   getAllProducts: async () => {
-    const response = await api.get("/product");
-    return response.data;
+    try {
+      // Check authentication before making request
+      const role = localStorage.getItem("current_role") || "admin";
+      const tokenKey = role === "admin" ? "admin_token" : role === "seller" ? "seller_token" : "token";
+      const token = localStorage.getItem(tokenKey);
+      
+      console.log("🔐 [productApi] Auth check:", {
+        role,
+        tokenKey,
+        hasToken: !!token,
+        tokenPreview: token ? `${token.substring(0, 20)}...` : 'none',
+        endpoint: "/product"
+      });
+      
+      // IMPORTANT: The /product endpoint is public, but we need to send the token
+      // so the backend can identify us as admin and show all products (not just approved)
+      // The backend checks: if (!req.user || req.user.role !== 'admin') it filters to approved only
+      // So we MUST send the Authorization header even though the route is public
+      const response = await api.get("/product", {
+        headers: {
+          Authorization: token ? `Bearer ${token}` : undefined,
+        }
+      });
+      
+      console.log("✅ [productApi] Full Response:", response);
+      console.log("✅ [productApi] Response data:", response.data);
+      console.log("✅ [productApi] Response status:", response.status);
+      console.log("✅ [productApi] Response headers:", response.headers);
+      console.log("✅ [productApi] Products count:", response.data?.data?.data?.length || response.data?.results || 0);
+      console.log("✅ [productApi] Total in DB:", response.data?.total || 0);
+      
+      // The backend returns: { status: 'success', results: number, total: number, data: { data: products[] } }
+      return response.data;
+    } catch (error) {
+      console.error("❌ [productApi] Error in getAllProducts:", error);
+      console.error("❌ [productApi] Error response:", error.response);
+      console.error("❌ [productApi] Error status:", error.response?.status);
+      console.error("❌ [productApi] Error data:", error.response?.data);
+      throw error;
+    }
   },
 
   getAllProductsBySeller: async () => {
@@ -118,6 +156,32 @@ export const productService = {
     const response = await api.get(
       `/product/category/${categoryId}?${queryParams.toString()}`
     );
+    return response.data;
+  },
+  
+  // Admin product moderation functions
+  approveProduct: async (productId, notes) => {
+    const response = await api.patch(`/admin/products/${productId}/approve`, {
+      notes,
+    });
+    return response.data;
+  },
+  
+  rejectProduct: async (productId, notes, reason) => {
+    const response = await api.patch(`/admin/products/${productId}/reject`, {
+      notes,
+      reason,
+    });
+    return response.data;
+  },
+  
+  getPendingProducts: async (params = {}) => {
+    const { page = 1, limit = 20 } = params;
+    const queryParams = new URLSearchParams();
+    queryParams.append('page', page);
+    queryParams.append('limit', limit);
+    
+    const response = await api.get(`/admin/products/pending?${queryParams.toString()}`);
     return response.data;
   },
 };

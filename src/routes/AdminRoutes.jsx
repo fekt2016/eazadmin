@@ -38,6 +38,8 @@ const AdminSupportPage = lazy(() => import("../pages/support/AdminSupportPage"))
 const AdminTicketsPage = lazy(() => import("../pages/support/AdminTicketsPage"));
 const AdminTicketDetailPage = lazy(() => import("../pages/support/AdminTicketDetailPage"));
 const SitemapPage = lazy(() => import("../pages/sitemap/SitemapPage"));
+const AdminNotificationsPage = lazy(() => import("../pages/notifications/AdminNotificationsPage"));
+const AdminCouponDiscountPage = lazy(() => import("../pages/coupons/AdminCouponDiscountPage"));
 
 
 const AdminCatchAll = () => {
@@ -375,6 +377,22 @@ export default function AdminRoutes() {
           element={
             <Suspense fallback={<LoadingSpinner />}>
               <SitemapPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path={PATHS.NOTIFICATIONS}
+          element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <AdminNotificationsPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path={PATHS.COUPONS}
+          element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <AdminCouponDiscountPage />
             </Suspense>
           }
         />

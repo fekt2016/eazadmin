@@ -2,11 +2,9 @@ import { useMemo } from "react";
 import { BrowserRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { ThemeProvider } from "styled-components";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import GlobalStyles from "./shared/styles/GlobalStyles";
-import { theme } from "./shared/styles/theme";
 import AdminRoutes from "./routes/AdminRoutes";
 import ScrollToTop from "./shared/ScrollToTop";
 function App() {
@@ -27,17 +25,15 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <GlobalStyles />
-      <ThemeProvider theme={theme}>
-        <BrowserRouter
-          future={{
-            v7_startTransition: true,
-            v7_relativeSplatPath: true,
-          }}
-        >
-          <ScrollToTop />
-          <AdminRoutes />
-        </BrowserRouter>
-      </ThemeProvider>
+      <BrowserRouter
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true,
+        }}
+      >
+        <ScrollToTop />
+        <AdminRoutes />
+      </BrowserRouter>
       <ReactQueryDevtools initialIsOpen={false} />
       <ToastContainer
         position="top-right"

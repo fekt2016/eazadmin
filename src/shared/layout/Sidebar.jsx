@@ -18,12 +18,17 @@ import {
   FaUndo,
   FaWallet,
   FaHeadset,
+  FaBell,
+  FaTicketAlt,
 } from "react-icons/fa";
 import useAuth from '../hooks/useAuth';
 import Logo from '../components/Logo';
+import { useUnreadCount } from '../hooks/notifications/useNotifications';
 
 export default function Sidebar({ role }) {
   const { logout } = useAuth();
+  const { data: unreadData } = useUnreadCount();
+  const unreadCount = unreadData?.data?.unreadCount || 0;
 
   // Combine role-specific menu with common menu
   const menuItems = [
@@ -113,6 +118,17 @@ export default function Sidebar({ role }) {
       label: "Platform Settings",
       icon: <FaCog />,
     },
+    {
+      path: "notifications",
+      label: "Notifications",
+      icon: <FaBell />,
+      badge: unreadCount > 0 ? unreadCount : null,
+    },
+    {
+      path: "coupons",
+      label: "Coupons & Discounts",
+      icon: <FaTicketAlt />,
+    },
   ];
   const handleLogout = () => {
     logout.mutate();
@@ -132,6 +148,9 @@ export default function Sidebar({ role }) {
             >
               <MenuIcon>{item.icon}</MenuIcon>
               {item.label}
+              {item.badge && item.badge > 0 && (
+                <Badge>{item.badge > 99 ? '99+' : item.badge}</Badge>
+              )}
             </NavLink>
           </MenuItem>
         ))}
@@ -241,6 +260,21 @@ const MenuItem = styled.li`
 const MenuIcon = styled.span`
   font-size: 1.2rem;
   display: flex;
+`;
+
+const Badge = styled.span`
+  background: #ef4444;
+  color: white;
+  border-radius: 50%;
+  min-width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0 6px;
+  margin-left: auto;
 `;
 
 const LogoutButton = styled.button`

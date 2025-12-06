@@ -4,6 +4,8 @@ import { getParentName } from '../../utils/helpers';
 import useGetImmediateSubcategories from '../../hooks/useGetImmediateSubcategories';
 import { useGetSubCategoryCount } from '../../hooks/useGetSubCategoryCount';
 import { FixedSizeList as List } from "react-window";
+import useProduct from '../../hooks/useProduct';
+import { LoadingSpinner } from '../LoadingSpinner';
 
 const CategoryTree = function ({
   categories,
@@ -30,6 +32,7 @@ const CategoryTree = function ({
 
   const getImmediateSubcategories = useGetImmediateSubcategories(categories);
   const getSubCategoryCount = useGetSubCategoryCount(categories);
+  const { useGetProductsByCategory } = useProduct();
 
   const parentCategories = categoriesTree
     .filter((cat) => {
@@ -113,6 +116,15 @@ const CategoryTree = function ({
       const hasChildren = subCount > 0;
       const subcategories = getImmediateSubcategories(category._id);
       const isActive = activeTab === category._id;
+      
+      // Fetch products for this category
+      const { data: productsData, isLoading: isLoadingProducts } = useGetProductsByCategory(
+        category._id,
+        { limit: 5, page: 1 }
+      );
+      
+      const products = productsData?.data?.products || productsData?.products || [];
+      const totalProducts = productsData?.data?.totalCount || productsData?.totalCount || products.length;
 
       // console.log("Category Debug:", {
       //   categoryName: category.name,
@@ -160,7 +172,13 @@ const CategoryTree = function ({
               <CategoryMeta>
                 <MetaItem>
                   <MetaLabel>Products:</MetaLabel>
-                  <MetaValue>{counts?.count || 0}</MetaValue>
+                  <MetaValue>
+                    {isLoadingProducts ? (
+                      <LoadingSpinner size="sm" />
+                    ) : (
+                      totalProducts || counts?.count || 0
+                    )}
+                  </MetaValue>
                 </MetaItem>
 
                 <MetaItem>
@@ -180,6 +198,35 @@ const CategoryTree = function ({
                   <MetaValue>{category.createdAt}</MetaValue>
                 </MetaItem>
               </CategoryMeta>
+              
+              {/* Products Section */}
+              {!isLoadingProducts && products.length > 0 && (
+                <ProductsSection>
+                  <ProductsLabel>Products ({totalProducts}):</ProductsLabel>
+                  <ProductsList>
+                    {products.map((product) => (
+                      <ProductItem key={product._id || product.id}>
+                        <ProductImage
+                          src={product.imageCover || product.image || "https://placehold.co/40x40?text=No+Image"}
+                          alt={product.name}
+                          onError={(e) => {
+                            e.target.src = "https://placehold.co/40x40?text=Error";
+                          }}
+                        />
+                        <ProductInfo>
+                          <ProductName>{product.name}</ProductName>
+                          <ProductPrice>GH₵{product.price?.toFixed(2) || "0.00"}</ProductPrice>
+                        </ProductInfo>
+                      </ProductItem>
+                    ))}
+                    {totalProducts > products.length && (
+                      <MoreProductsText>
+                        +{totalProducts - products.length} more products
+                      </MoreProductsText>
+                    )}
+                  </ProductsList>
+                </ProductsSection>
+              )}
               {hasChildren && (
                 <SubcategorySection>
                   {isActive && subcategories.length > 0 && (
@@ -830,4 +877,95 @@ const CategoryNameHeader = styled.h1`
   font-size: 2.2rem;
   color: #2c3e50;
   margin: 0;
+`;
+
+const ProductsSection = styled.div`
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px dashed #eee;
+`;
+
+const ProductsLabel = styled.span`
+  display: block;
+  font-size: 0.85rem;
+  color: #7f8c8d;
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+`;
+
+const ProductsList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 200px;
+  overflow-y: auto;
+  
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+  }
+  
+  &::-webkit-scrollbar-thumb:hover {
+    background: #555;
+  }
+`;
+
+const ProductItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+  transition: background 0.2s;
+  
+  &:hover {
+    background: #e9ecef;
+  }
+`;
+
+const ProductImage = styled.img`
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #dee2e6;
+`;
+
+const ProductInfo = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const ProductName = styled.div`
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #2c3e50;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 0.2rem;
+`;
+
+const ProductPrice = styled.div`
+  font-size: 0.75rem;
+  color: #27ae60;
+  font-weight: 600;
+`;
+
+const MoreProductsText = styled.div`
+  text-align: center;
+  font-size: 0.8rem;
+  color: #7f8c8d;
+  font-style: italic;
+  padding: 0.5rem;
 `;

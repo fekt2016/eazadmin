@@ -53,6 +53,18 @@ export const orderService = {
       throw error;
     }
   },
+  confirmPayment: async (orderId) => {
+    try {
+      if (!orderId) {
+        throw new Error("Order ID is required");
+      }
+      const response = await api.patch(`/order/${orderId}/confirm-payment`);
+      return response.data;
+    } catch (error) {
+      console.error("Error confirming payment:", error);
+      throw error;
+    }
+  },
   // getSellersOrders: async () => {
   //   const response = await api.get("/order/get-seller-orders");
   //   return response;
@@ -97,5 +109,17 @@ export const orderService = {
   //     });
   //     throw new Error(error.response?.data?.message || "Failed to fetch order");
   //   }
-  // },
+  //   },
+  updateOrder: async (orderId, updateData) => {
+    try {
+      if (!orderId) {
+        throw new Error("Order ID is required");
+      }
+      const response = await api.patch(`/order/${orderId}`, updateData);
+      return response.data;
+    } catch (error) {
+      console.error("Error updating order:", error);
+      throw error;
+    }
+  },
 };

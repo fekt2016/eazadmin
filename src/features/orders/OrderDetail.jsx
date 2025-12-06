@@ -11,15 +11,25 @@ import {
   FaClock,
   FaMapMarkerAlt,
   FaCreditCard,
+  FaMoneyBillWave,
+  FaCheckCircle,
+  FaSpinner,
 } from "react-icons/fa";
-import { useGetOrderById } from '../../shared/hooks/useOrder';
+import { useGetOrderById, useConfirmPayment } from '../../shared/hooks/useOrder';
+import { useUpdateOrderStatus } from '../../shared/hooks/useUpdateOrderStatus';
 import { useParams, Link } from "react-router-dom";
 import { PATHS } from '../../routes/routhPath';
 import useDynamicPageTitle from '../../shared/hooks/useDynamicPageTitle';
+import { toast } from 'react-toastify';
+import { useQueryClient } from '@tanstack/react-query';
+import { orderService } from '../../shared/services/orderApi';
 
 const OrderDetail = () => {
   const { id: orderId } = useParams();
-  const { data: orderData } = useGetOrderById(orderId);
+  const { data: orderData, refetch: refetchOrder } = useGetOrderById(orderId);
+  const queryClient = useQueryClient();
+  const confirmPaymentMutation = useConfirmPayment();
+  const updateOrderStatusMutation = useUpdateOrderStatus();
   const [status, setStatus] = useState("pending");
   const [isEditingNote, setIsEditingNote] = useState(false);
   const [customerNote, setCustomerNote] = useState(
@@ -60,6 +70,10 @@ const OrderDetail = () => {
         credit_card: "Credit Card",
         paypal: "PayPal",
         cash_on_delivery: "Cash on Delivery",
+        bank_transfer: "Bank Transfer",
+        payment_on_delivery: "Cash on Delivery",
+        paystack: "Paystack",
+        credit_balance: "Credit Balance",
       };
 
       // Transform order items
@@ -87,6 +101,7 @@ const OrderDetail = () => {
         paymentStatus: orderform.paymentStatus || 'pending', // Include paymentStatus
         paymentMethod:
           paymentMethodMap[orderform.paymentMethod] || orderform.paymentMethod,
+        rawPaymentMethod: orderform.paymentMethod, // Store raw payment method for button logic
         customer: {
           name: orderform.user.name,
           email: orderform.user.email,
@@ -148,9 +163,20 @@ const OrderDetail = () => {
     }
   }, [orderData]);
 
-  const handleStatusChange = (newStatus) => {
-    setStatus(newStatus);
-    // In a real app, you would update the status on the server here
+  const handleStatusChange = async (newStatus) => {
+    try {
+      await updateOrderStatusMutation.mutateAsync({
+        orderId,
+        status: newStatus,
+        message: `Order status changed to ${newStatus} by admin`,
+      });
+      setStatus(newStatus);
+      toast.success('Order status updated successfully');
+      await refetchOrder();
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      toast.error(error.response?.data?.message || 'Failed to update order status');
+    }
   };
 
   const handleNoteEdit = () => {
@@ -161,9 +187,70 @@ const OrderDetail = () => {
     setCustomerNote(e.target.value);
   };
 
-  const handleSaveNote = () => {
-    setIsEditingNote(false);
-    // In a real app, you would save the note to the server here
+  const handleSaveNote = async () => {
+    try {
+      await orderService.updateOrder(orderId, {
+        adminNotes: customerNote,
+      });
+      setIsEditingNote(false);
+      toast.success('Customer note saved successfully');
+      await refetchOrder();
+    } catch (error) {
+      console.error('Error saving note:', error);
+      toast.error(error.response?.data?.message || 'Failed to save note');
+    }
+  };
+
+  // Handle payment confirmation
+  const handleConfirmPayment = async () => {
+    if (!orderId) {
+      toast.error('Order ID is missing');
+      return;
+    }
+
+    // Get current payment status and method from order or orderData
+    const currentPaymentStatus = order?.paymentStatus || orderData?.data?.data?.paymentStatus || 'pending';
+    const currentPaymentMethod = order?.rawPaymentMethod || orderData?.data?.data?.paymentMethod;
+
+    // Double-check conditions
+    if (currentPaymentStatus !== 'pending') {
+      toast.error('Payment has already been confirmed');
+      return;
+    }
+
+    if (!['bank_transfer', 'payment_on_delivery'].includes(currentPaymentMethod)) {
+      toast.error('Manual payment confirmation is only available for bank transfer and cash on delivery');
+      return;
+    }
+
+    // Show confirmation dialog
+    const confirmMessage = currentPaymentMethod === 'bank_transfer'
+      ? 'Confirm bank transfer payment for this order?'
+      : 'Mark cash on delivery payment as received?';
+
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    try {
+      await confirmPaymentMutation.mutateAsync(orderId);
+      toast.success(
+        currentPaymentMethod === 'bank_transfer'
+          ? 'Bank transfer payment confirmed successfully!'
+          : 'Cash on delivery payment confirmed successfully!'
+      );
+      
+      // Refetch order data to update UI
+      await refetchOrder();
+      
+      // Invalidate related queries
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['order', orderId] });
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to confirm payment';
+      toast.error(errorMessage);
+      console.error('Error confirming payment:', error);
+    }
   };
 
   if (!order) {
@@ -268,6 +355,54 @@ const OrderDetail = () => {
                 {order.paymentStatus === 'paid' && (
                   <PaymentDate>Paid on {order.date}</PaymentDate>
                 )}
+                
+                {/* Payment Confirmation Button */}
+                {(() => {
+                  const orderform = orderData?.data?.data?.data || orderData?.data?.data;
+                  const currentPaymentStatus = order?.paymentStatus || orderform?.paymentStatus || 'pending';
+                  const currentPaymentMethod = order?.rawPaymentMethod || orderform?.paymentMethod;
+                  const currentStatus = orderform?.currentStatus || orderform?.orderStatus || orderform?.status || 'pending';
+                  
+                  // Show button only if:
+                  // 1. Payment is pending
+                  // 2. Payment method is bank_transfer or payment_on_delivery
+                  // 3. Order is delivered (currentStatus === 'delivered' or 'delievered')
+                  const isDelivered = currentStatus === 'delivered' || currentStatus === 'delievered'; // Note: typo in backend enum
+                  
+                  const shouldShowButton = 
+                    currentPaymentStatus === 'pending' &&
+                    (currentPaymentMethod === 'bank_transfer' || currentPaymentMethod === 'payment_on_delivery') &&
+                    isDelivered;
+                  
+                  if (!shouldShowButton) {
+                    return null;
+                  }
+                  
+                  const buttonText = currentPaymentMethod === 'bank_transfer'
+                    ? 'Confirm Bank Payment'
+                    : 'Mark Cash Received';
+                  
+                  const buttonIcon = currentPaymentMethod === 'bank_transfer'
+                    ? <FaMoneyBillWave />
+                    : <FaCheckCircle />;
+                  
+                  return (
+                    <ConfirmPaymentButton
+                      onClick={handleConfirmPayment}
+                      disabled={confirmPaymentMutation.isPending}
+                    >
+                      {confirmPaymentMutation.isPending ? (
+                        <>
+                          <FaSpinner style={{ animation: 'spin 1s linear infinite' }} /> Processing...
+                        </>
+                      ) : (
+                        <>
+                          {buttonIcon} {buttonText}
+                        </>
+                      )}
+                    </ConfirmPaymentButton>
+                  );
+                })()}
               </PaymentSection>
             </AddressSection>
           </GridRow>
@@ -710,6 +845,42 @@ const PaymentDate = styled.p`
   color: #64748b;
   font-size: 0.9rem;
   margin-top: 0.25rem;
+`;
+
+const ConfirmPaymentButton = styled.button`
+  margin-top: 1rem;
+  padding: 0.75rem 1.5rem;
+  background-color: #10b981;
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background-color: #059669;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
 `;
 
 const OrderItemsCard = styled(Card)`

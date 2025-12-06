@@ -239,3 +239,33 @@ export const useAddTrackingUpdate = () => {
     },
   });
 };
+
+/**
+ * Hook to confirm payment for bank transfer or cash on delivery orders
+ * @returns {Object} Mutation object with mutate function and state
+ */
+export const useConfirmPayment = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (orderId) => {
+      if (!orderId) {
+        throw new Error("Order ID is required");
+      }
+      return await orderService.confirmPayment(orderId);
+    },
+    onSuccess: (data, orderId) => {
+      // Invalidate order queries to refresh data
+      queryClient.invalidateQueries({ 
+        queryKey: ["order", orderId] 
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ["orders"] 
+      });
+      console.log("Payment confirmed successfully:", data);
+    },
+    onError: (error) => {
+      console.error("Error confirming payment:", error);
+    },
+  });
+};

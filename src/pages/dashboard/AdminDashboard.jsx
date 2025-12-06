@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import useDynamicPageTitle from '../../shared/hooks/useDynamicPageTitle';
 import Container from '../../components/ui/Container';
@@ -7,8 +8,10 @@ import Card from '../../components/ui/Card';
 import SectionTitle from '../../components/ui/SectionTitle';
 import Button from '../../components/ui/Button';
 import IconWrapper from '../../components/ui/IconWrapper';
-import { FaChartBar, FaUsers, FaShoppingCart, FaDollarSign } from 'react-icons/fa';
-import { useAdminStats } from '../../shared/hooks/useAdminStats'; // Assume
+import { FaChartBar, FaUsers, FaShoppingCart, FaDollarSign, FaBell } from 'react-icons/fa';
+import { useAdminStats } from '../../shared/hooks/useAdminStats';
+import { useNotifications, useUnreadCount } from '../../shared/hooks/notifications/useNotifications';
+import { PATHS } from '../../routes/routhPath';
 
 const AdminDashboardWrapper = styled.div`
   background: var(--color-grey-50);
@@ -43,7 +46,47 @@ const StatLabel = styled.p`
   font-size: var(--text-base);
 `;
 
+const NotificationsWidget = styled(Card)`
+  margin-top: var(--space-xl);
+  padding: var(--space-lg) !important;
+`;
+
+const NotificationItem = styled.div`
+  padding: var(--space-md);
+  border-bottom: 1px solid var(--color-grey-200);
+  cursor: pointer;
+  transition: background 0.2s;
+  
+  &:hover {
+    background: var(--color-grey-50);
+  }
+  
+  &:last-child {
+    border-bottom: none;
+  }
+`;
+
+const NotificationTitle = styled.h4`
+  margin: 0 0 var(--space-xs) 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-grey-900);
+`;
+
+const NotificationMessage = styled.p`
+  margin: 0 0 var(--space-xs) 0;
+  font-size: var(--text-xs);
+  color: var(--color-grey-600);
+  line-height: 1.4;
+`;
+
+const NotificationTime = styled.span`
+  font-size: var(--text-xs);
+  color: var(--color-grey-500);
+`;
+
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   useDynamicPageTitle({
     title: "Admin Dashboard",
     description: "EazAdmin control panel.",
@@ -51,6 +94,11 @@ const AdminDashboard = () => {
   });
 
   const { data: stats, isLoading } = useAdminStats();
+  const { data: notificationsData } = useNotifications({ limit: 5 });
+  const { data: unreadData } = useUnreadCount();
+  
+  const unreadCount = unreadData?.data?.unreadCount || 0;
+  const recentNotifications = notificationsData?.data?.notifications || [];
 
   if (isLoading) {
     return (
@@ -100,17 +148,60 @@ const AdminDashboard = () => {
           </StatCard>
         </StatsGrid>
 
-        <SectionTitle title="Recent Activity" />
-        <Grid responsiveColumns>
-          {/* Activity cards */}
-          {stats?.recentActivity?.map(activity => (
-            <Card key={activity.id} clickable variant="elevated">
-              <h4>{activity.type}</h4>
-              <p>{activity.description}</p>
-              <Button variant="primary" size="sm">View</Button>
-            </Card>
-          ))}
-        </Grid>
+        <NotificationsWidget variant="elevated">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-md)' }}>
+            <SectionTitle title="Recent Notifications" />
+            <Button 
+              variant="primary" 
+              size="sm"
+              onClick={() => navigate(`/dashboard/${PATHS.NOTIFICATIONS}`)}
+            >
+              View All
+            </Button>
+          </div>
+          {recentNotifications.length === 0 ? (
+            <p style={{ color: 'var(--color-grey-500)', textAlign: 'center', padding: 'var(--space-lg)' }}>
+              No notifications yet
+            </p>
+          ) : (
+            recentNotifications.slice(0, 5).map((notification) => (
+              <NotificationItem
+                key={notification._id}
+                onClick={() => {
+                  if (notification.actionUrl) {
+                    // If actionUrl is already a full path starting with /dashboard, use it directly
+                    if (notification.actionUrl.startsWith('/dashboard')) {
+                      navigate(notification.actionUrl);
+                    } else {
+                      // Otherwise, prepend /dashboard
+                      navigate(`/dashboard${notification.actionUrl}`);
+                    }
+                  } else if (notification.metadata?.orderId) {
+                    navigate(`/dashboard/orders/detail/${notification.metadata.orderId}`);
+                  } else if (notification.metadata?.ticketId) {
+                    navigate(`/dashboard/support/tickets/${notification.metadata.ticketId}`);
+                  } else if (notification.metadata?.productId) {
+                    navigate(`/dashboard/product-details/${notification.metadata.productId}`);
+                  } else if (notification.metadata?.sellerId) {
+                    navigate(`/dashboard/sellers/detail/${notification.metadata.sellerId}`);
+                  } else if (notification.metadata?.refundId) {
+                    navigate(`/dashboard/refunds/${notification.metadata.refundId}`);
+                  } else if (notification.metadata?.withdrawalId) {
+                    navigate(`/dashboard/payment-request/detail/${notification.metadata.withdrawalId}`);
+                  } else {
+                    navigate(`/dashboard/${PATHS.NOTIFICATIONS}`);
+                  }
+                }}
+              >
+                <NotificationTitle>{notification.title}</NotificationTitle>
+                <NotificationMessage>{notification.message}</NotificationMessage>
+                <NotificationTime>
+                  {new Date(notification.createdAt).toLocaleDateString()}
+                </NotificationTime>
+              </NotificationItem>
+            ))
+          )}
+        </NotificationsWidget>
 
         <Button variant="primary">Generate Report</Button>
       </Container>

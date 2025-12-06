@@ -79,12 +79,6 @@ api.interceptors.request.use((config) => {
     (route) => normalizedPath === normalizePath(route)
   );
 
-  // Skip authentication for public endpoints
-  if (isPublicRoute) {
-    console.log(`Public route: ${normalizedPath}, skipping authentication`);
-    return config;
-  }
-
   // Determine authentication token based on stored role
   const role = localStorage.getItem("current_role") || "admin";
   const tokenKey =
@@ -96,15 +90,26 @@ api.interceptors.request.use((config) => {
 
   const token = localStorage.getItem(tokenKey);
 
-  if (!token) {
-    console.error(`No authentication token found for protected endpoint. Token key: ${tokenKey}, Role: ${role}`);
-    console.error("Available localStorage keys:", Object.keys(localStorage));
-    // Don't reject immediately - let the server handle 401
-    // This allows the request to go through so we can see the actual error
-  } else {
-    // Add authorization headers only if token exists
+  // IMPORTANT: Even for public routes, send the token if available
+  // This allows optional authentication middleware on the backend to identify admins
+  // and show them all products (not just approved ones)
+  if (token) {
     config.headers.Authorization = `Bearer ${token}`;
     config.headers["X-User-Role"] = role;
+    
+    if (isPublicRoute) {
+      console.log(`Public route: ${normalizedPath}, but sending token for optional auth (role: ${role})`);
+    }
+  } else {
+    if (isPublicRoute) {
+      console.log(`Public route: ${normalizedPath}, no token available`);
+      return config;
+    } else {
+      console.error(`No authentication token found for protected endpoint. Token key: ${tokenKey}, Role: ${role}`);
+      console.error("Available localStorage keys:", Object.keys(localStorage));
+      // Don't reject immediately - let the server handle 401
+      // This allows the request to go through so we can see the actual error
+    }
   }
 
   // Add subdomain information for seller context

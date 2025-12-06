@@ -39,4 +39,6 @@ export const PATHS = {
   SUPPORT_TICKETS: "support/tickets",
   TICKET_DETAIL: "support/tickets/:id",
   SITEMAP: "sitemap",
+  NOTIFICATIONS: "notifications",
+  COUPONS: "coupons",
 };
