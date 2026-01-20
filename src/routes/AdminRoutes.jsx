@@ -2,7 +2,7 @@ import { Route, Routes, Navigate } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { PATHS } from "./routhPath";
 import { LoadingSpinner } from '../shared/components/LoadingSpinner';
-import ProtectedRoute from "../routes/ProtectedRoute";
+import ProtectedRoute from "../routes/protectedRoute";
 
 const ProductDetail = lazy(() => import("../features/products/ProductDetail"));
 const AdminLogin = lazy(() => import("../pages/auth/AdminLogin"));
