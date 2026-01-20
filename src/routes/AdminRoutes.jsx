@@ -6,6 +6,8 @@ import ProtectedRoute from "../routes/ProtectedRoute";
 
 const ProductDetail = lazy(() => import("../features/products/ProductDetail"));
 const AdminLogin = lazy(() => import("../pages/auth/AdminLogin"));
+const ForgotPasswordPage = lazy(() => import("../features/auth/ForgotPasswordPage"));
+const ResetPasswordPage = lazy(() => import("../features/auth/ResetPasswordPage"));
 const Dashboard = lazy(() => import("../features/Dashboard"));
 const DashboardLayout = lazy(() => import("../shared/layout/DashboardLayout"));
 const OrdersPage = lazy(() => import("../features/orders/OrdersPage"));
@@ -13,11 +15,10 @@ const AllProductPage = lazy(() => import("../features/products/AllProductPage"))
 const CategoryPage = lazy(() => import("../features/categories/CategoryPage"));
 const UsersPage = lazy(() => import("../features/users/UsersPage"));
 const UserDetail = lazy(() => import("../features/users/UserDetail"));
+const SellerDetailPage = lazy(() => import("../features/sellers/SellerDetailPage"));
 const PaymentPage = lazy(() => import("../features/payment/PaymentPage"));
 const PaymentRequestDetail = lazy(() => import("../features/payment/PaymentRequestDetail"));
-const SellerRequests = lazy(() => import("../features/sellers/SellerRequest"));
 const SellerBalancesPage = lazy(() => import("../features/sellers/SellerBalancesPage"));
-const ChatSupportPage = lazy(() => import("../features/settings/ChatSupportPage"));
 const UsersActivityPage = lazy(() => import("../features/users/UsersActivityPage"));
 const OrderDetail = lazy(() => import("../features/orders/OrderDetail"));
 const ShippingRatesPage = lazy(() => import("../features/shipping/ShippingRatesPage"));
@@ -64,6 +65,18 @@ export default function AdminRoutes() {
     <Routes>
       {/* Admin login route */}
       <Route path={PATHS.LOGIN} element={<AdminLogin />} />
+      
+      {/* Password reset routes */}
+      <Route path="/forgot-password" element={
+        <Suspense fallback={<LoadingSpinner />}>
+          <ForgotPasswordPage />
+        </Suspense>
+      } />
+      <Route path="/reset-password" element={
+        <Suspense fallback={<LoadingSpinner />}>
+          <ResetPasswordPage />
+        </Suspense>
+      } />
       
       {/* Tracking detail page - accessible at /tracking/:trackingNumber */}
       <Route 
@@ -184,7 +197,7 @@ export default function AdminRoutes() {
           path={PATHS.SELLERDETAIL}
           element={
             <Suspense fallback={<LoadingSpinner />}>
-              <UserDetail />
+              <SellerDetailPage />
             </Suspense>
           }
         />
@@ -209,22 +222,6 @@ export default function AdminRoutes() {
           element={
             <Suspense fallback={<LoadingSpinner />}>
               <PaymentRequestDetail />
-            </Suspense>
-          }
-        />
-        <Route
-          path={PATHS.SELLERREQUEST}
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <SellerRequests />
-            </Suspense>
-          }
-        />
-        <Route
-          path={PATHS.CHAT_SUPPORT}
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <ChatSupportPage />
             </Suspense>
           }
         />

@@ -21,9 +21,15 @@ import {
   StatusCell,
   DateCell,
   LastActiveCell,
+  VerificationStatusCell,
+  OrderCountCell,
 } from '../../shared/components/Table';
+import { FaCheckCircle, FaTimesCircle, FaUndo, FaClock, FaEye, FaWallet } from 'react-icons/fa';
+import { toast } from 'react-toastify';
 import EditUserModal from '../../shared/components/Modal/EditUserModal';
 import AddUserModal from '../../shared/components/Modal/AddUserModal';
+import PayoutVerificationModal from '../../shared/components/Modal/payoutVerificationModal';
+import { useResetSellerBalance } from '../../shared/hooks/useSellerBalance';
 
 // Dynamic Table Component
 
@@ -32,10 +38,25 @@ export default function UsersPage() {
   const [activeTab, setActiveTab] = useState("users");
   const [filterOpen, setFilterOpen] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState("all");
+  const [verificationStatusFilter, setVerificationStatusFilter] = useState("all"); // For sellers tab
   const [actionMenu, setActionMenu] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [userToEdit, setUserToEdit] = useState(null);
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [sellerToReject, setSellerToReject] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [showResetBalanceModal, setShowResetBalanceModal] = useState(false);
+  const [sellerToResetBalance, setSellerToResetBalance] = useState(null);
+  const [resetBalance, setResetBalance] = useState("");
+  const [resetBalanceReason, setResetBalanceReason] = useState("");
+  const [showRejectPayoutModal, setShowRejectPayoutModal] = useState(false);
+  const [sellerToRejectPayout, setSellerToRejectPayout] = useState(null);
+  const [payoutRejectionReason, setPayoutRejectionReason] = useState("");
+  const [selectedSellerForPayout, setSelectedSellerForPayout] = useState(null); // For PayoutVerificationModal
+  
+  // Reset balance mutation
+  const resetBalanceMutation = useResetSellerBalance();
 
   // Pagination state
   const [pagination, setPagination] = useState({
@@ -46,7 +67,22 @@ export default function UsersPage() {
 
   // New state for setIsAddUserModalOpen
   // Update hooks to accept pagination parameters
-  const { sellers, isSellerLoading, totalSellers } = useSellerAdmin(pagination.sellers.page, pagination.sellers.limit);
+  const { 
+    sellers, 
+    isSellerLoading, 
+    totalSellers,
+    approveVerification,
+    rejectVerification,
+    approvePayout,
+    rejectPayout,
+    searchValue: sellerSearchValue,
+    setSearchValue: setSellerSearchValue,
+    sort: sellerSort,
+    setSort: setSellerSort,
+    meta: sellerMeta,
+    page: sellerPage,
+    setPage: setSellerPage,
+  } = useSellerAdmin(pagination.sellers.page, pagination.sellers.limit);
 
   const {
     users,
@@ -71,15 +107,31 @@ export default function UsersPage() {
   }, [totalUsers, totalSellers, totalAdmins]);
 
   // memoize data
-  const allSellers = useMemo(() => sellers?.results || [], [sellers]);
+  // sellers structure: { results, meta, data: { results, meta } }
+  const allSellers = useMemo(() => {
+    if (!sellers) return [];
+    // Check multiple possible structures
+    if (Array.isArray(sellers)) return sellers;
+    if (sellers.results && Array.isArray(sellers.results)) return sellers.results;
+    if (sellers.data?.results && Array.isArray(sellers.data.results)) return sellers.data.results;
+    return [];
+  }, [sellers]);
   const allUsers = useMemo(() => users?.results || [], [users]);
   const allAdmins = useMemo(() => adminsData?.results || [], [adminsData]);
 
   const handlePageChange = (page) => {
+    if (activeTab === "sellers") {
+      setSellerPage(page);
+      setPagination((prev) => ({
+        ...prev,
+        sellers: { ...prev.sellers, page },
+      }));
+    } else {
     setPagination((prev) => ({
       ...prev,
       [activeTab]: { ...prev[activeTab], page },
     }));
+    }
   };
   const handleItemsPerPageChange = (limit) => {
     setPagination((prev) => ({
@@ -99,6 +151,62 @@ export default function UsersPage() {
       : 0;
   }, [allUsers, allSellers, allAdmins]);
 
+  // Tab-specific statistics
+  const tabStats = useMemo(() => {
+    if (activeTab === "users") {
+      const users = allUsers.filter((u) => u.role === "user");
+      const activeUsers = users.filter((u) => u.status === "active").length;
+      const inactiveUsers = users.filter((u) => u.status === "inactive").length;
+      const pendingUsers = users.filter((u) => u.status === "pending").length;
+      const thisMonth = new Date();
+      thisMonth.setDate(1);
+      const newThisMonth = users.filter(
+        (u) => new Date(u.createdAt) >= thisMonth
+      ).length;
+
+      return {
+        total: users.length,
+        active: activeUsers,
+        inactive: inactiveUsers,
+        pending: pendingUsers,
+        newThisMonth: newThisMonth,
+      };
+    } else if (activeTab === "sellers") {
+      const sellers = allSellers.filter((u) => u.role === "seller");
+      const verifiedSellers = sellers.filter(
+        (u) => u.verificationStatus === "verified" || u.onboardingStage === "verified"
+      ).length;
+      const pendingSellers = sellers.filter(
+        (u) => u.verificationStatus === "pending" || u.onboardingStage === "pending_verification"
+      ).length;
+      const rejectedSellers = sellers.filter(
+        (u) => u.verificationStatus === "rejected" || u.onboardingStage === "rejected"
+      ).length;
+      const activeSellers = sellers.filter((u) => u.status === "active").length;
+
+      return {
+        total: sellers.length,
+        verified: verifiedSellers,
+        pending: pendingSellers,
+        rejected: rejectedSellers,
+        active: activeSellers,
+      };
+    } else if (activeTab === "admins") {
+      const admins = allAdmins.filter((u) => u.role === "admin");
+      const activeAdmins = admins.filter((u) => u.status === "active").length;
+      const inactiveAdmins = admins.filter((u) => u.status === "inactive").length;
+      const superAdmins = admins.filter((u) => u.role === "super_admin" || u.permissions?.includes("all")).length;
+
+      return {
+        total: admins.length,
+        active: activeAdmins,
+        inactive: inactiveAdmins,
+        superAdmins: superAdmins,
+      };
+    }
+    return {};
+  }, [activeTab, allUsers, allSellers, allAdmins]);
+
   // Columns configuration
   const columns = {
     users: [
@@ -112,8 +220,8 @@ export default function UsersPage() {
       { Header: "Registration", accessor: "createdAt", Cell: DateCell },
       { Header: "Seller", accessor: "name", Cell: UserCell },
       { Header: "Store", accessor: "shopName" },
-      { Header: "Orders", accessor: "orders" },
-      { Header: "Revenue", accessor: "revenue" },
+      { Header: "Verification", accessor: "verificationStatus", Cell: VerificationStatusCell },
+      { Header: "Orders", accessor: "orderCount", Cell: OrderCountCell },
       { Header: "Last Active", accessor: "lastLogin", Cell: LastActiveCell },
       { Header: "Status", accessor: "status", Cell: StatusCell },
     ],
@@ -159,7 +267,8 @@ export default function UsersPage() {
           lastLogin: user.lastLogin || generateLastLogin(user.createdAt),
         })),
       sellers: allSellers
-        .filter((u) => u.role === "seller")
+        // Sellers from backend are already filtered and paginated
+        // Just map the data structure (no need to filter by role as backend returns only sellers)
         .map((seller) => ({
           ...seller,
           // Ensure id points to _id (MongoDB ObjectId) if _id exists
@@ -176,17 +285,32 @@ export default function UsersPage() {
         })),
     };
 
-    const tabData = data[activeTab] || [];
+    let tabData = data[activeTab] || [];
 
-    return selectedStatus === "all"
-      ? tabData
-      : tabData.filter((item) => item.status === selectedStatus);
+    // Apply status filter (only for users and admins)
+    // For sellers, filtering is done on backend via API params
+    if (activeTab !== "sellers" && selectedStatus !== "all") {
+      tabData = tabData.filter((item) => item.status === selectedStatus);
+    }
+
+    // For sellers, verification status filter is handled by backend API
+    // Frontend filtering removed to avoid double-filtering paginated results
+    // The backend already applies search, sort, and pagination
+
+    return tabData;
   };
 
   const filteredData = getFilteredData();
 
   // Current pagination settings
-  const currentPagination = pagination[activeTab];
+  // For sellers tab, use sellerMeta from hook; otherwise use local pagination
+  const currentPagination = activeTab === "sellers" && sellerMeta 
+    ? { 
+        page: sellerPage, 
+        limit: pagination.sellers.limit, 
+        total: sellerMeta.total || 0 
+      }
+    : pagination[activeTab];
   const totalPages = Math.ceil(
     currentPagination.total / currentPagination.limit
   );
@@ -205,17 +329,27 @@ export default function UsersPage() {
   };
 
   const handleViewDetails = (item) => {
-    // Navigate to user detail page using the user's ID
-    // Prioritize _id (MongoDB ObjectId) over id
-    // The id field should already be set to _id in getFilteredData, but check both for safety
+    console.log('[handleViewDetails] Called with item:', item);
+    console.log('[handleViewDetails] Active tab:', activeTab);
+    
+    // Navigate to detail page based on active tab
     const userId = item._id || item.id;
+    console.log('[handleViewDetails] User ID:', userId);
+    
     if (userId) {
       // Validate that it's not a simple sequential number (like 1, 2, 3)
-      // MongoDB ObjectIds are typically 24 character hex strings, but we'll accept any string longer than 5 chars
-      // or any non-numeric value
       const isNumericId = !isNaN(userId) && parseInt(userId) < 1000;
       if (!isNumericId || (typeof userId === 'string' && userId.length > 5)) {
-        navigate(`users/detail/${userId}`);
+        let path = '';
+        if (activeTab === "sellers") {
+          path = `/dashboard/${PATHS.SELLERDETAIL.replace(':id', userId)}`;
+        } else if (activeTab === "admins") {
+          path = `/dashboard/${PATHS.ADMINDETAIL.replace(':id', userId)}`;
+        } else {
+          path = `/dashboard/${PATHS.USERDETAIL.replace(':id', userId)}`;
+        }
+        console.log('[handleViewDetails] Navigating to:', path);
+        navigate(path);
       } else {
         console.error('Invalid user ID format (appears to be sequential number):', userId, item);
       }
@@ -271,8 +405,56 @@ export default function UsersPage() {
           <input
             type="text"
             placeholder={`Search ${activeTab} by name, email, or vendor...`}
+            value={activeTab === "sellers" ? sellerSearchValue : ""}
+            onChange={(e) => {
+              if (activeTab === "sellers") {
+                setSellerSearchValue(e.target.value);
+              }
+            }}
           />
         </SearchBar>
+
+        {activeTab === "sellers" && (
+          <SortContainer>
+            <SortLabel>Sort:</SortLabel>
+            <SortButton
+              active={sellerSort.startsWith("createdAt")}
+              onClick={() => {
+                const [currentField, currentOrder] = sellerSort.split(":");
+                const newOrder = currentField === "createdAt" && currentOrder === "asc" ? "desc" : "asc";
+                setSellerSort(`createdAt:${newOrder}`);
+                setSellerPage(1);
+                handlePageChange(1);
+              }}
+            >
+              Date {sellerSort === "createdAt:asc" ? "↑" : "↓"}
+            </SortButton>
+            <SortButton
+              active={sellerSort.startsWith("name")}
+              onClick={() => {
+                const [currentField, currentOrder] = sellerSort.split(":");
+                const newOrder = currentField === "name" && currentOrder === "asc" ? "desc" : "asc";
+                setSellerSort(`name:${newOrder}`);
+                setSellerPage(1);
+                handlePageChange(1);
+              }}
+            >
+              Name {sellerSort === "name:asc" ? "↑" : "↓"}
+            </SortButton>
+            <SortButton
+              active={sellerSort.startsWith("shopName")}
+              onClick={() => {
+                const [currentField, currentOrder] = sellerSort.split(":");
+                const newOrder = currentField === "shopName" && currentOrder === "asc" ? "desc" : "asc";
+                setSellerSort(`shopName:${newOrder}`);
+                setSellerPage(1);
+                handlePageChange(1);
+              }}
+            >
+              Shop {sellerSort === "shopName:asc" ? "↑" : "↓"}
+            </SortButton>
+          </SortContainer>
+        )}
 
         <FilterButton onClick={() => setFilterOpen(!filterOpen)}>
           <FaFilter /> Filters
@@ -294,6 +476,21 @@ export default function UsersPage() {
             </Select>
           </FilterGroup>
 
+          {activeTab === "sellers" && (
+            <FilterGroup>
+              <label>Verification Status</label>
+              <Select
+                value={verificationStatusFilter}
+                onChange={(e) => setVerificationStatusFilter(e.target.value)}
+              >
+                <option value="all">All Verification Statuses</option>
+                <option value="pending">Pending Requests</option>
+                <option value="verified">Verified Sellers</option>
+                <option value="rejected">Rejected</option>
+              </Select>
+            </FilterGroup>
+          )}
+
           <FilterGroup>
             <label>Registration Date</label>
             <DateRangeSelector>
@@ -307,51 +504,158 @@ export default function UsersPage() {
         </FiltersPanel>
       )}
 
+      {/* Tab-specific Stats Cards */}
+      {activeTab === "users" && (
       <StatsSummary>
         <StatCard>
           <StatIcon style={{ background: "#4361EE20", color: "#4361EE" }}>
             <FaUserAlt />
           </StatIcon>
           <StatInfo>
-            <StatValue>{allUsers.length}</StatValue>
+              <StatValue>{tabStats.total || 0}</StatValue>
             <StatLabel>Total Users</StatLabel>
           </StatInfo>
         </StatCard>
 
         <StatCard>
-          <StatIcon style={{ background: "#F8961E20", color: "#F8961E" }}>
+            <StatIcon style={{ background: "#10B98120", color: "#10B981" }}>
+              <FaCheckCircle />
+            </StatIcon>
+            <StatInfo>
+              <StatValue>{tabStats.active || 0}</StatValue>
+              <StatLabel>Active Users</StatLabel>
+            </StatInfo>
+          </StatCard>
+
+          <StatCard>
+            <StatIcon style={{ background: "#F59E0B20", color: "#F59E0B" }}>
+              <FaClock />
+            </StatIcon>
+            <StatInfo>
+              <StatValue>{tabStats.pending || 0}</StatValue>
+              <StatLabel>Pending</StatLabel>
+            </StatInfo>
+          </StatCard>
+
+          <StatCard>
+            <StatIcon style={{ background: "#EF444420", color: "#EF4444" }}>
+              <FaTimesCircle />
+            </StatIcon>
+            <StatInfo>
+              <StatValue>{tabStats.inactive || 0}</StatValue>
+              <StatLabel>Inactive</StatLabel>
+            </StatInfo>
+          </StatCard>
+
+          <StatCard>
+            <StatIcon style={{ background: "#8B5CF620", color: "#8B5CF6" }}>
+              <FaUserPlus />
+            </StatIcon>
+            <StatInfo>
+              <StatValue>{tabStats.newThisMonth || 0}</StatValue>
+              <StatLabel>New This Month</StatLabel>
+            </StatInfo>
+          </StatCard>
+        </StatsSummary>
+      )}
+
+      {activeTab === "sellers" && (
+        <StatsSummary>
+          <StatCard>
+            <StatIcon style={{ background: "#4361EE20", color: "#4361EE" }}>
             <FaStore />
           </StatIcon>
           <StatInfo>
-            <StatValue>
-              {allSellers.filter((u) => u.role === "seller").length}
-            </StatValue>
+              <StatValue>{tabStats.total || 0}</StatValue>
+              <StatLabel>Total Sellers</StatLabel>
+            </StatInfo>
+          </StatCard>
+
+          <StatCard>
+            <StatIcon style={{ background: "#10B98120", color: "#10B981" }}>
+              <FaCheckCircle />
+            </StatIcon>
+            <StatInfo>
+              <StatValue>{tabStats.verified || 0}</StatValue>
+              <StatLabel>Verified</StatLabel>
+            </StatInfo>
+          </StatCard>
+
+          <StatCard>
+            <StatIcon style={{ background: "#F59E0B20", color: "#F59E0B" }}>
+              <FaClock />
+            </StatIcon>
+            <StatInfo>
+              <StatValue>{tabStats.pending || 0}</StatValue>
+              <StatLabel>Pending Verification</StatLabel>
+            </StatInfo>
+          </StatCard>
+
+          <StatCard>
+            <StatIcon style={{ background: "#EF444420", color: "#EF4444" }}>
+              <FaTimesCircle />
+            </StatIcon>
+            <StatInfo>
+              <StatValue>{tabStats.rejected || 0}</StatValue>
+              <StatLabel>Rejected</StatLabel>
+            </StatInfo>
+          </StatCard>
+
+          <StatCard>
+            <StatIcon style={{ background: "#3B82F620", color: "#3B82F6" }}>
+              <FaChartLine />
+            </StatIcon>
+            <StatInfo>
+              <StatValue>{tabStats.active || 0}</StatValue>
             <StatLabel>Active Sellers</StatLabel>
           </StatInfo>
         </StatCard>
+        </StatsSummary>
+      )}
 
+      {activeTab === "admins" && (
+        <StatsSummary>
         <StatCard>
-          <StatIcon style={{ background: "#4CC9F020", color: "#4CC9F0" }}>
+            <StatIcon style={{ background: "#4361EE20", color: "#4361EE" }}>
             <FaUserShield />
           </StatIcon>
           <StatInfo>
-            <StatValue>
-              {allAdmins.filter((u) => u.role === "admin").length}
-            </StatValue>
-            <StatLabel>Administrators</StatLabel>
+              <StatValue>{tabStats.total || 0}</StatValue>
+              <StatLabel>Total Admins</StatLabel>
           </StatInfo>
         </StatCard>
 
         <StatCard>
-          <StatIcon style={{ background: "#F7258520", color: "#F72585" }}>
-            <FaChartLine />
+            <StatIcon style={{ background: "#10B98120", color: "#10B981" }}>
+              <FaCheckCircle />
           </StatIcon>
           <StatInfo>
-            <StatValue>{activeRate}%</StatValue>
-            <StatLabel>Active Rate</StatLabel>
+              <StatValue>{tabStats.active || 0}</StatValue>
+              <StatLabel>Active Admins</StatLabel>
+            </StatInfo>
+          </StatCard>
+
+          <StatCard>
+            <StatIcon style={{ background: "#EF444420", color: "#EF4444" }}>
+              <FaTimesCircle />
+            </StatIcon>
+            <StatInfo>
+              <StatValue>{tabStats.inactive || 0}</StatValue>
+              <StatLabel>Inactive</StatLabel>
+            </StatInfo>
+          </StatCard>
+
+          <StatCard>
+            <StatIcon style={{ background: "#8B5CF620", color: "#8B5CF6" }}>
+              <FaUserShield />
+            </StatIcon>
+            <StatInfo>
+              <StatValue>{tabStats.superAdmins || 0}</StatValue>
+              <StatLabel>Super Admins</StatLabel>
           </StatInfo>
         </StatCard>
       </StatsSummary>
+      )}
 
       {/* Dynamic Table */}
       <Table
@@ -362,7 +666,7 @@ export default function UsersPage() {
         onViewDetails={handleViewDetails}
         actionMenu={actionMenu}
         setActionMenu={setActionMenu}
-        actionType="iconLink"
+        actionType={activeTab === "sellers" ? "menu" : "iconLink"}
         actionLinkPath={(item) => {
           const userId = item._id || item.id;
           // Generate different paths based on active tab
@@ -391,6 +695,259 @@ export default function UsersPage() {
           setActiveTab={setActiveTab}
         />
       )}
+
+      {/* Reject Payout Modal */}
+      {showRejectPayoutModal && sellerToRejectPayout && (
+        <ModalOverlay onClick={() => setShowRejectPayoutModal(false)}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
+            <ModalHeader>
+              <h3>Reject Payout Verification</h3>
+              <CloseButton onClick={() => {
+                setShowRejectPayoutModal(false);
+                setSellerToRejectPayout(null);
+                setPayoutRejectionReason("");
+              }}>&times;</CloseButton>
+            </ModalHeader>
+            <ModalBody>
+              <p><strong>Seller:</strong> {sellerToRejectPayout.shopName || sellerToRejectPayout.name}</p>
+              <p><strong>Email:</strong> {sellerToRejectPayout.email}</p>
+              <label style={{ display: 'block', marginTop: '1rem', marginBottom: '0.5rem', fontWeight: 600 }}>
+                Rejection Reason *
+              </label>
+              <textarea
+                value={payoutRejectionReason}
+                onChange={(e) => setPayoutRejectionReason(e.target.value)}
+                placeholder="Enter reason for rejecting payout verification..."
+                rows="4"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontFamily: 'inherit',
+                  resize: 'vertical',
+                }}
+                required
+              />
+            </ModalBody>
+            <ModalActions>
+              <ActionButton
+                variant="danger"
+                onClick={async () => {
+                  if (!payoutRejectionReason.trim()) {
+                    toast.error('Please provide a reason for rejection');
+                    return;
+                  }
+                  try {
+                    await rejectPayout.mutateAsync({
+                      sellerId: sellerToRejectPayout._id || sellerToRejectPayout.id,
+                      reason: payoutRejectionReason.trim(),
+                    });
+                    toast.success('Payout verification rejected');
+                    setShowRejectPayoutModal(false);
+                    setSellerToRejectPayout(null);
+                    setPayoutRejectionReason("");
+                  } catch (error) {
+                    toast.error(error.response?.data?.message || 'Failed to reject payout verification');
+                  }
+                }}
+                disabled={rejectPayout.isPending || !payoutRejectionReason.trim()}
+              >
+                {rejectPayout.isPending ? 'Rejecting...' : 'Confirm Rejection'}
+              </ActionButton>
+              <ActionButton variant="secondary" onClick={() => {
+                setShowRejectPayoutModal(false);
+                setSellerToRejectPayout(null);
+                setPayoutRejectionReason("");
+              }}>
+                Cancel
+              </ActionButton>
+            </ModalActions>
+          </ModalContent>
+        </ModalOverlay>
+      )}
+
+      {/* Reject Seller Modal */}
+      {showRejectModal && sellerToReject && (
+        <ModalOverlay onClick={() => setShowRejectModal(false)}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
+            <ModalHeader>
+              <h3>Reject Seller Verification</h3>
+              <CloseButton onClick={() => {
+                setShowRejectModal(false);
+                setSellerToReject(null);
+                setRejectionReason("");
+              }}>&times;</CloseButton>
+            </ModalHeader>
+            <ModalBody>
+              <p><strong>Seller:</strong> {sellerToReject.shopName || sellerToReject.name}</p>
+              <p><strong>Email:</strong> {sellerToReject.email}</p>
+              <label style={{ display: 'block', marginTop: '1rem', marginBottom: '0.5rem', fontWeight: 600 }}>
+                Rejection Reason *
+              </label>
+              <textarea
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="Enter reason for rejecting seller verification..."
+                rows="4"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontFamily: 'inherit',
+                  resize: 'vertical',
+                }}
+                required
+              />
+            </ModalBody>
+            <ModalActions>
+              <ActionButton
+                variant="danger"
+                onClick={async () => {
+                  if (!rejectionReason.trim()) {
+                    toast.error('Please provide a reason for rejection');
+                    return;
+                  }
+                  try {
+                    await rejectVerification.mutateAsync({
+                      sellerId: sellerToReject._id || sellerToReject.id,
+                      reason: rejectionReason.trim(),
+                    });
+                    toast.success('Seller verification rejected');
+                    setShowRejectModal(false);
+                    setSellerToReject(null);
+                    setRejectionReason("");
+                  } catch (error) {
+                    toast.error(error.response?.data?.message || 'Failed to reject seller verification');
+                  }
+                }}
+                disabled={rejectVerification.isPending || !rejectionReason.trim()}
+              >
+                {rejectVerification.isPending ? 'Rejecting...' : 'Confirm Rejection'}
+              </ActionButton>
+              <ActionButton variant="secondary" onClick={() => {
+                setShowRejectModal(false);
+                setSellerToReject(null);
+                setRejectionReason("");
+              }}>
+                Cancel
+              </ActionButton>
+            </ModalActions>
+          </ModalContent>
+        </ModalOverlay>
+      )}
+
+      {/* Seller Details Modal - No longer used, navigation goes to SellerDetailPage instead */}
+
+      {/* Payout Verification Modal */}
+      {selectedSellerForPayout && (
+        <PayoutVerificationModal
+          seller={selectedSellerForPayout}
+          onClose={() => setSelectedSellerForPayout(null)}
+        />
+      )}
+
+      {/* Reset Balance Modal */}
+      {showResetBalanceModal && sellerToResetBalance && (
+        <ModalOverlay onClick={() => setShowResetBalanceModal(false)}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
+            <ModalHeader>
+              <h3>Reset Seller Balance</h3>
+              <CloseButton onClick={() => {
+                setShowResetBalanceModal(false);
+                setSellerToResetBalance(null);
+                setResetBalance("");
+                setResetBalanceReason("");
+              }}>&times;</CloseButton>
+            </ModalHeader>
+            <ModalBody>
+              <p><strong>Seller:</strong> {sellerToResetBalance.shopName || sellerToResetBalance.name}</p>
+              <p><strong>Email:</strong> {sellerToResetBalance.email}</p>
+              <div style={{ marginTop: '1.5rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
+                  New Balance (GH₵) *
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={resetBalance}
+                  onChange={(e) => setResetBalance(e.target.value)}
+                  placeholder="0.00"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #ddd',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontFamily: 'inherit',
+                  }}
+                  required
+                />
+              </div>
+              <div style={{ marginTop: '1rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
+                  Reason (Optional)
+                </label>
+                <textarea
+                  value={resetBalanceReason}
+                  onChange={(e) => setResetBalanceReason(e.target.value)}
+                  placeholder="Enter reason for resetting balance..."
+                  rows="3"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #ddd',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontFamily: 'inherit',
+                    resize: 'vertical',
+                  }}
+                />
+              </div>
+            </ModalBody>
+            <ModalActions>
+              <ActionButton
+                variant="warning"
+                onClick={async () => {
+                  if (!resetBalance || parseFloat(resetBalance) < 0) {
+                    toast.error('Please enter a valid balance amount');
+                    return;
+                  }
+                  try {
+                    await resetBalanceMutation.mutateAsync({
+                      sellerId: sellerToResetBalance._id || sellerToResetBalance.id,
+                      balance: parseFloat(resetBalance),
+                      reason: resetBalanceReason.trim() || undefined,
+                    });
+                    toast.success('Seller balance reset successfully');
+                    setShowResetBalanceModal(false);
+                    setSellerToResetBalance(null);
+                    setResetBalance("");
+                    setResetBalanceReason("");
+                  } catch (error) {
+                    toast.error(error.response?.data?.message || 'Failed to reset seller balance');
+                  }
+                }}
+                disabled={resetBalanceMutation.isPending || !resetBalance}
+              >
+                {resetBalanceMutation.isPending ? 'Resetting...' : 'Confirm Reset'}
+              </ActionButton>
+              <ActionButton variant="secondary" onClick={() => {
+                setShowResetBalanceModal(false);
+                setSellerToResetBalance(null);
+                setResetBalance("");
+                setResetBalanceReason("");
+              }}>
+                Cancel
+              </ActionButton>
+            </ModalActions>
+          </ModalContent>
+        </ModalOverlay>
+      )}
       <Pagination>
         <PaginationButton
           disabled={currentPagination.page === 1}
@@ -399,9 +956,23 @@ export default function UsersPage() {
           Previous
         </PaginationButton>
 
-        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-          const pageNum = i + 1;
-          return (
+        {(() => {
+          // Calculate page numbers to display (show 5 pages around current page)
+          const maxPagesToShow = 5;
+          let startPage = Math.max(1, currentPagination.page - Math.floor(maxPagesToShow / 2));
+          let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+          
+          // Adjust start if we're near the end
+          if (endPage - startPage < maxPagesToShow - 1) {
+            startPage = Math.max(1, endPage - maxPagesToShow + 1);
+          }
+          
+          const pagesToShow = [];
+          for (let i = startPage; i <= endPage; i++) {
+            pagesToShow.push(i);
+          }
+          
+          return pagesToShow.map((pageNum) => (
             <PaginationButton
               key={pageNum}
               active={pageNum === currentPagination.page}
@@ -409,8 +980,8 @@ export default function UsersPage() {
             >
               {pageNum}
             </PaginationButton>
-          );
-        })}
+          ));
+        })()}
 
         {totalPages > 5 && (
           <PageInfo>
@@ -475,24 +1046,6 @@ const TitleSection = styled.div`
   }
 `;
 
-const ActionButton = styled.button`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 20px;
-  background: #4361ee;
-  color: white;
-  border: none;
-  border-radius: 10px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s;
-
-  &:hover {
-    background: #3a56d4;
-    transform: translateY(-2px);
-  }
-`;
 
 const TabsContainer = styled.div`
   display: flex;
@@ -733,26 +1286,267 @@ const ItemsPerPageSelect = styled.select`
   cursor: pointer;
 `;
 
-// Modify existing PaginationButton for disabled state
-// const PaginationButton = styled.button`
-//   min-width: 40px;
-//   padding: 0 15px;
-//   height: 40px;
-//   border-radius: 10px;
-//   border: none;
-//   background: ${({ active }) => (active ? "#4361ee" : "white")};
-//   color: ${({ active, disabled }) =>
-//     active ? "white" : disabled ? "#adb5bd" : "#2b2d42"};
-//   display: flex;
-//   align-items: center;
-//   justify-content: center;
-//   cursor: ${({ disabled }) => (disabled ? "not-allowed" : "pointer")};
-//   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-//   font-weight: 500;
-//   opacity: ${({ disabled }) => (disabled ? 0.6 : 1)};
+// Reject Modal Styles
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+`;
 
-//   &:hover {
-//     background: ${({ active, disabled }) =>
-//       disabled ? "white" : active ? "#3a56d4" : "#f0f2ff"};
-//   }
-// `;
+const ModalContent = styled.div`
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+`;
+
+const ModalHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #e9ecef;
+  padding-bottom: 1rem;
+
+  h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: #2b2d42;
+  }
+`;
+
+const CloseButton = styled.button`
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #666;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+
+  &:hover {
+    background: #f8f9fa;
+  }
+`;
+
+const ModalBody = styled.div`
+  margin: 1.5rem 0;
+
+  p {
+    margin: 0.5rem 0;
+    color: #666;
+  }
+`;
+
+const ModalActions = styled.div`
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+  justify-content: flex-end;
+`;
+
+const ActionButtonsContainer = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+`;
+
+const ApproveButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: #059669;
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const RejectButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: #dc2626;
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const ViewDetailsButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: #4361ee;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: #3a56d4;
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const VerifyPayoutButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: #059669;
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const ActionButton = styled.button`
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  ${({ variant }) => {
+    switch (variant) {
+      case 'danger':
+        return `
+          background: #ef4444;
+          color: white;
+          &:hover:not(:disabled) {
+            background: #dc2626;
+          }
+        `;
+      case 'secondary':
+        return `
+          background: #e9ecef;
+          color: #495057;
+          &:hover {
+            background: #dee2e6;
+          }
+        `;
+      case 'warning':
+        return `
+          background: #f59e0b;
+          color: white;
+          &:hover:not(:disabled) {
+            background: #d97706;
+          }
+        `;
+      default:
+        return `
+          background: #4361ee;
+          color: white;
+          &:hover {
+            background: #3a56d4;
+          }
+        `;
+    }
+  }}
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const SortContainer = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+`;
+
+const SortLabel = styled.span`
+  color: #666;
+  font-size: 0.9rem;
+  font-weight: 500;
+`;
+
+const SortButton = styled.button`
+  padding: 0.5rem 1rem;
+  border: 1px solid ${(props) => (props.active ? "#4361ee" : "#ddd")};
+  border-radius: 6px;
+  background: ${(props) => (props.active ? "#4361ee20" : "white")};
+  color: ${(props) => (props.active ? "#4361ee" : "#666")};
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.9rem;
+  font-weight: 500;
+
+  &:hover {
+    border-color: #4361ee;
+    color: #4361ee;
+    background: #4361ee10;
+  }
+`;

@@ -47,7 +47,15 @@ export const useEazShop = () => {
           return [];
         } catch (error) {
           console.error('❌ [useEazShop] Failed to fetch EazShop products:', error);
-          throw new Error('Failed to load EazShop products');
+          const errorMessage = error?.response?.data?.message || error?.message || 'Failed to load EazShop products';
+          const statusCode = error?.response?.status;
+          console.error('❌ [useEazShop] Error details:', {
+            message: errorMessage,
+            status: statusCode,
+            url: error?.config?.url,
+            response: error?.response?.data,
+          });
+          throw new Error(errorMessage);
         }
       },
       staleTime: 1000 * 60 * 5,

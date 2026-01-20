@@ -17,11 +17,11 @@ const getBaseURL = () => {
     // Admin subdomain handling
     const subdomain = hostParts[0];
     if (subdomain === "admin") {
-      return "https://eazworld.com/api/v1";
+      return "https://api.saiisai.com/api/v1";
     }
 
     // Default production API
-    return "https://eazworld.com/api/v1";
+    return "https://api.saiisai.com/api/v1";
   }
 
   return "http://localhost:4000/api/v1";
@@ -79,43 +79,31 @@ api.interceptors.request.use((config) => {
     (route) => normalizedPath === normalizePath(route)
   );
 
-  // Determine authentication token based on stored role
-  const role = localStorage.getItem("current_role") || "admin";
-  const tokenKey =
-    role === "admin"
-      ? "admin_token"
-      : role === "seller"
-      ? "seller_token"
-      : "token";
-
-  const token = localStorage.getItem(tokenKey);
-
-  // IMPORTANT: Even for public routes, send the token if available
-  // This allows optional authentication middleware on the backend to identify admins
-  // and show them all products (not just approved ones)
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-    config.headers["X-User-Role"] = role;
-    
-    if (isPublicRoute) {
-      console.log(`Public route: ${normalizedPath}, but sending token for optional auth (role: ${role})`);
-    }
-  } else {
-    if (isPublicRoute) {
-      console.log(`Public route: ${normalizedPath}, no token available`);
-      return config;
-    } else {
-      console.error(`No authentication token found for protected endpoint. Token key: ${tokenKey}, Role: ${role}`);
-      console.error("Available localStorage keys:", Object.keys(localStorage));
-      // Don't reject immediately - let the server handle 401
-      // This allows the request to go through so we can see the actual error
-    }
-  }
-
-  // Add subdomain information for seller context
-  if (role === "admin") {
+  // SECURITY: Cookie-only authentication - no token storage
+  // Cookies are automatically sent via withCredentials: true
+  // Backend reads from req.cookies.admin_jwt (or seller_jwt/main_jwt based on route)
+  
+  // Add platform header (non-sensitive metadata)
+  config.headers["x-platform"] = "eazadmin";
+  
+  // Add subdomain information for admin context (non-sensitive metadata)
+  if (typeof window !== "undefined") {
     config.headers["X-admin-Subdomain"] =
       window.location.hostname.split(".")[0] || "default";
+  }
+  
+  // Use Vite's import.meta.env.DEV or fallback to __DEV__ if polyfilled
+  const isDev = import.meta.env.DEV || (typeof __DEV__ !== "undefined" && __DEV__);
+  
+  if (isPublicRoute) {
+    if (isDev) {
+      console.log(`Public route: ${normalizedPath}, cookie will be sent automatically if available`);
+    }
+  } else {
+    // Protected route - cookie will be sent automatically via withCredentials: true
+    if (isDev) {
+      console.debug(`Cookie will be sent automatically for ${normalizedPath}`);
+    }
   }
 
   return config;

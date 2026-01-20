@@ -5,7 +5,9 @@ import { LoadingSpinner } from '../shared/components/LoadingSpinner';
 
 const ProtectedRoutes = ({ children }) => {
   const { adminData, isLoading, error } = useAuth();
-  const token = localStorage.getItem("admin_token");
+
+  // SECURITY: Cookie-only authentication - no token check needed
+  // Backend validates session via HTTP-only cookie automatically
 
   // Extract admin data from nested response structure
   // Backend returns: { status: 'success', data: { data: <admin> } }
@@ -21,12 +23,6 @@ const ProtectedRoutes = ({ children }) => {
     
     return extracted || null;
   }, [adminData]);
-
-  // If no token, immediately redirect to login
-  if (!token) {
-    console.log("[ProtectedRoute] No token found, redirecting to login");
-    return <Navigate to="/" replace />;
-  }
 
   // Show loading spinner while fetching admin data
   if (isLoading) {

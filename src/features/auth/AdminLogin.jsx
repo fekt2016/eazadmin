@@ -21,9 +21,13 @@ export default function AdminLogin() {
       return;
     }
     const response = await login.mutateAsync(state);
-    localStorage.setItem("admin_token", response.data.token);
-
-    // Set role context to admin
+    
+    // SECURITY: Token is in HTTP-only cookie, NOT in response
+    // Backend sets cookie automatically - no token storage needed
+    // Only store non-sensitive role preference
+    if (typeof window !== "undefined") {
+      localStorage.setItem("current_role", "admin");
+    }
 
     navigate("/dashboard");
   };

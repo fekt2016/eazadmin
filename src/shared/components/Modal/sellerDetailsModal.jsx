@@ -2,17 +2,19 @@ import { useState } from "react";
 import styled from "styled-components";
 import useSellerAdmin from '../../hooks/useSellerAdmin';
 import { useGetSellerBalance, useResetSellerBalance, useResetLockedBalance } from '../../hooks/useSellerBalance';
-import { FaWallet, FaUndo, FaLock } from "react-icons/fa";
+import { FaWallet, FaUndo, FaLock, FaCheckCircle, FaTimesCircle, FaBuilding, FaMobileAlt } from "react-icons/fa";
 import { toast } from "react-toastify";
 
 const SellerDetailsModal = ({ seller, onClose }) => {
   // Always call hooks at the top level - never conditionally
-  const { updateStatus } = useSellerAdmin();
+  const { updateStatus, approveVerification, rejectVerification, approvePayout, rejectPayout } = useSellerAdmin();
   const [showResetModal, setShowResetModal] = useState(false);
   const [showResetLockedModal, setShowResetLockedModal] = useState(false);
+  const [showRejectPayoutModal, setShowRejectPayoutModal] = useState(false);
   const [resetBalance, setResetBalance] = useState("");
   const [resetReason, setResetReason] = useState("");
   const [resetLockedReason, setResetLockedReason] = useState("");
+  const [payoutRejectionReason, setPayoutRejectionReason] = useState("");
   
   // Use seller?._id to safely get the ID, hook will handle undefined
   const { data: balanceData, isLoading: isBalanceLoading } = useGetSellerBalance(seller?._id);
@@ -31,20 +33,73 @@ const SellerDetailsModal = ({ seller, onClose }) => {
   console.log('[SellerDetailsModal] Seller balance:', sellerBalance);
   console.log('[SellerDetailsModal] Locked balance:', sellerBalance?.lockedBalance || seller?.lockedBalance);
 
-  const handleStatusChange = async (newStatus) => {
-    console.log("new:", newStatus);
-    console.log("sellerId:", seller._id);
+  // Check if seller has all required documents
+  const hasAllRequiredDocuments = () => {
+    const docs = seller.verificationDocuments || {};
+    
+    // Check business certificate
+    const hasBusinessCert = docs.businessCert && 
+      (typeof docs.businessCert === 'string' || (docs.businessCert && docs.businessCert.url));
+    
+    // Check ID proof
+    const hasIdProof = docs.idProof && 
+      (typeof docs.idProof === 'string' || (docs.idProof && docs.idProof.url));
+    
+    // Check address proof
+    const hasAddressProof = docs.addresProof && 
+      (typeof docs.addresProof === 'string' || (docs.addresProof && docs.addresProof.url));
+    
+    return hasBusinessCert && hasIdProof && hasAddressProof;
+  };
+
+  // Get missing documents list
+  const getMissingDocuments = () => {
+    const missing = [];
+    const docs = seller.verificationDocuments || {};
+    
+    if (!docs.businessCert || (typeof docs.businessCert !== 'string' && (!docs.businessCert || !docs.businessCert.url))) {
+      missing.push('Business Certificate');
+    }
+    if (!docs.idProof || (typeof docs.idProof !== 'string' && (!docs.idProof || !docs.idProof.url))) {
+      missing.push('ID Proof');
+    }
+    if (!docs.addresProof || (typeof docs.addresProof !== 'string' && (!docs.addresProof || !docs.addresProof.url))) {
+      missing.push('Address Proof');
+    }
+    
+    return missing;
+  };
+
+  // Handle seller verification approval (document verification)
+  // This is called when admin approves seller after they've uploaded all required documents
+  const handleApproveVerification = async () => {
+    // Frontend validation: Check if all documents are uploaded
+    if (!hasAllRequiredDocuments()) {
+      const missingDocs = getMissingDocuments();
+      toast.error(`Cannot approve seller verification. Missing required documents: ${missingDocs.join(', ')}`);
+      return;
+    }
+
+    // Check if email is verified
+    if (!seller.verification?.emailVerified) {
+      toast.error('Cannot approve seller verification. Email must be verified first.');
+      return;
+    }
 
     try {
-      await updateStatus.mutateAsync({
-        sellerId: seller._id,
-        status: newStatus,
-      });
+      await approveVerification.mutateAsync(seller._id);
+      toast.success('Seller verification approved successfully');
       onClose();
     } catch (error) {
-      console.error("Error updating status:", error);
-      // Handle error (e.g., show a notification)
+      console.error("Error approving verification:", error);
+      toast.error(error.response?.data?.message || 'Failed to approve seller verification');
     }
+  };
+
+  // Handle seller verification rejection
+  const handleRejectVerification = () => {
+    // For now, show a message - you can add a reject modal similar to payout rejection
+    toast.info('Please use the reject option from the action menu to provide a rejection reason');
   };
 
   return (
@@ -64,19 +119,48 @@ const SellerDetailsModal = ({ seller, onClose }) => {
           <DetailItem>
             <Label>Verification Documents:</Label>
             <Documents>
-              <DocumentLink
-                href={seller.verificationDocuments?.idProof}
-                target="_blank"
-              >
-                ID Proof
-              </DocumentLink>
-              <DocumentLink
-                href={seller.verificationDocuments?.addresProof}
-                target="_blank"
-              >
-                Address Proof
-              </DocumentLink>
+              {seller.verificationDocuments?.businessCert ? (
+                <DocumentLink
+                  href={typeof seller.verificationDocuments.businessCert === 'string' 
+                    ? seller.verificationDocuments.businessCert 
+                    : seller.verificationDocuments.businessCert.url}
+                  target="_blank"
+                >
+                  Business Certificate ✓
+                </DocumentLink>
+              ) : (
+                <DocumentMissing>Business Certificate ✗ (Missing)</DocumentMissing>
+              )}
+              {seller.verificationDocuments?.idProof ? (
+                <DocumentLink
+                  href={typeof seller.verificationDocuments.idProof === 'string' 
+                    ? seller.verificationDocuments.idProof 
+                    : seller.verificationDocuments.idProof.url}
+                  target="_blank"
+                >
+                  ID Proof ✓
+                </DocumentLink>
+              ) : (
+                <DocumentMissing>ID Proof ✗ (Missing)</DocumentMissing>
+              )}
+              {seller.verificationDocuments?.addresProof ? (
+                <DocumentLink
+                  href={typeof seller.verificationDocuments.addresProof === 'string' 
+                    ? seller.verificationDocuments.addresProof 
+                    : seller.verificationDocuments.addresProof.url}
+                  target="_blank"
+                >
+                  Address Proof ✓
+                </DocumentLink>
+              ) : (
+                <DocumentMissing>Address Proof ✗ (Missing)</DocumentMissing>
+              )}
             </Documents>
+            {!hasAllRequiredDocuments() && (
+              <DocumentWarning>
+                ⚠️ All documents must be uploaded before approval
+              </DocumentWarning>
+            )}
           </DetailItem>
 
           <DetailItem>
@@ -118,21 +202,104 @@ const SellerDetailsModal = ({ seller, onClose }) => {
               </>
             )}
           </DetailItem>
+
+          {/* Payout Information */}
+          <DetailItem>
+            <Label>Payout Information:</Label>
+            {seller.payoutStatus ? (
+              <>
+                <Value>
+                  <PayoutStatusBadge $status={seller.payoutStatus}>
+                    {seller.payoutStatus === 'verified' && <FaCheckCircle style={{ marginRight: '0.5rem' }} />}
+                    {seller.payoutStatus === 'rejected' && <FaTimesCircle style={{ marginRight: '0.5rem' }} />}
+                    {seller.payoutStatus === 'pending' && <FaWallet style={{ marginRight: '0.5rem' }} />}
+                    Payout Status: {seller.payoutStatus.toUpperCase()}
+                  </PayoutStatusBadge>
+                </Value>
+                {seller.payoutRejectionReason && (
+                  <Value style={{ color: '#dc3545', marginTop: '0.5rem' }}>
+                    <strong>Rejection Reason:</strong> {seller.payoutRejectionReason}
+                  </Value>
+                )}
+                {seller.payoutVerifiedAt && (
+                  <Value style={{ color: '#666', marginTop: '0.5rem', fontSize: '0.9rem' }}>
+                    Verified on: {new Date(seller.payoutVerifiedAt).toLocaleDateString()}
+                  </Value>
+                )}
+              </>
+            ) : (
+              <Value style={{ color: '#999' }}>No payout information available</Value>
+            )}
+          </DetailItem>
+
+          {/* Payment Methods */}
+          {(seller.paymentMethods?.bankAccount || seller.paymentMethods?.mobileMoney) && (
+            <DetailItem>
+              <Label>Payment Methods:</Label>
+              {seller.paymentMethods?.bankAccount && (
+                <Value style={{ marginBottom: '0.5rem' }}>
+                  <PaymentMethodCard>
+                    <FaBuilding style={{ marginRight: '0.5rem', color: '#007bff' }} />
+                    <div>
+                      <strong>Bank Account</strong>
+                      <div style={{ fontSize: '0.9rem', color: '#666', marginTop: '0.25rem' }}>
+                        {seller.paymentMethods.bankAccount.accountName}
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: '#999', marginTop: '0.25rem' }}>
+                        {seller.paymentMethods.bankAccount.accountNumber} | {seller.paymentMethods.bankAccount.bankName}
+                      </div>
+                    </div>
+                  </PaymentMethodCard>
+                </Value>
+              )}
+              {seller.paymentMethods?.mobileMoney && (
+                <Value>
+                  <PaymentMethodCard>
+                    <FaMobileAlt style={{ marginRight: '0.5rem', color: '#28a745' }} />
+                    <div>
+                      <strong>Mobile Money ({seller.paymentMethods.mobileMoney.network || 'Unknown'})</strong>
+                      <div style={{ fontSize: '0.9rem', color: '#666', marginTop: '0.25rem' }}>
+                        {seller.paymentMethods.mobileMoney.accountName || 'N/A'}
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: '#999', marginTop: '0.25rem' }}>
+                        {seller.paymentMethods.mobileMoney.phone}
+                      </div>
+                    </div>
+                  </PaymentMethodCard>
+                </Value>
+              )}
+            </DetailItem>
+          )}
         </DetailsSection>
 
         <ActionGroup>
-          <ActionButton
-            variant="success"
-            onClick={() => handleStatusChange("active")}
-          >
-            Approve
-          </ActionButton>
-          <ActionButton
-            variant="danger"
-            onClick={() => handleStatusChange("deactive")}
-          >
-            Reject
-          </ActionButton>
+          {/* Hide approve/reject buttons if seller is already verified */}
+          {/* Show buttons only if seller is pending or rejected (not verified) */}
+          {/* Seller Document Verification - Approve/Reject buttons */}
+          {/* This approves the seller after they've uploaded all required documents (businessCert, idProof, addresProof) */}
+          {/* Backend will check: email verified + all documents uploaded before approving */}
+          {(seller.verificationStatus === 'pending' || !seller.verificationStatus || seller.verificationStatus === 'rejected') && 
+           (seller.onboardingStage !== 'verified') && (
+            <>
+              <ActionButton
+                variant="success"
+                onClick={handleApproveVerification}
+                disabled={approveVerification.isPending || !hasAllRequiredDocuments() || !seller.verification?.emailVerified}
+                title={!hasAllRequiredDocuments() ? `Missing documents: ${getMissingDocuments().join(', ')}` : !seller.verification?.emailVerified ? 'Email must be verified' : ''}
+              >
+                <FaCheckCircle style={{ marginRight: '0.5rem' }} />
+                {approveVerification.isPending ? 'Approving...' : 'Approve Verification'}
+              </ActionButton>
+              <ActionButton
+                variant="danger"
+                onClick={handleRejectVerification}
+                disabled={rejectVerification.isPending}
+              >
+                <FaTimesCircle style={{ marginRight: '0.5rem' }} />
+                Reject Verification
+              </ActionButton>
+            </>
+          )}
           <ActionButton
             variant="warning"
             onClick={() => setShowResetModal(true)}
@@ -150,6 +317,49 @@ const SellerDetailsModal = ({ seller, onClose }) => {
               Reset Locked Balance (GH₵{(sellerBalance?.lockedBalance || seller?.lockedBalance || 0).toFixed(2)})
             </ActionButton>
           )}
+          
+          {/* Payout Verification Actions */}
+          {seller.payoutStatus === 'pending' && (seller.paymentMethods?.bankAccount || seller.paymentMethods?.mobileMoney) && (
+            <>
+              <ActionButton
+                variant="success"
+                onClick={async () => {
+                  try {
+                    // Determine payment method
+                    const paymentMethod = seller.paymentMethods?.bankAccount 
+                      ? 'bank' 
+                      : seller.paymentMethods?.mobileMoney?.network === 'MTN' 
+                        ? 'mtn_momo'
+                        : seller.paymentMethods?.mobileMoney?.network === 'Vodafone'
+                          ? 'vodafone_cash'
+                          : 'airtel_tigo_money';
+                    
+                    await approvePayout.mutateAsync({
+                      sellerId: seller._id,
+                      paymentMethod,
+                    });
+                    toast.success('Payout verification approved successfully');
+                    onClose();
+                  } catch (error) {
+                    toast.error(error.response?.data?.message || 'Failed to approve payout verification');
+                  }
+                }}
+                disabled={approvePayout.isPending}
+              >
+                <FaCheckCircle style={{ marginRight: '0.5rem' }} />
+                {approvePayout.isPending ? 'Approving...' : 'Approve Payout'}
+              </ActionButton>
+              <ActionButton
+                variant="danger"
+                onClick={() => setShowRejectPayoutModal(true)}
+                disabled={rejectPayout.isPending}
+              >
+                <FaTimesCircle style={{ marginRight: '0.5rem' }} />
+                Reject Payout
+              </ActionButton>
+            </>
+          )}
+          
           <ActionButton variant="secondary" onClick={onClose}>
             Cancel
           </ActionButton>
@@ -220,6 +430,72 @@ const SellerDetailsModal = ({ seller, onClose }) => {
                   setShowResetModal(false);
                   setResetBalance("");
                   setResetReason("");
+                }}>
+                  Cancel
+                </ActionButton>
+              </ResetModalActions>
+            </ResetModalContent>
+          </ResetBalanceModal>
+        )}
+
+        {/* Reject Payout Modal */}
+        {showRejectPayoutModal && (
+          <ResetBalanceModal>
+            <ResetModalContent>
+              <ResetModalHeader>
+                <h3>Reject Payout Verification</h3>
+                <CloseButton onClick={() => setShowRejectPayoutModal(false)}>&times;</CloseButton>
+              </ResetModalHeader>
+              <ResetModalBody>
+                <ResetInfo>
+                  <p><strong>Seller:</strong> {seller.shopName || seller.name}</p>
+                  <p><strong>Current Status:</strong> {seller.payoutStatus || 'pending'}</p>
+                  {seller.paymentMethods?.bankAccount && (
+                    <p><strong>Payment Method:</strong> Bank Account - {seller.paymentMethods.bankAccount.accountNumber}</p>
+                  )}
+                  {seller.paymentMethods?.mobileMoney && (
+                    <p><strong>Payment Method:</strong> Mobile Money ({seller.paymentMethods.mobileMoney.network}) - {seller.paymentMethods.mobileMoney.phone}</p>
+                  )}
+                </ResetInfo>
+                <ResetFormGroup>
+                  <ResetLabel>Rejection Reason *</ResetLabel>
+                  <ResetTextarea
+                    value={payoutRejectionReason}
+                    onChange={(e) => setPayoutRejectionReason(e.target.value)}
+                    placeholder="Enter reason for rejecting payout verification..."
+                    rows="4"
+                    required
+                  />
+                </ResetFormGroup>
+              </ResetModalBody>
+              <ResetModalActions>
+                <ActionButton
+                  variant="danger"
+                  onClick={async () => {
+                    if (!payoutRejectionReason.trim()) {
+                      toast.error('Please provide a reason for rejection');
+                      return;
+                    }
+                    try {
+                      await rejectPayout.mutateAsync({
+                        sellerId: seller._id,
+                        reason: payoutRejectionReason.trim(),
+                      });
+                      toast.success('Payout verification rejected');
+                      setShowRejectPayoutModal(false);
+                      setPayoutRejectionReason("");
+                      onClose();
+                    } catch (error) {
+                      toast.error(error.response?.data?.message || 'Failed to reject payout verification');
+                    }
+                  }}
+                  disabled={rejectPayout.isPending || !payoutRejectionReason.trim()}
+                >
+                  {rejectPayout.isPending ? 'Rejecting...' : 'Confirm Rejection'}
+                </ActionButton>
+                <ActionButton variant="secondary" onClick={() => {
+                  setShowRejectPayoutModal(false);
+                  setPayoutRejectionReason("");
                 }}>
                   Cancel
                 </ActionButton>
@@ -358,9 +634,38 @@ const Documents = styled.div`
 const DocumentLink = styled.a`
   color: #007bff;
   text-decoration: none;
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  background: #e7f3ff;
+  margin-right: 0.5rem;
+  margin-bottom: 0.5rem;
   &:hover {
     text-decoration: underline;
+    background: #d0e7ff;
   }
+`;
+
+const DocumentMissing = styled.span`
+  color: #dc3545;
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  background: #fff5f5;
+  margin-right: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+`;
+
+const DocumentWarning = styled.div`
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 4px;
+  color: #856404;
+  font-size: 0.875rem;
+  font-weight: 500;
 `;
 
 const ActionGroup = styled.div`
@@ -511,6 +816,37 @@ const ResetModalActions = styled.div`
   gap: 1rem;
   margin-top: 2rem;
   justify-content: flex-end;
+`;
+
+const PayoutStatusBadge = styled.div`
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  background: ${({ $status }) =>
+    $status === 'verified'
+      ? '#d1fae5'
+      : $status === 'rejected'
+      ? '#fee2e2'
+      : '#fef3c7'};
+  color: ${({ $status }) =>
+    $status === 'verified'
+      ? '#065f46'
+      : $status === 'rejected'
+      ? '#991b1b'
+      : '#92400e'};
+`;
+
+const PaymentMethodCard = styled.div`
+  display: flex;
+  align-items: flex-start;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+  margin-top: 0.5rem;
 `;
 
 export default SellerDetailsModal;

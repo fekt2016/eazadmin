@@ -1,3 +1,4 @@
+import React, { useEffect } from "react";
 import {
   FaCheckCircle,
   FaEdit,
@@ -6,6 +7,7 @@ import {
   FaStore,
   FaTimesCircle,
   FaTrash,
+  FaUndo,
   FaUserAlt,
   FaUserShield,
 } from "react-icons/fa";
@@ -24,6 +26,20 @@ export const Table = ({
   actionType = "menu", // "menu" or "iconLink"
   actionLinkPath, // Function to generate link path: (item) => string
 }) => {
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (actionMenu && !event.target.closest('[data-action-menu]')) {
+        setActionMenu(null);
+      }
+    };
+
+    if (actionMenu) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [actionMenu, setActionMenu]);
+
   return (
     <TableContainer>
       <StyledTable>
@@ -48,13 +64,13 @@ export const Table = ({
                     {column.Cell
                       ? column.Cell({
                           value: item[column.accessor],
-                          row: item.name,
+                          row: item, // Pass full row data for access to all fields
                         })
                       : item[column.accessor]}
                   </TableCell>
                 ))}
 
-                <TableCell>
+                <TableCell style={{ position: 'relative' }} data-action-menu>
                   {actionType === "iconLink" ? (
                     <ActionIconLink
                       to={linkPath}
@@ -65,24 +81,97 @@ export const Table = ({
                   ) : (
                     <>
                       <ActionButton
-                        onClick={() =>
-                          setActionMenu(actionMenu === item.id ? null : item.id)
-                        }
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActionMenu(actionMenu === item.id ? null : item.id);
+                        }}
+                        type="button"
                       >
                         <FaEllipsisV />
                       </ActionButton>
 
                       {actionMenu === item.id && (
-                        <ActionMenu>
-                          <ActionMenuItem onClick={() => onViewDetails(item)}>
-                            <FaUserAlt /> View Details
+                        <ActionMenu 
+                          data-action-menu
+                          ref={(el) => {
+                            if (el) {
+                              // Position dropdown dynamically using fixed positioning
+                              setTimeout(() => {
+                                const button = el.previousElementSibling;
+                                if (button) {
+                                  const buttonRect = button.getBoundingClientRect();
+                                  const viewportHeight = window.innerHeight;
+                                  const spaceBelow = viewportHeight - buttonRect.bottom;
+                                  const menuHeight = el.scrollHeight || 200;
+                                  
+                                  // Calculate position
+                                  let top = buttonRect.bottom + 5;
+                                  let left = buttonRect.right - el.offsetWidth;
+                                  
+                                  // Ensure menu doesn't go off-screen horizontally
+                                  if (left < 10) {
+                                    left = 10;
+                                  }
+                                  
+                                  // Position above if not enough space below
+                                  if (spaceBelow < menuHeight + 10) {
+                                    top = buttonRect.top - menuHeight - 5;
+                                    el.setAttribute('data-position', 'above');
+                                  } else {
+                                    el.setAttribute('data-position', 'below');
+                                  }
+                                  
+                                  // Set fixed position with calculated coordinates
+                                  el.style.position = 'fixed';
+                                  el.style.top = `${Math.max(10, top)}px`;
+                                  el.style.left = `${left}px`;
+                                  el.style.right = 'auto';
+                                  el.style.bottom = 'auto';
+                                  el.style.zIndex = '99999';
+                                }
+                              }, 0);
+                            }
+                          }}
+                        >
+                          {onViewDetails && (
+                            <ActionMenuItem 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (onViewDetails) {
+                                  onViewDetails(item);
+                                }
+                                setActionMenu(null);
+                              }}
+                            >
+                              <FaEye /> View Details
                           </ActionMenuItem>
-                          <ActionMenuItem onClick={() => onEdit(item)}>
+                          )}
+                          {onEdit && (
+                            <ActionMenuItem 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (onEdit) {
+                                  onEdit(item);
+                                }
+                                setActionMenu(null);
+                              }}
+                            >
                             <FaEdit /> Edit
                           </ActionMenuItem>
-                          <ActionMenuItem onClick={() => onDelete(item)}>
+                          )}
+                          {onDelete && (
+                            <ActionMenuItem 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (onDelete) {
+                                  onDelete(item);
+                                }
+                                setActionMenu(null);
+                              }}
+                            >
                             <FaTrash /> Delete
                           </ActionMenuItem>
+                          )}
                         </ActionMenu>
                       )}
                     </>
@@ -173,36 +262,163 @@ export const DateCell = ({ value }) => {
   return <span>{formattedDate}</span>;
 };
 
+export const VerificationStatusCell = ({ value, row }) => {
+  // Use verificationStatus from row data, fallback to value
+  const verificationStatus = row?.verificationStatus || value || 'pending';
+  
+  const getStatusConfig = (status) => {
+    switch (status) {
+      case 'verified':
+        return {
+          icon: <FaCheckCircle />,
+          color: '#10b981',
+          bg: '#d1fae5',
+          label: 'Verified'
+        };
+      case 'rejected':
+        return {
+          icon: <FaTimesCircle />,
+          color: '#ef4444',
+          bg: '#fee2e2',
+          label: 'Rejected'
+        };
+      case 'pending':
+      default:
+        return {
+          icon: <FaTimesCircle style={{ opacity: 0.5 }} />,
+          color: '#f59e0b',
+          bg: '#fef3c7',
+          label: 'Pending'
+        };
+    }
+  };
+
+  const config = getStatusConfig(verificationStatus);
+
+  return (
+    <VerificationStatusBadge $status={verificationStatus} $color={config.color} $bg={config.bg}>
+      {config.icon}
+      <span>{config.label}</span>
+    </VerificationStatusBadge>
+  );
+};
+
+export const PayoutStatusCell = ({ value, row }) => {
+  // Use payoutStatus from row data, fallback to value
+  const payoutStatus = row?.payoutStatus || value || 'pending';
+  
+  const getStatusConfig = (status) => {
+    switch (status) {
+      case 'verified':
+        return {
+          icon: <FaCheckCircle />,
+          color: '#10b981',
+          bg: '#d1fae5',
+          label: 'Verified'
+        };
+      case 'rejected':
+        return {
+          icon: <FaTimesCircle />,
+          color: '#ef4444',
+          bg: '#fee2e2',
+          label: 'Rejected'
+        };
+      case 'pending':
+      default:
+        return {
+          icon: <FaTimesCircle style={{ opacity: 0.5 }} />,
+          color: '#f59e0b',
+          bg: '#fef3c7',
+          label: 'Pending'
+        };
+    }
+  };
+
+  const config = getStatusConfig(payoutStatus);
+
+  return (
+    <VerificationStatusBadge $status={payoutStatus} $color={config.color} $bg={config.bg}>
+      {config.icon}
+      <span>{config.label}</span>
+    </VerificationStatusBadge>
+  );
+};
+
+export const OrderCountCell = ({ value, row }) => {
+  // Use orderCount from row data, fallback to value
+  const orderCount = row?.orderCount ?? value ?? 0;
+  
+  return (
+    <OrderCountBadge>
+      <span>{orderCount.toLocaleString()}</span>
+    </OrderCountBadge>
+  );
+};
+
 const ActionButton = styled.button`
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 5px;
-  padding: 10px 15px;
+  padding: 8px 12px;
   background: #4361ee;
   color: white;
   border: none;
-  border-radius: 10px;
+  border-radius: 8px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s;
+  min-width: 36px;
+  min-height: 36px;
 
   &:hover {
     background: #3a56d4;
     transform: translateY(-2px);
+  }
+
+  &:active {
+    transform: translateY(0);
   }
 `;
 
 const TableContainer = styled.div`
   background: white;
   border-radius: 16px;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: visible;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
   margin-bottom: 30px;
+  width: 100%;
+  
+  /* Smooth scrolling */
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e0 #f7fafc;
+  
+  &::-webkit-scrollbar {
+    height: 8px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: #f7fafc;
+    border-radius: 4px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 4px;
+    
+    &:hover {
+      background: #a0aec0;
+    }
+  }
 `;
 
 const StyledTable = styled.table`
   width: 100%;
+  min-width: 1000px; /* Ensure minimum width for all columns */
   border-collapse: collapse;
+  table-layout: auto;
 `;
 
 const TableHead = styled.thead`
@@ -211,11 +427,21 @@ const TableHead = styled.thead`
 `;
 
 const TableHeader = styled.th`
-  padding: 18px 25px;
+  padding: 10px 12px;
   text-align: left;
   font-weight: 600;
   color: #2b2d42;
-  font-size: 14px;
+  font-size: 13px;
+  white-space: nowrap;
+  
+  /* Make Actions column sticky on the right */
+  &:last-child {
+    position: sticky;
+    right: 0;
+    background: #f8f9fa;
+    z-index: 10;
+    box-shadow: -2px 0 4px rgba(0, 0, 0, 0.05);
+  }
 `;
 
 const TableBody = styled.tbody``;
@@ -233,9 +459,25 @@ const TableRow = styled.tr`
 `;
 
 const TableCell = styled.td`
-  padding: 10px 15px;
+  padding: 8px 12px;
   color: #2b2d42;
   vertical-align: middle;
+  font-size: 13px;
+  white-space: nowrap;
+  
+  /* Make Actions column sticky on the right */
+  &:last-child {
+    position: sticky;
+    right: 0;
+    background: white;
+    z-index: 10;
+    box-shadow: -2px 0 4px rgba(0, 0, 0, 0.05);
+  }
+  
+  /* Ensure Actions column stays white on hover */
+  tr:hover &:last-child {
+    background: #f8faff;
+  }
 `;
 
 const UserInfo = styled.div`
@@ -245,8 +487,8 @@ const UserInfo = styled.div`
 `;
 
 const UserAvatar = styled.div`
-  width: 45px;
-  height: 45px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: #4361ee;
   color: white;
@@ -254,7 +496,7 @@ const UserAvatar = styled.div`
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 18px;
+  font-size: 14px;
 `;
 
 const UserDetails = styled.div``;
@@ -311,13 +553,19 @@ const StatusBadge = styled.div`
 `;
 
 const ActionMenu = styled.div`
-  position: absolute;
+  position: fixed;
   background: white;
   border-radius: 10px;
   box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
   min-width: 200px;
-  z-index: 10;
-  overflow: hidden;
+  z-index: 99999;
+  overflow: visible;
+  max-height: 300px;
+  overflow-y: auto;
+  
+  /* Position will be set dynamically via JavaScript */
+  top: 0;
+  left: 0;
 `;
 
 const ActionMenuItem = styled.div`
@@ -356,4 +604,35 @@ const ActionIconLink = styled(Link)`
   svg {
     font-size: 16px;
   }
+`;
+
+const VerificationStatusBadge = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  background: ${({ $bg }) => $bg || '#fef3c7'};
+  color: ${({ $color }) => $color || '#f59e0b'};
+  width: fit-content;
+
+  svg {
+    font-size: 14px;
+  }
+`;
+
+const OrderCountBadge = styled.div`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  background: #e8f4f8;
+  color: #4361ee;
+  min-width: 50px;
+  text-align: center;
 `;

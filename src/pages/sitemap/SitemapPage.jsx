@@ -80,7 +80,6 @@ const SitemapPage = () => {
         { label: 'User Details', path: PATHS.USERDETAIL },
         { label: 'Sellers', path: PATHS.SELLERS },
         { label: 'Seller Details', path: PATHS.SELLERDETAIL },
-        { label: 'Seller Requests', path: PATHS.SELLERREQUEST },
         { label: 'Admins', path: PATHS.ADMINS },
         { label: 'Admin Details', path: PATHS.ADMINDETAIL },
         { label: 'User Activity', path: PATHS.ACTIVITY },
@@ -128,9 +127,9 @@ const SitemapPage = () => {
       id: 'external',
       title: 'External Resources',
       links: [
-        { label: 'EazMain (Buyer App)', path: 'https://eazworld.com', external: true },
-        { label: 'EazSeller Portal', path: 'https://seller.eazworld.com', external: true },
-        { label: 'EazWorld Website', path: 'https://eazworld.com', external: true },
+        { label: 'SaiisaiWeb (Buyer App)', path: 'https://saiisai.com', external: true },
+        { label: 'EazSeller Portal', path: 'https://seller.saiisai.com', external: true },
+        { label: 'Saiisai Website', path: 'https://saiisai.com', external: true },
       ],
     },
   ];

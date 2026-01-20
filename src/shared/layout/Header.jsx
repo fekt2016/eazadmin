@@ -44,15 +44,37 @@ const Header = ({ user }) => {
       </div>
       <TopbarRight>
         <NotificationDropdown unreadCount={unreadCount} />
-        <UserProfile>
-          <UserAvatar>{user.avatar}</UserAvatar>
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <div style={{ fontWeight: 600 }}>{user.name}</div>
-            <div style={{ fontSize: "12px", color: theme.gray }}>
-              {user.shopName}
+        {user ? (
+          <UserProfile>
+            <UserAvatar>
+              {user.avatar ? (
+                <img 
+                  src={user.avatar} 
+                  alt={user.name || 'Admin'} 
+                  style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+                />
+              ) : (
+                (user.name || 'A').charAt(0).toUpperCase()
+              )}
+            </UserAvatar>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <div style={{ fontWeight: 600 }}>{user.name || 'Admin'}</div>
+              <div style={{ fontSize: "12px", color: theme.gray }}>
+                {user.shopName || user.email || 'Administrator'}
+              </div>
             </div>
-          </div>
-        </UserProfile>
+          </UserProfile>
+        ) : (
+          <UserProfile>
+            <UserAvatar>A</UserAvatar>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <div style={{ fontWeight: 600 }}>Loading...</div>
+              <div style={{ fontSize: "12px", color: theme.gray }}>
+                Administrator
+              </div>
+            </div>
+          </UserProfile>
+        )}
       </TopbarRight>
     </Container>
   );

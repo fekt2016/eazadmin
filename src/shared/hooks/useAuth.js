@@ -1,33 +1,27 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { authApi } from '../services/adminApi';
 
-const TOKEN_KEY = "admin_token";
+// SECURITY: Cookie-only authentication - no token storage
+// Tokens are in HTTP-only cookies set by backend
+// No localStorage, sessionStorage, or any client-side token storage
 
-function getToken() {
-  return localStorage.getItem(TOKEN_KEY);
-}
-
-function clearToken() {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem("current_role");
-}
-
-function validateToken(token) {
-  if (!token) return false;
-  try {
-    const [, payloadB64] = token.split(".");
-    const { exp } = JSON.parse(atob(payloadB64));
-    return exp * 1000 > Date.now();
-  } catch {
-    return false;
+function clearAuthData() {
+  // SECURITY: No token storage to clear - cookies are managed by backend
+  // Backend logout endpoint clears the cookie
+  // Only clear non-sensitive localStorage items if needed
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("current_role"); // Non-sensitive role preference only
   }
 }
 
 export default function useAuth() {
   const queryClient = useQueryClient();
-  const token = getToken();
+  const navigate = useNavigate();
 
   // 1️⃣ Fetch current admin user
+  // SECURITY: Cookie-only authentication - no token check needed
+  // Backend reads from HTTP-only cookie automatically
   const {
     data: adminData,
     isLoading,
@@ -35,30 +29,17 @@ export default function useAuth() {
   } = useQuery({
     queryKey: ["adminAuth"],
     queryFn: async () => {
-      // Only validate token if it exists - don't clear immediately on expiry
-      // Let server validate and return proper error
-      if (token && !validateToken(token)) {
-        console.warn("[useAuth] Token expired client-side, but attempting server validation");
-        // Don't clear token yet - let server confirm
-      }
-      
       try {
         const response = await authApi.getCurrentUser();
         return response; // Return user object directly
       } catch (error) {
-        // Only clear token after server confirms 401 (not on network errors)
-        if (error.response?.status === 401) {
-          console.warn("[useAuth] Server confirmed 401 - clearing token");
-          clearToken();
-        }
-        // Don't throw for 401 - return null to allow graceful handling
+        // 401 is expected when cookie is expired/missing - not an error, just unauthenticated state
         if (error.response?.status === 401) {
           return null;
         }
         throw error;
       }
     },
-    enabled: !!token,
     staleTime: 1000 * 60 * 10, // 10 minutes
     retry: (failureCount, error) => {
       // Retry up to 2 times, but not on 401 (server confirmed auth failure)
@@ -74,12 +55,15 @@ export default function useAuth() {
   const login = useMutation({
     mutationFn: authApi.login,
     onSuccess: (response) => {
-      const { token: newToken, user } = response.data;
-      if (!validateToken(newToken)) {
-        throw new Error("Invalid token received");
+      // SECURITY: Token is in HTTP-only cookie, NOT in response
+      // Backend sets cookie automatically - no token storage needed
+      const user = response.data?.user || response.data?.data?.user || response.data;
+      
+      // Store non-sensitive role preference only
+      if (typeof window !== "undefined") {
+        localStorage.setItem("current_role", "admin");
       }
-      localStorage.setItem(TOKEN_KEY, newToken);
-      localStorage.setItem("current_role", "admin");
+      
       queryClient.setQueryData(["adminAuth"], user); // Set user object directly
     },
   });
@@ -88,12 +72,14 @@ export default function useAuth() {
   const register = useMutation({
     mutationFn: authApi.register,
     onSuccess: (response) => {
-      const { token: newToken, user } = response.data;
-      if (!validateToken(newToken)) {
-        throw new Error("Invalid token received");
+      // SECURITY: Token is in HTTP-only cookie, NOT in response
+      const user = response.data?.user || response.data?.data?.user || response.data;
+      
+      // Store non-sensitive role preference only
+      if (typeof window !== "undefined") {
+        localStorage.setItem("current_role", "admin");
       }
-      localStorage.setItem(TOKEN_KEY, newToken);
-      localStorage.setItem("current_role", "admin");
+      
       queryClient.setQueryData(["adminAuth"], user); // Set user object directly
     },
   });
@@ -102,12 +88,67 @@ export default function useAuth() {
   const logout = useMutation({
     mutationFn: authApi.logout,
     onSuccess: () => {
-      clearToken();
+      clearAuthData();
       queryClient.removeQueries(["adminAuth"]);
+      queryClient.clear();
     },
     onError: () => {
-      clearToken();
+      clearAuthData();
       queryClient.removeQueries(["adminAuth"]);
+      queryClient.clear();
+    },
+  });
+
+  // ==================================================
+  // UNIFIED EMAIL-ONLY PASSWORD RESET FLOW
+  // ==================================================
+  
+  /**
+   * Request Password Reset (Email Only)
+   * Sends reset link to admin's email
+   */
+  const requestPasswordReset = useMutation({
+    mutationFn: async (email) => {
+      const response = await authApi.requestPasswordReset(email);
+      return response;
+    },
+    onSuccess: (data) => {
+      if (import.meta.env.DEV) {
+        console.debug("[useAuth] Password reset request sent:", data);
+      }
+    },
+    onError: (error) => {
+      console.error("[useAuth] Error requesting password reset:", error);
+    },
+  });
+
+  /**
+   * Reset Password with Token
+   * Resets password using token from email link
+   */
+  const resetPasswordWithToken = useMutation({
+    mutationFn: async ({ token, newPassword, confirmPassword }) => {
+      const response = await authApi.resetPasswordWithToken(
+        token,
+        newPassword,
+        confirmPassword
+      );
+      return response;
+    },
+    onSuccess: (data) => {
+      if (import.meta.env.DEV) {
+        console.debug("[useAuth] Password reset successful:", data);
+      }
+      // Navigate to login page with success message
+      navigate("/login", {
+        state: {
+          message:
+            "Password reset successfully. Please login with your new password.",
+        },
+      });
+    },
+    onError: (error) => {
+      console.error("[useAuth] Error resetting password:", error);
     },
   });
 
@@ -120,5 +161,8 @@ export default function useAuth() {
     login,
     register,
     logout,
+    // Unified email-only password reset
+    requestPasswordReset,
+    resetPasswordWithToken,
   };
 }

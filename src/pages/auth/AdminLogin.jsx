@@ -57,9 +57,12 @@ export default function AdminLogin() {
 
       if (!ALLOWED_ROLES.includes(role)) {
         toast.error("You are not authorized to access the admin system.");
-        // Clear token and logout
-        localStorage.removeItem("admin_token");
-        localStorage.removeItem("current_role");
+        // SECURITY: Cookie-only authentication - no token to clear
+        // Backend logout endpoint clears the cookie
+        // Only clear non-sensitive role preference
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("current_role");
+        }
         return;
       }
 
@@ -165,10 +168,10 @@ export default function AdminLogin() {
 
           <LoginButton
             type="submit"
-            disabled={login.isLoading || !formData.email || !formData.password}
-            $isLoading={login.isLoading}
+            disabled={login.isPending || !formData.email || !formData.password}
+            $isLoading={login.isPending}
           >
-            {login.isLoading ? (
+            {login.isPending ? (
               <>
                 <LoadingSpinner size="sm" color="#ffffff" />
                 <span>Signing in...</span>

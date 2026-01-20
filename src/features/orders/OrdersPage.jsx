@@ -55,16 +55,23 @@ export default function OrdersPage() {
   }
 
   // Extract data from response
-  const orders = ordersData?.data?.results || [];
+  // API returns: { status: 'success', results: [...], meta: {...} }
+  // Axios wraps it in response.data, so ordersData = { status: 'success', results: [...], meta: {...} }
+  const orders = ordersData?.results || ordersData?.data?.results || [];
 
-  const pagination = ordersData?.data?.pagination || {};
+  // Pagination is in meta object
+  const pagination = ordersData?.meta || ordersData?.data?.pagination || {};
   const {
-    totalOrders = 0,
+    total = 0,
     totalPages = 1,
     currentPage: currentPageFromApi = 1,
-    hasNext = false,
-    hasPrev = false,
+    itemsPerPage = 10,
   } = pagination;
+  
+  // Calculate pagination flags
+  const hasNext = currentPageFromApi < totalPages;
+  const hasPrev = currentPageFromApi > 1;
+  const totalOrders = total || orders.length;
 
   // Stats from backend
 
@@ -82,20 +89,30 @@ export default function OrdersPage() {
 
     return {
       totalOrders: orders.length,
-      pendingCount: orders.filter((order) => 
-        order.orderStatus === "pending" || order.orderStatus === "pending_payment"
-      ).length,
-      processing: orders.filter((order) => 
-        order.orderStatus === "processing" || order.orderStatus === "preparing" || order.orderStatus === "ready_for_dispatch"
-      ).length,
-      confirmed: orders.filter((order) => order.orderStatus === "confirmed").length,
-      shipped: orders.filter((order) => 
-        order.orderStatus === "shipped" || order.orderStatus === "out_for_delivery"
-      ).length,
-      delivered: orders.filter((order) => order.orderStatus === "delivered")
-        .length,
-      cancelled: orders.filter((order) => order.orderStatus === "cancelled")
-        .length,
+      pendingCount: orders.filter((order) => {
+        const status = order.orderStatus || order.currentStatus;
+        return status === "pending" || status === "pending_payment";
+      }).length,
+      processing: orders.filter((order) => {
+        const status = order.orderStatus || order.currentStatus;
+        return status === "processing" || status === "preparing" || status === "ready_for_dispatch";
+      }).length,
+      confirmed: orders.filter((order) => {
+        const status = order.orderStatus || order.currentStatus;
+        return status === "confirmed";
+      }).length,
+      shipped: orders.filter((order) => {
+        const status = order.orderStatus || order.currentStatus;
+        return status === "shipped" || status === "out_for_delivery";
+      }).length,
+      delivered: orders.filter((order) => {
+        const status = order.orderStatus || order.currentStatus;
+        return status === "delivered";
+      }).length,
+      cancelled: orders.filter((order) => {
+        const status = order.orderStatus || order.currentStatus;
+        return status === "cancelled";
+      }).length,
     };
   };
   console.log("stats", stats());
@@ -233,7 +250,7 @@ export default function OrdersPage() {
             <FaTimesCircle />
           </StatIcon>
           <StatContent>
-            <StatValue>{stats.cancelled}</StatValue>
+            <StatValue>{stats().cancelled}</StatValue>
             <StatLabel>Cancelled</StatLabel>
           </StatContent>
         </StatCard>
@@ -306,7 +323,7 @@ export default function OrdersPage() {
         <TableBody>
           {orders.length > 0 ? (
             orders.map((order) => (
-              <TableRow key={order.id}>
+              <TableRow key={order._id || order.id}>
                 <TableCell>{order.orderNumber}</TableCell>
                 <TableCell>{order.user?.name || "Unknown Customer"}</TableCell>
                 <TableCell>{formatDate(order.createdAt)}</TableCell>
@@ -327,10 +344,10 @@ export default function OrdersPage() {
                   Gh₵{order.totalPrice?.toFixed(2) || "0.00"}
                 </TableCell>
                 <TableCell>
-                  <StatusBadge $color={getStatusColor(order.orderStatus)}>
-                    {getStatusIcon(order.orderStatus)}
-                    {order.orderStatus?.charAt(0).toUpperCase() +
-                      order.orderStatus?.slice(1) || "Unknown"}
+                  <StatusBadge $color={getStatusColor(order.orderStatus || order.currentStatus)}>
+                    {getStatusIcon(order.orderStatus || order.currentStatus)}
+                    {(order.orderStatus || order.currentStatus)?.charAt(0).toUpperCase() +
+                      (order.orderStatus || order.currentStatus)?.slice(1) || "Unknown"}
                   </StatusBadge>
                 </TableCell>
                 <TableCell>
@@ -338,7 +355,7 @@ export default function OrdersPage() {
                     <ActionIcon
                       $color="#3498db"
                       title="View details"
-                      to={`detail/${order.id}`}
+                      to={`detail/${order._id || order.id}`}
                     >
                       <FaEye />
                     </ActionIcon>

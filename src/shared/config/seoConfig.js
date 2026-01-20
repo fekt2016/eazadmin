@@ -1,20 +1,20 @@
 /**
- * SEO Configuration for EazAdmin (Admin Backend Dashboard)
+ * SEO Configuration for Saysay (Admin Backend Dashboard)
  * All pages are set to noIndex and noFollow - admin should never appear in search engines
  */
 
-const BASE_URL = (typeof process !== 'undefined' && process.env?.REACT_APP_ADMIN_URL) || window.location.origin || 'https://admin.eazshop.com';
-const DEFAULT_IMAGE = `${BASE_URL}/images/eazshop-admin-og.jpg`;
-const DEFAULT_DESCRIPTION = 'EazShop Admin Dashboard - Manage the platform';
+const BASE_URL = (typeof process !== 'undefined' && process.env?.REACT_APP_ADMIN_URL) || window.location.origin || 'https://admin.saysay.com';
+const DEFAULT_IMAGE = `${BASE_URL}/images/saysay-admin-og.jpg`;
+const DEFAULT_DESCRIPTION = 'Saysay Admin Dashboard - Manage the platform';
 
 const seoConfig = {
   // ────────────────────────────────────────────────
   // Admin Dashboard
   // ────────────────────────────────────────────────
   dashboard: {
-    title: 'Admin Dashboard - EazShop',
-    description: 'Manage the EazShop platform',
-    keywords: 'admin, dashboard, EazShop',
+    title: 'Admin Dashboard - Saysay',
+    description: 'Manage the Saysay platform',
+    keywords: 'admin, dashboard, Saysay',
     image: DEFAULT_IMAGE,
     type: 'website',
     canonical: `${BASE_URL}/dashboard`,
@@ -26,9 +26,9 @@ const seoConfig = {
   // Users Management
   // ────────────────────────────────────────────────
   users: {
-    title: 'Users Management - Admin | EazShop',
+    title: 'Users Management - Admin | Saysay',
     description: 'Manage platform users',
-    keywords: 'users, admin, EazShop',
+    keywords: 'users, admin, Saysay',
     image: DEFAULT_IMAGE,
     type: 'website',
     canonical: `${BASE_URL}/users`,
@@ -40,9 +40,9 @@ const seoConfig = {
   // Sellers Management
   // ────────────────────────────────────────────────
   sellers: {
-    title: 'Sellers Management - Admin | EazShop',
+    title: 'Sellers Management - Admin | Saysay',
     description: 'Manage seller accounts',
-    keywords: 'sellers, admin, EazShop',
+    keywords: 'sellers, admin, Saysay',
     image: DEFAULT_IMAGE,
     type: 'website',
     canonical: `${BASE_URL}/sellers`,
@@ -54,9 +54,9 @@ const seoConfig = {
   // Products Moderation
   // ────────────────────────────────────────────────
   products: {
-    title: 'Products Moderation - Admin | EazShop',
+    title: 'Products Moderation - Admin | Saysay',
     description: 'Moderate and manage products',
-    keywords: 'products, moderation, admin, EazShop',
+    keywords: 'products, moderation, admin, Saysay',
     image: DEFAULT_IMAGE,
     type: 'website',
     canonical: `${BASE_URL}/products`,
@@ -68,9 +68,9 @@ const seoConfig = {
   // Orders Management
   // ────────────────────────────────────────────────
   orders: {
-    title: 'Orders Management - Admin | EazShop',
+    title: 'Orders Management - Admin | Saysay',
     description: 'Manage platform orders',
-    keywords: 'orders, admin, EazShop',
+    keywords: 'orders, admin, Saysay',
     image: DEFAULT_IMAGE,
     type: 'website',
     canonical: `${BASE_URL}/orders`,
@@ -82,9 +82,9 @@ const seoConfig = {
   // Transactions
   // ────────────────────────────────────────────────
   transactions: {
-    title: 'Transactions - Admin | EazShop',
+    title: 'Transactions - Admin | Saysay',
     description: 'View and manage transactions',
-    keywords: 'transactions, admin, EazShop',
+    keywords: 'transactions, admin, Saysay',
     image: DEFAULT_IMAGE,
     type: 'website',
     canonical: `${BASE_URL}/transactions`,
@@ -96,9 +96,9 @@ const seoConfig = {
   // Settings
   // ────────────────────────────────────────────────
   settings: {
-    title: 'Settings - Admin | EazShop',
+    title: 'Settings - Admin | Saysay',
     description: 'Platform settings and configuration',
-    keywords: 'settings, admin, EazShop',
+    keywords: 'settings, admin, Saysay',
     image: DEFAULT_IMAGE,
     type: 'website',
     canonical: `${BASE_URL}/settings`,
@@ -110,9 +110,9 @@ const seoConfig = {
   // System Logs
   // ────────────────────────────────────────────────
   systemLogs: {
-    title: 'System Logs - Admin | EazShop',
+    title: 'System Logs - Admin | Saysay',
     description: 'View system logs and activity',
-    keywords: 'logs, system, admin, EazShop',
+    keywords: 'logs, system, admin, Saysay',
     image: DEFAULT_IMAGE,
     type: 'website',
     canonical: `${BASE_URL}/logs`,

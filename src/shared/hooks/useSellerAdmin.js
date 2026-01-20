@@ -51,6 +51,23 @@ const useSellerAdmin = (pageParam = 1, limit = 10) => {
     keepPreviousData: true,
     retry: 2,
   });
+  
+  // Seller verification mutations
+  const approveVerification = useMutation({
+    mutationFn: (sellerId) => adminApi.approveSellerVerification(sellerId),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["admin", "sellers"]);
+      queryClient.invalidateQueries(["seller", "details"]);
+    },
+  });
+
+  const rejectVerification = useMutation({
+    mutationFn: ({ sellerId, reason }) => adminApi.rejectSellerVerification(sellerId, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["admin", "sellers"]);
+      queryClient.invalidateQueries(["seller", "details"]);
+    },
+  });
 
   // Backend handleFactory.getAll returns: { status: 'success', results: [...], meta: {...} }
   // Axios response structure: response = { data: { status: 'success', results: [...], meta: {...} } }
@@ -85,6 +102,27 @@ const useSellerAdmin = (pageParam = 1, limit = 10) => {
     },
   });
 
+  // Payout verification mutations
+  const approvePayout = useMutation({
+    mutationFn: ({ sellerId, paymentMethod }) => adminApi.approveSellerPayout(sellerId, { paymentMethod }),
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries(["admin", "sellers"]);
+      queryClient.invalidateQueries(["seller", "details"]);
+      queryClient.invalidateQueries(["admin", "user", variables.sellerId]);
+      queryClient.invalidateQueries(["admin", "seller", variables.sellerId, "payout-verification"]);
+    },
+  });
+
+  const rejectPayout = useMutation({
+    mutationFn: ({ sellerId, reason }) => adminApi.rejectSellerPayout(sellerId, reason),
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries(["admin", "sellers"]);
+      queryClient.invalidateQueries(["seller", "details"]);
+      queryClient.invalidateQueries(["admin", "user", variables.sellerId]);
+      queryClient.invalidateQueries(["admin", "seller", variables.sellerId, "payout-verification"]);
+    },
+  });
+
   return {
     sellers: { results, meta, data: { results, meta } }, // Keep backward compatibility
     totalSellers: meta.total || 0,
@@ -93,6 +131,10 @@ const useSellerAdmin = (pageParam = 1, limit = 10) => {
     error: sellersError,
     updateStatus,
     updateSeller,
+    approvePayout,
+    rejectPayout,
+    approveVerification,
+    rejectVerification,
     page,
     setPage,
     setSearchValue,
@@ -102,6 +144,44 @@ const useSellerAdmin = (pageParam = 1, limit = 10) => {
     setSort,
     meta, // Direct access to meta
   };
+};
+
+/**
+ * Hook to fetch seller payout verification details (includes PaymentMethod records)
+ */
+export const usePayoutVerificationDetails = (sellerId) => {
+  return useQuery({
+    queryKey: ["admin", "seller", sellerId, "payout-verification"],
+    queryFn: () => adminApi.getPayoutVerificationDetails(sellerId),
+    enabled: !!sellerId,
+    staleTime: 1000 * 60 * 2, // 2 minutes
+  });
+};
+
+/**
+ * Hook to fetch a single seller by ID (for Seller Detail Page)
+ * Uses the seller-specific endpoint directly
+ */
+export const useGetSellerById = (sellerId) => {
+  return useQuery({
+    queryKey: ["admin", "seller", sellerId, "details"],
+    queryFn: async () => {
+      if (!sellerId) {
+        throw new Error("Seller ID is required");
+      }
+      const response = await adminApi.getSellerDetails(sellerId);
+      return response;
+    },
+    enabled: !!sellerId,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    retry: (failureCount, error) => {
+      // Don't retry on 404 errors
+      if (error.response?.status === 404) {
+        return false;
+      }
+      return failureCount < 2;
+    },
+  });
 };
 
 export default useSellerAdmin;

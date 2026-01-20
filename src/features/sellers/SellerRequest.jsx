@@ -6,6 +6,7 @@ import SellerDetailsModal from '../../shared/components/Modal/sellerDetailsModal
 const SellerRequests = () => {
   const [selectedSeller, setSelectedSeller] = useState(null);
   const [loadingSellerId, setLoadingSellerId] = useState(null);
+  const [limit, setLimit] = useState(50); // Increased default limit to show more sellers
 
   const {
     sellers,
@@ -17,7 +18,7 @@ const SellerRequests = () => {
     sort,
     searchValue, // From hook
     setSearchValue,
-  } = useSellerAdmin();
+  } = useSellerAdmin(1, limit); // Pass limit to hook
 
   const handleSearchChange = (e) => {
     setSearchValue(e.target.value);
@@ -62,6 +63,19 @@ const SellerRequests = () => {
           value={searchValue}
           onChange={handleSearchChange}
         />
+        <LimitSelector>
+          <LimitLabel>Show:</LimitLabel>
+          <LimitSelect value={limit} onChange={(e) => {
+            setLimit(Number(e.target.value));
+            setPage(1); // Reset to first page when changing limit
+          }}>
+            <option value={10}>10</option>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+            <option value={200}>200</option>
+          </LimitSelect>
+        </LimitSelector>
         <SortContainer>
           <SortLabel>Sort by:</SortLabel>
           <SortButton
@@ -126,15 +140,43 @@ const SellerRequests = () => {
 
       {meta.totalPages > 1 && (
         <PaginationContainer>
-          {Array.from({ length: meta.totalPages }, (_, i) => (
-            <PageButton
-              key={i + 1}
-              onClick={() => setPage(i + 1)}
-              active={page === i + 1}
-            >
-              {i + 1}
-            </PageButton>
-          ))}
+          <PaginationInfo>
+            Showing {((page - 1) * limit) + 1} - {Math.min(page * limit, meta.total || 0)} of {meta.total || 0} sellers
+          </PaginationInfo>
+          <PageButton
+            onClick={() => setPage(page - 1)}
+            disabled={page === 1}
+          >
+            Previous
+          </PageButton>
+          {Array.from({ length: Math.min(meta.totalPages, 10) }, (_, i) => {
+            // Show page numbers around current page
+            let pageNum;
+            if (meta.totalPages <= 10) {
+              pageNum = i + 1;
+            } else if (page <= 5) {
+              pageNum = i + 1;
+            } else if (page >= meta.totalPages - 4) {
+              pageNum = meta.totalPages - 9 + i;
+            } else {
+              pageNum = page - 5 + i;
+            }
+            return (
+              <PageButton
+                key={pageNum}
+                onClick={() => setPage(pageNum)}
+                active={page === pageNum}
+              >
+                {pageNum}
+              </PageButton>
+            );
+          })}
+          <PageButton
+            onClick={() => setPage(page + 1)}
+            disabled={page === meta.totalPages}
+          >
+            Next
+          </PageButton>
         </PaginationContainer>
       )}
       {selectedSeller && (
@@ -274,14 +316,19 @@ const PaginationContainer = styled.div`
 const PageButton = styled.button`
   padding: 0.5rem 1rem;
   border: 1px solid #dee2e6;
-  background-color: ${(props) => (props.active ? "#007bff" : "white")};
-  color: ${(props) => (props.active ? "white" : "#495057")};
+  background-color: ${(props) => (props.active ? "#007bff" : props.disabled ? "#e9ecef" : "white")};
+  color: ${(props) => (props.active ? "white" : props.disabled ? "#adb5bd" : "#495057")};
   border-radius: 4px;
-  cursor: pointer;
+  cursor: ${(props) => (props.disabled ? "not-allowed" : "pointer")};
   transition: all 0.2s ease;
+  min-width: 40px;
 
-  &:hover {
+  &:hover:not(:disabled) {
     background-color: ${(props) => (props.active ? "#0069d9" : "#f8f9fa")};
+  }
+
+  &:disabled {
+    opacity: 0.6;
   }
 `;
 const FiltersContainer = styled.div`
@@ -321,4 +368,42 @@ const SortButton = styled.button`
     border-color: #007bff;
     color: #007bff;
   }
+`;
+
+const LimitSelector = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const LimitLabel = styled.span`
+  color: #666;
+  font-size: 0.9rem;
+`;
+
+const LimitSelect = styled.select`
+  padding: 0.5rem 1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: white;
+  color: #666;
+  cursor: pointer;
+  font-size: 0.9rem;
+
+  &:hover {
+    border-color: #007bff;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: #007bff;
+  }
+`;
+
+const PaginationInfo = styled.div`
+  color: #666;
+  font-size: 0.9rem;
+  margin-right: 1rem;
+  display: flex;
+  align-items: center;
 `;

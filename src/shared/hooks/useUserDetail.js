@@ -41,7 +41,7 @@ export const useGetUserById = (userId) => {
           // 2. Try seller endpoint first (more common than admin)
           try {
             const sellerResponse = await adminSellerApi.getSellerDetails(userId);
-            return sellerResponse;
+            return sellerResponse.data;
           } catch (sellerError) {
             // 3. Try admin endpoint (for admins in Admin collection)
             try {

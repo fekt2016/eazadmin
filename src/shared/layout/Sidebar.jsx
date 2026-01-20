@@ -79,19 +79,9 @@ export default function Sidebar({ role }) {
       icon: <FaWallet />,
     },
     {
-      path: "seller-request",
-      label: "Seller Request",
-      icon: <FaUsersCog />,
-    },
-    {
       path: "support",
       label: "Support",
       icon: <FaHeadset />,
-    },
-    {
-      path: "chat-support",
-      label: "Live Chat",
-      icon: <FaUsersCog />,
     },
     {
       path: "activity-logs",
