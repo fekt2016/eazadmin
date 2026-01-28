@@ -26,6 +26,7 @@ export default function useAuth() {
     data: adminData,
     isLoading,
     isError,
+    error: queryError,
   } = useQuery({
     queryKey: ["adminAuth"],
     queryFn: async () => {
@@ -91,11 +92,15 @@ export default function useAuth() {
       clearAuthData();
       queryClient.removeQueries(["adminAuth"]);
       queryClient.clear();
+      // After successful logout, redirect to admin login page
+      navigate("/login");
     },
     onError: () => {
       clearAuthData();
       queryClient.removeQueries(["adminAuth"]);
       queryClient.clear();
+      // Even if backend logout fails, send user to login to force fresh auth
+      navigate("/login");
     },
   });
 
@@ -156,6 +161,7 @@ export default function useAuth() {
     adminData, // User object (or null)
     isLoading, // Loading state
     isError, // Error state
+    error: queryError, // Error object from query
     // isAuthenticated: !!data, // True if user exists
     // isAdmin: data?.role === "admin",
     login,

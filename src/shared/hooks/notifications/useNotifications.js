@@ -29,32 +29,57 @@ export const useNotifications = (params = {}) => {
       return data;
     },
     staleTime: 30000, // 30 seconds
-    refetchOnWindowFocus: true,
+    // Non-critical: avoid refetch storm on window focus
+    refetchOnWindowFocus: false,
   });
 };
 
 /**
  * Hook to get unread notification count
  * FIX: Updated settings to ensure count updates immediately
+ * Made non-blocking with timeout handling
  */
 export const useUnreadCount = () => {
   const query = useQuery({
     queryKey: ['notifications', 'unread'],
     queryFn: async () => {
       console.log('[EazAdmin useUnreadCount] 🔄 Query function called');
-      const data = await getUnreadCount();
-      console.log('[EazAdmin useUnreadCount] ✅ Query function returned:', {
-        data,
-        unreadCount: data?.data?.unreadCount,
-        status: data?.status,
-      });
-      return data;
+      try {
+        const data = await getUnreadCount();
+        console.log('[EazAdmin useUnreadCount] ✅ Query function returned:', {
+          data,
+          unreadCount: data?.data?.unreadCount,
+          status: data?.status,
+        });
+        return data;
+      } catch (error) {
+        // On timeout or network error, return safe fallback instead of throwing.
+        // This prevents cascading failures and request storms for a non-critical badge.
+        if (
+          error?.isTimeout ||
+          error?.code === 'ECONNABORTED' ||
+          error?.message?.includes('timeout')
+        ) {
+          console.warn('[EazAdmin useUnreadCount] ⏱️ Request timed out, using fallback unreadCount=0');
+          return {
+            status: 'success',
+            data: { unreadCount: 0 },
+          };
+        }
+        throw error;
+      }
     },
-    staleTime: 0, // Always consider stale to ensure fresh data
+    staleTime: 60000, // 1 minute - reduce refetch frequency
     refetchOnMount: true, // Refetch when component mounts
-    refetchOnWindowFocus: true, // Refetch when window regains focus
-    refetchInterval: 30000, // Refetch every 30 seconds for real-time updates
-    refetchIntervalInBackground: false, // Don't refetch when tab is in background
+    // Non-critical: avoid refetch storm on window focus
+    refetchOnWindowFocus: false,
+    // Non-critical: avoid background polling storms under load
+    refetchInterval: undefined,
+    refetchIntervalInBackground: false,
+    // Non-critical badge: do not retry aggressively on failures/timeouts
+    retry: false,
+    // Don't fail the query on error - use default value
+    throwOnError: false,
   });
 
   // Debug logging
@@ -115,9 +140,9 @@ export const useMarkAsRead = () => {
         return updatedData;
       });
       
-      // Invalidate to refetch fresh data (background refetch)
+      // Invalidate to refetch fresh data (background refetch).
+      // Single broad invalidation is enough and avoids multiple network calls.
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread'] });
     },
     onError: (error) => {
       console.error('[Admin useMarkAsRead] ❌ Error marking notification as read:', error);
@@ -167,9 +192,9 @@ export const useMarkAllAsRead = () => {
         return updatedData;
       });
       
-      // Invalidate to refetch fresh data (background refetch)
+      // Invalidate to refetch fresh data (background refetch).
+      // Single broad invalidation covers both list and unread count queries.
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread'] });
     },
     onError: (error) => {
       console.error('[Admin useMarkAllAsRead] ❌ Error marking all notifications as read:', error);
@@ -226,9 +251,9 @@ export const useDeleteNotification = () => {
         };
       });
       
-      // Invalidate to refetch fresh data (background refetch)
+      // Invalidate to refetch fresh data (background refetch).
+      // Single broad invalidation covers both list and unread count queries.
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread'] });
     },
     onError: (error) => {
       console.error('[Admin useDeleteNotification] ❌ Error deleting notification:', error);

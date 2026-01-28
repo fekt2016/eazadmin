@@ -26,20 +26,42 @@ const useAdminsAdmin = (page = 1, limit = 10) => {
     error,
   } = useQuery({
     queryKey: ["admin", "admins", page, limit, appliedSearch, sort],
-    queryFn: () => {
-      const params = {
-        page,
-        limit,
-        sort,
-      };
+    queryFn: async () => {
+      try {
+        const params = {
+          page,
+          limit,
+          sort,
+        };
 
-      if (appliedSearch) {
-        params.search = appliedSearch;
+        if (appliedSearch) {
+          params.search = appliedSearch;
+        }
+        return await adminUserApi.getAllAdmins(params);
+      } catch (error) {
+        // If timeout or network error, return empty result instead of throwing
+        if (error.isTimeout || error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+          console.warn('[useAdminsAdmin] Request timed out, returning empty result:', error);
+          return {
+            data: {
+              status: 'success',
+              results: [],
+              meta: {
+                total: 0,
+                totalPages: 1,
+                currentPage: page,
+                itemsPerPage: limit,
+              },
+            },
+          };
+        }
+        throw error;
       }
-      return adminUserApi.getAllAdmins(params);
     },
     keepPreviousData: true,
-    retry: 2,
+    retry: 1, // Reduced retries
+    retryDelay: 2000, // Wait 2 seconds before retry
+    staleTime: 30000, // 30 seconds - reduce refetch frequency
   });
 
   // Backend handleFactory.getAll returns: { status: 'success', results: [...], meta: {...} }

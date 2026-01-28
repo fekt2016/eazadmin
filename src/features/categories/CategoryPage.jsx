@@ -38,6 +38,27 @@ export default function CategoryPage() {
     const { name, value } = e.target;
 
     setFilters((prev) => ({ ...prev, [name]: value }));
+    // Reset to first page when filters change
+    setCurrentPage(1);
+  };
+
+  // Wrapper function to handle filter changes from buttons/links
+  // This ensures the page resets when filters change programmatically
+  const handleFilterUpdate = (newFilters) => {
+    setFilters((prev) => {
+      const updated = typeof newFilters === 'function' ? newFilters(prev) : { ...prev, ...newFilters };
+      // Reset to first page when parentFilter changes
+      if (updated.parentFilter !== prev.parentFilter) {
+        setCurrentPage(1);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[CategoryPage] Filter changed, resetting to page 1:', {
+            oldFilter: prev.parentFilter,
+            newFilter: updated.parentFilter,
+          });
+        }
+      }
+      return updated;
+    });
   };
 
   const { getCategories, updateCategory, createCategory, deleteCategory } =
@@ -60,57 +81,345 @@ export default function CategoryPage() {
   const { data, isLoading: isGettingCategories } = getCategories;
 
   const categories = useMemo(() => {
-    return data?.data?.results || [];
-  }, [data]);
-  console.log("categories", categories);
-
-  // Get top-level categories
-  const topLevelCategories = categories
-    .filter((cat) => cat.parentCategory === null)
-    .sort((a, b) => a.name.localeCompare(b.name));
-
-  // Filter categories based on filters
-  const filteredCategories = categories.filter((cat) => {
-    if (filters.status !== "ALL" && cat.status !== filters.status) {
-      return false;
+    const cats = data?.data?.results || data?.data?.data?.results || data?.results || [];
+    
+    // Check for exact "Electronics" category name (case-insensitive)
+    const electronicsExact = cats.find(c => 
+      c.name && c.name.toLowerCase().trim() === 'electronics'
+    );
+    
+    // Check for categories containing "electron" (partial match)
+    const electronicsPartial = cats.filter(c => 
+      c.name && c.name.toLowerCase().includes('electron')
+    );
+    
+    // Always log all categories for debugging
+    console.log('[CategoryPage] 📦 ALL CATEGORIES FROM DATABASE:', {
+      total: cats.length,
+      expected: 112,
+      match: cats.length === 112 ? '✅ MATCH' : `❌ MISMATCH (expected 112, got ${cats.length})`,
+      categoryNames: cats.map(c => c.name || 'NO NAME'),
+    });
+    
+    // Log Electronics category specifically
+    if (electronicsExact) {
+      console.log('[CategoryPage] ✅ ELECTRONICS CATEGORY FOUND (exact match):', {
+        name: electronicsExact.name,
+        _id: electronicsExact._id,
+        parentCategory: electronicsExact.parentCategory,
+        parentCategoryType: typeof electronicsExact.parentCategory,
+        parentCategoryValue: electronicsExact.parentCategory,
+        parentCategoryId: typeof electronicsExact.parentCategory === 'object' 
+          ? (electronicsExact.parentCategory?._id || electronicsExact.parentCategory?.id || electronicsExact.parentCategory)
+          : electronicsExact.parentCategory,
+        hasParent: electronicsExact.parentCategory !== null && 
+                   electronicsExact.parentCategory !== undefined && 
+                   electronicsExact.parentCategory !== '' &&
+                   !(typeof electronicsExact.parentCategory === 'object' && 
+                     Object.keys(electronicsExact.parentCategory || {}).length === 0),
+        isTopLevel: !(electronicsExact.parentCategory !== null && 
+                      electronicsExact.parentCategory !== undefined && 
+                      electronicsExact.parentCategory !== '' &&
+                      !(typeof electronicsExact.parentCategory === 'object' && 
+                        Object.keys(electronicsExact.parentCategory || {}).length === 0)),
+        status: electronicsExact.status,
+        fullCategory: electronicsExact,
+      });
+    } else {
+      console.log('[CategoryPage] ❌ ELECTRONICS CATEGORY NOT FOUND (exact match "electronics")');
     }
+    
+    // Log all categories containing "electron"
+    if (electronicsPartial.length > 0) {
+      console.log('[CategoryPage] 🔍 Categories containing "electron":', {
+        count: electronicsPartial.length,
+        categories: electronicsPartial.map(c => ({
+          name: c.name,
+          _id: c._id,
+          parentCategory: c.parentCategory,
+          parentCategoryType: typeof c.parentCategory,
+          hasParent: c.parentCategory !== null && 
+                     c.parentCategory !== undefined && 
+                     c.parentCategory !== '' &&
+                     !(typeof c.parentCategory === 'object' && 
+                       Object.keys(c.parentCategory || {}).length === 0),
+        })),
+      });
+    }
+    
+    // Log detailed category information
+    console.log('[CategoryPage] 📋 Categories with details:', {
+      categoriesWithDetails: cats.map(c => ({
+        name: c.name || 'NO NAME',
+        _id: c._id,
+        parentCategory: c.parentCategory,
+        parentCategoryType: typeof c.parentCategory,
+        parentCategoryValue: c.parentCategory,
+        hasParent: c.parentCategory !== null && 
+                   c.parentCategory !== undefined && 
+                   c.parentCategory !== '' &&
+                   !(typeof c.parentCategory === 'object' && 
+                     Object.keys(c.parentCategory || {}).length === 0),
+        status: c.status,
+      })),
+      sampleCategory: cats[0],
+      sampleCategoryStructure: cats[0] ? Object.keys(cats[0]) : [],
+    });
+    
+    return cats;
+  }, [data]);
 
-    if (filters.search) {
-      const searchLower = filters.search.toLowerCase();
-      if (
-        !cat.name.toLowerCase().includes(searchLower) &&
-        !(
-          cat.description && cat.description.toLowerCase().includes(searchLower)
-        )
-      ) {
+  // Get top-level categories - memoized
+  const topLevelCategories = useMemo(() => {
+    const topLevel = categories.filter((cat) => {
+      // Handle both object and string/null parentCategory
+      const hasParent = cat.parentCategory !== null && 
+                       cat.parentCategory !== undefined && 
+                       cat.parentCategory !== '' &&
+                       !(typeof cat.parentCategory === 'object' && 
+                         Object.keys(cat.parentCategory || {}).length === 0);
+      
+      // Special logging for Electronics category
+      if (cat.name && cat.name.toLowerCase().includes('electron')) {
+        console.log('[CategoryPage] Electronics category check:', {
+          name: cat.name,
+          _id: cat._id,
+          parentCategory: cat.parentCategory,
+          parentCategoryType: typeof cat.parentCategory,
+          hasParent,
+          isTopLevel: !hasParent,
+        });
+      }
+      
+      return !hasParent;
+    });
+    
+    // Sort alphabetically
+    const sorted = topLevel.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    
+    // Always log top-level categories for debugging
+    const electronicsInList = sorted.find(c => c.name && c.name.toLowerCase().includes('electron'));
+    console.log('[CategoryPage] 📋 Top-level categories:', {
+      totalCategories: categories.length,
+      topLevelCount: sorted.length,
+      topLevelNames: sorted.map(c => c.name),
+      electronicsInList: electronicsInList ? electronicsInList.name : 'NOT FOUND',
+      electronicsDetails: electronicsInList ? {
+        name: electronicsInList.name,
+        _id: electronicsInList._id,
+        parentCategory: electronicsInList.parentCategory,
+        parentCategoryType: typeof electronicsInList.parentCategory,
+      } : null,
+      allTopLevelCategories: sorted.map(c => ({
+        name: c.name,
+        _id: c._id,
+        parentCategory: c.parentCategory,
+        parentCategoryType: typeof c.parentCategory,
+        parentCategoryValue: c.parentCategory,
+      })),
+      sampleCategory: sorted[0],
+    });
+    
+    return sorted;
+  }, [categories]);
+
+  // Filter categories based on filters - memoized
+  const filteredCategories = useMemo(() => {
+    const searchTerm = filters.search ? filters.search.trim().toLowerCase() : '';
+    const searchResults = [];
+    const nonMatchingCategories = [];
+    
+    const filtered = categories.filter((cat) => {
+      if (filters.status !== "ALL" && cat.status !== filters.status) {
         return false;
       }
-    }
 
-    if (filters.parentFilter !== "ALL") {
-      if (filters.parentFilter === "TOP_LEVEL") {
-        if (cat.parentCategory !== null) return false;
-      } else {
-        const parentId =
-          typeof cat.parentCategory === "object"
-            ? cat.parentCategory?._id
-            : cat.parentCategory;
-        if (parentId !== filters.parentFilter) return false;
+      if (searchTerm) {
+        // Normalize category name - handle whitespace, null/undefined, and normalize spaces
+        const categoryName = String(cat.name || '')
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, ' '); // Normalize multiple spaces to single space
+        
+        // PRIMARY: Check if search term matches category name (includes handles partial matches)
+        const matchesName = categoryName.includes(searchTerm);
+        
+        // SECONDARY: Also try word boundary matching for better results
+        // e.g., "electronic" should match "Electronics"
+        const words = categoryName.split(/\s+/);
+        const matchesWord = words.some(word => word.includes(searchTerm) || searchTerm.includes(word));
+        
+        // Only match by category name (name includes or word matching)
+        const matches = matchesName || matchesWord;
+        
+        // Log detailed match information for each category
+        const matchInfo = {
+          categoryName: cat.name,
+          categoryNameOriginal: cat.name,
+          categoryNameNormalized: categoryName,
+          categoryId: cat._id,
+          searchTerm,
+          matchesName,
+          matchesWord,
+          words: words,
+          finalMatch: matches,
+        };
+        
+        if (matches) {
+          searchResults.push(matchInfo);
+          console.log('[Category Search] ✅ MATCH (by name):', matchInfo);
+        } else {
+          nonMatchingCategories.push(matchInfo);
+          // Log non-matches for categories that might be expected to match
+          if (categoryName.includes('electron') || searchTerm.includes('electron')) {
+            console.log('[Category Search] ❌ NO MATCH (but contains "electron"):', matchInfo);
+          }
+        }
+        
+        // Show category ONLY if it matches the category name field
+        if (!matches) {
+          return false;
+        }
       }
+
+      // Filter by parent category
+      if (filters.parentFilter !== "ALL") {
+        if (filters.parentFilter === "TOP_LEVEL") {
+          // Check if category is top-level (no parentCategory)
+          // Use the SAME logic as topLevelCategories to ensure consistency
+          // Handle various formats: null, undefined, empty string, empty object
+          const hasParent = cat.parentCategory !== null && 
+                           cat.parentCategory !== undefined && 
+                           cat.parentCategory !== '' &&
+                           !(typeof cat.parentCategory === 'object' && 
+                             Object.keys(cat.parentCategory || {}).length === 0);
+          
+          // If it has a parent, filter it out
+          if (hasParent) {
+            // Debug logging for Electronics category
+            if (cat.name && cat.name.toLowerCase().includes('electron')) {
+              console.log('[CategoryPage] ❌ Electronics filtered out from TOP_LEVEL (has parent):', {
+                name: cat.name,
+                _id: cat._id,
+                parentCategory: cat.parentCategory,
+                parentCategoryType: typeof cat.parentCategory,
+                parentCategoryValue: cat.parentCategory,
+                hasParent,
+              });
+            }
+            return false;
+          } else {
+            // Debug logging for Electronics category when it passes
+            if (cat.name && cat.name.toLowerCase().includes('electron')) {
+              console.log('[CategoryPage] ✅ Electronics included in TOP_LEVEL (no parent):', {
+                name: cat.name,
+                _id: cat._id,
+                parentCategory: cat.parentCategory,
+                parentCategoryType: typeof cat.parentCategory,
+                hasParent: false,
+              });
+            }
+          }
+        } else {
+          // Filter by specific parent category ID
+          // Normalize both IDs to strings for reliable comparison
+          let parentId = null;
+          
+          if (cat.parentCategory) {
+            if (typeof cat.parentCategory === 'object' && cat.parentCategory !== null) {
+              // Populated object or ObjectId instance
+              parentId = cat.parentCategory._id || 
+                        cat.parentCategory.id || 
+                        (cat.parentCategory.toString && cat.parentCategory.toString()) ||
+                        cat.parentCategory;
+            } else {
+              // String/ObjectId
+              parentId = cat.parentCategory;
+            }
+          }
+          
+          // Normalize both IDs to strings for comparison
+          const parentIdStr = parentId?.toString ? parentId.toString() : String(parentId || '');
+          const filterIdStr = filters.parentFilter?.toString ? filters.parentFilter.toString() : String(filters.parentFilter || '');
+          
+          // Debug logging in development - log ALL attempts, not just matches
+          if (process.env.NODE_ENV === 'development') {
+            console.debug('[CategoryPage] Parent filter check:', {
+              categoryName: cat.name,
+              categoryId: cat._id,
+              parentCategory: cat.parentCategory,
+              parentCategoryType: typeof cat.parentCategory,
+              parentId: parentId,
+              parentIdStr,
+              filterIdStr,
+              filterValue: filters.parentFilter,
+              matches: parentIdStr === filterIdStr,
+            });
+          }
+          
+          if (parentIdStr !== filterIdStr) {
+            return false;
+          }
+          
+          // Log successful match
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[CategoryPage] ✅ Subcategory included:', {
+              subcategoryName: cat.name,
+              subcategoryId: cat._id,
+              parentId: parentIdStr,
+              filterId: filterIdStr,
+            });
+          }
+        }
+      }
+      
+      return true;
+    });
+    
+    // Log comprehensive search results summary
+    if (searchTerm) {
+      console.log('[Category Search] 📊 Search Summary:', {
+        searchTerm: filters.search,
+        searchTermLower: searchTerm,
+        totalCategories: categories.length,
+        filteredCount: filtered.length,
+        matchedCount: searchResults.length,
+        notMatchedCount: nonMatchingCategories.length,
+        matchedCategoryNames: searchResults.map(r => r.categoryName),
+        allMatches: searchResults,
+        sampleNonMatches: nonMatchingCategories.slice(0, 5), // First 5 non-matches
+      });
     }
+    
+    // Log summary of filtered results
+    if (process.env.NODE_ENV === 'development' && filters.parentFilter !== "ALL" && filters.parentFilter !== "TOP_LEVEL") {
+      console.log('[CategoryPage] 📊 Filter Summary:', {
+        parentFilter: filters.parentFilter,
+        totalCategories: categories.length,
+        filteredCount: filtered.length,
+        filteredCategoryNames: filtered.map(c => c.name),
+        sampleFiltered: filtered.slice(0, 5).map(c => ({
+          name: c.name,
+          _id: c._id,
+          parentCategory: c.parentCategory,
+          parentCategoryType: typeof c.parentCategory,
+        })),
+      });
+    }
+    
+    return filtered;
+  }, [categories, filters.status, filters.search, filters.parentFilter]);
 
-    return true;
-  });
+  // Pagination - memoized
+  const totalPages = useMemo(() => {
+    return Math.ceil(filteredCategories.length / itemsPerPage);
+  }, [filteredCategories.length, itemsPerPage]);
 
-  // Pagination
-  const totalPages = Math.ceil(filteredCategories.length / itemsPerPage);
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-
-  const currentCategories = filteredCategories.slice(
-    indexOfFirstItem,
-    indexOfLastItem
-  );
+  const currentCategories = useMemo(() => {
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    return filteredCategories.slice(indexOfFirstItem, indexOfLastItem);
+  }, [filteredCategories, currentPage, itemsPerPage]);
 
   const handleInputChange = (e) => {
     console.log("e", e);
@@ -304,13 +613,13 @@ export default function CategoryPage() {
         <CategoryListView
           currentCategories={currentCategories}
           categories={categories}
-          setFilters={setFilters}
+          setFilters={handleFilterUpdate}
           handleEdit={handleEdit}
           handleDelete={handleDelete}
           updateCategory={updateCategory}
         />
       ) : (
-        <EmptyState />
+        <EmptyState setShowForm={setShowForm} />
       )}
       {filters.viewMode === "list" &&
         filteredCategories.length > itemsPerPage && (

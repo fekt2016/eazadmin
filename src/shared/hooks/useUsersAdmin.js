@@ -23,6 +23,19 @@ const useSellerAdmin = (userId) => {
   const queryClient = useQueryClient();
 
   // Get seller details if sellerId is provided
+  // CRITICAL: Validate ID format to prevent invalid API calls
+  const isValidObjectId = (id) => {
+    if (!id) return false;
+    // MongoDB ObjectIds are 24 character hex strings
+    // Reject numeric IDs like "1", "2", etc.
+    if (typeof id === 'string' && id.length <= 3 && !isNaN(id) && parseInt(id) < 1000) {
+      return false;
+    }
+    // Check if it's a valid ObjectId format (24 hex characters)
+    const objectIdRegex = /^[0-9a-fA-F]{24}$/;
+    return objectIdRegex.test(id);
+  };
+
   const {
     data: user,
     isLoading: isSellerLoading,
@@ -31,7 +44,14 @@ const useSellerAdmin = (userId) => {
   } = useQuery({
     queryKey: ["admin", "user", userId],
     queryFn: () => adminUserApi.getUserDetails(userId),
-    enabled: !!userId, // Only fetch when sellerId exists
+    enabled: !!userId && isValidObjectId(userId), // Only fetch when sellerId exists and is valid
+    retry: (failureCount, error) => {
+      // Don't retry on 400 (Invalid ID format) or timeout errors to avoid storms.
+      if (error?.response?.status === 400 || error?.isTimeout || error?.code === 'ECONNABORTED') {
+        return false;
+      }
+      return failureCount < 2;
+    },
   });
 
   // Get all sellers with pagination
@@ -54,7 +74,15 @@ const useSellerAdmin = (userId) => {
       return adminUserApi.getAllUsers(params);
     },
     keepPreviousData: true,
-    retry: 2,
+    // Users list can be heavy; avoid retrying on backend timeouts.
+    retry: (failureCount, error) => {
+      if (error?.isTimeout || error?.code === 'ECONNABORTED') {
+        return false;
+      }
+      return failureCount < 2;
+    },
+    // Non-critical list: avoid window-focus refetch storms in admin dashboard.
+    refetchOnWindowFocus: false,
     onSuccess: (response) => {
       // Use optional chaining to safely access data
       const apiData = response?.data?.data || {};

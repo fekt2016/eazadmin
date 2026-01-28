@@ -5,19 +5,53 @@ import { productService } from '../services/productApi';
 const useProduct = () => {
   const queryClient = useQueryClient();
 
-  // Get all products
+  // Get all products - CRITICAL: Use pagination, do NOT fetch all products at once
+  // This prevents server lockup from large queries
   const getProducts = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
       try {
-        return await productService.getAllProducts();
+        // CRITICAL: Fetch only first page (200 products max) to prevent timeout
+        // Frontend pagination should handle additional pages
+        const response = await productService.getAllProducts({ page: 1, limit: 200 });
+        
+        // Handle different response structures
+        const products = response?.data?.data || 
+                        response?.data?.products || 
+                        response?.data || 
+                        response?.results || 
+                        [];
+        
+        const total = response?.total || response?.data?.total || products.length;
+        
+        return {
+          status: 'success',
+          results: products.length,
+          total: total,
+          data: {
+            data: products,
+          },
+        };
       } catch (error) {
-        console.error("Failed to fetch products:", error);
-        throw new Error("Failed to load products");
+        console.error("[useProduct] ❌ Failed to fetch products:", {
+          message: error.message,
+          status: error.response?.status,
+        });
+        
+        const errorMessage = error.response?.data?.message || 
+                            error.message || 
+                            "Failed to load products";
+        
+        const enhancedError = new Error(errorMessage);
+        enhancedError.originalError = error;
+        enhancedError.status = error.response?.status;
+        enhancedError.responseData = error.response?.data;
+        
+        throw enhancedError;
       }
     },
     staleTime: 1000 * 60 * 5,
-    retry: 2,
+    retry: 1, // Reduced retries to prevent accumulation
   });
 
   // Get single product by ID
@@ -106,8 +140,15 @@ const useProduct = () => {
   const deleteProduct = useMutation({
     mutationFn: (id) => productService.deleteProduct(id),
     onSuccess: () => {
-      queryClient.getQueryData(["product"]);
+      // CRITICAL: Only invalidate, do NOT refetch immediately
+      // This prevents accumulation of overlapping requests
+      // React Query will refetch when component needs the data
+      queryClient.invalidateQueries({ queryKey: ["product"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
       console.log("product deleted successfully!!!");
+    },
+    onError: (error) => {
+      console.error("Delete product error:", error);
     },
   });
 
@@ -172,10 +213,36 @@ const useProduct = () => {
 
   // Approve product mutation
   const approveProduct = useMutation({
-    mutationFn: ({ productId, notes }) => productService.approveProduct(productId, notes),
-    onSuccess: () => {
+    mutationFn: async ({ productId, notes }) => {
+      console.log('[useProduct] Approving product:', { productId, notes });
+      try {
+        const result = await productService.approveProduct(productId, notes);
+        console.log('[useProduct] ✅ Product approved successfully:', result);
+        return result;
+      } catch (error) {
+        console.error('[useProduct] ❌ Error approving product:', {
+          productId,
+          error: error.message,
+          response: error.response?.data,
+          status: error.response?.status,
+        });
+        throw error;
+      }
+    },
+    onSuccess: (data, variables) => {
+      console.log('[useProduct] Approval success, invalidating queries:', variables);
+      // Invalidate and refetch products to get updated data
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["pendingProducts"] });
+      queryClient.refetchQueries({ queryKey: ["products"] });
+    },
+    onError: (error, variables) => {
+      console.error('[useProduct] Approval mutation error:', {
+        productId: variables.productId,
+        error: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
     },
   });
 
@@ -218,6 +285,8 @@ const useProduct = () => {
     },
     deleteProduct: {
       mutate: deleteProduct.mutate,
+      mutateAsync: deleteProduct.mutateAsync,
+      isPending: deleteProduct.isPending,
       isLoading: deleteProduct.isLoading,
       error: deleteProduct.error,
     },

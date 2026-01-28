@@ -156,16 +156,38 @@ export default function CategoryForm({
               >
                 <option value="">None (Top Level)</option>
                 {categories
-                  .filter((cat) => !cat.parentCategory)
+                  .filter((cat) => {
+                    // Only show categories without a parent (top-level categories)
+                    // Handle both object and string/null parentCategory
+                    const hasParent = cat.parentCategory !== null && 
+                                     cat.parentCategory !== undefined && 
+                                     cat.parentCategory !== '' &&
+                                     !(typeof cat.parentCategory === 'object' && 
+                                       Object.keys(cat.parentCategory || {}).length === 0);
+                    return !hasParent;
+                  })
                   .filter(
                     (cat) => !editingCategory || cat._id !== editingCategory._id
                   )
+                  .sort((a, b) => (a.name || '').localeCompare(b.name || '')) // Sort alphabetically
                   .map((cat) => (
                     <option key={cat._id} value={cat._id}>
                       {cat.name}
                     </option>
                   ))}
               </FormSelect>
+              {process.env.NODE_ENV === 'development' && (
+                <div style={{ fontSize: '0.85rem', color: '#666', marginTop: '0.5rem' }}>
+                  Showing {categories.filter(cat => {
+                    const hasParent = cat.parentCategory !== null && 
+                                     cat.parentCategory !== undefined && 
+                                     cat.parentCategory !== '' &&
+                                     !(typeof cat.parentCategory === 'object' && 
+                                       Object.keys(cat.parentCategory || {}).length === 0);
+                    return !hasParent;
+                  }).length} of {categories.length} categories (top-level only)
+                </div>
+              )}
             </FormGroup>
 
             <FormGroup>

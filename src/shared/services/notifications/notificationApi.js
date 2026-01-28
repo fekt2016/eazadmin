@@ -36,7 +36,10 @@ export const getNotifications = async (params = {}) => {
 export const getUnreadCount = async () => {
   try {
     console.log('[EazAdmin NotificationAPI] 🔍 Fetching unread count...');
-    const response = await api.get('/notifications/unread');
+    // Use shorter timeout for notification count (5 seconds)
+    const response = await api.get('/notifications/unread', {
+      timeout: 5000, // 5 seconds timeout
+    });
     console.log('[EazAdmin NotificationAPI] ✅ getUnreadCount response:', {
       fullResponse: response,
       responseData: response.data,
@@ -45,13 +48,20 @@ export const getUnreadCount = async () => {
     });
     return response.data;
   } catch (error) {
-    console.error('[EazAdmin NotificationAPI] ❌ Error fetching unread count:', {
+    // Don't throw error - return default value instead to prevent blocking
+    console.warn('[EazAdmin NotificationAPI] ⚠️ Error fetching unread count (non-blocking):', {
       error,
       message: error.message,
       response: error.response?.data,
       status: error.response?.status,
     });
-    throw error;
+    // Return default structure so UI doesn't break
+    return {
+      status: 'success',
+      data: {
+        unreadCount: 0,
+      },
+    };
   }
 };
 

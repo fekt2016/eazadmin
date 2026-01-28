@@ -49,7 +49,13 @@ const useSellerAdmin = (pageParam = 1, limit = 10) => {
       return adminApi.getAllSellers(params);
     },
     keepPreviousData: true,
-    retry: 2,
+    // Avoid retry storms on backend timeouts while still retrying for transient errors.
+    retry: (failureCount, error) => {
+      if (error?.isTimeout || error?.code === 'ECONNABORTED') {
+        return false;
+      }
+      return failureCount < 2;
+    },
   });
   
   // Seller verification mutations
@@ -152,9 +158,55 @@ const useSellerAdmin = (pageParam = 1, limit = 10) => {
 export const usePayoutVerificationDetails = (sellerId) => {
   return useQuery({
     queryKey: ["admin", "seller", sellerId, "payout-verification"],
-    queryFn: () => adminApi.getPayoutVerificationDetails(sellerId),
+    queryFn: async () => {
+      try {
+        const response = await adminApi.getPayoutVerificationDetails(sellerId);
+        console.log('[usePayoutVerificationDetails] ✅ Fetched payout verification data:', {
+          sellerId,
+          hasData: !!response,
+          responseStructure: response,
+          paymentMethodRecords: response?.data?.data?.seller?.paymentMethodRecords?.length || 0,
+        });
+        return response;
+      } catch (error) {
+        console.error('[usePayoutVerificationDetails] ❌ Error fetching payout verification:', {
+          sellerId,
+          error,
+          message: error.message,
+          isTimeout: error.isTimeout,
+        });
+        // Don't throw - return empty structure to prevent blocking
+        if (error.isTimeout || error.code === 'ECONNABORTED') {
+          console.warn('[usePayoutVerificationDetails] ⚠️ Request timed out, returning empty structure');
+          return {
+            data: {
+              status: 'success',
+              data: {
+                seller: {
+                  paymentMethodRecords: [],
+                  paymentMethods: null,
+                },
+              },
+            },
+          };
+        }
+        throw error;
+      }
+    },
     enabled: !!sellerId,
-    staleTime: 1000 * 60 * 2, // 2 minutes
+    staleTime: 0, // Always fetch fresh data - payment methods can be added at any time
+    // Avoid refetch storm on tab focus; admin can explicitly refresh when needed.
+    refetchOnWindowFocus: false,
+    refetchOnMount: true, // Always refetch when component mounts
+    cacheTime: 0, // Don't cache - always get fresh data
+    // Avoid retrying when the backend is already timing out.
+    retry: (failureCount, error) => {
+      if (error?.isTimeout || error?.code === 'ECONNABORTED') {
+        return false;
+      }
+      return failureCount < 1;
+    },
+    retryDelay: 2000, // Wait 2 seconds before retry
   });
 };
 
@@ -169,14 +221,24 @@ export const useGetSellerById = (sellerId) => {
       if (!sellerId) {
         throw new Error("Seller ID is required");
       }
-      const response = await adminApi.getSellerDetails(sellerId);
+      // Increase timeout for seller details (may have lots of data)
+      const response = await adminApi.getSellerDetails(sellerId, {
+        timeout: 30000, // 30 seconds for seller details
+      });
       return response;
     },
     enabled: !!sellerId,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 5, // 5 minutes - cache is considered fresh for 5 minutes
+    gcTime: 1000 * 60 * 10, // 10 minutes - keep in cache for 10 minutes (formerly cacheTime)
+    refetchOnWindowFocus: false, // Prevent refetch on window focus
+    refetchOnMount: false, // Prevent refetch on mount if data exists
+    refetchOnReconnect: false, // Prevent refetch on reconnect
+    // CRITICAL: Don't refetch if we have fresh data
+    // This prevents stale data from overwriting verified state
+    refetchInterval: false, // Never auto-refetch
     retry: (failureCount, error) => {
-      // Don't retry on 404 errors
-      if (error.response?.status === 404) {
+      // Don't retry on 404 errors or timeout errors
+      if (error.response?.status === 404 || error.isTimeout) {
         return false;
       }
       return failureCount < 2;

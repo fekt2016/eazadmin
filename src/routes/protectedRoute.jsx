@@ -4,7 +4,7 @@ import useAuth from '../shared/hooks/useAuth';
 import { LoadingSpinner } from '../shared/components/LoadingSpinner';
 
 const ProtectedRoutes = ({ children }) => {
-  const { adminData, isLoading, error } = useAuth();
+  const { adminData, isLoading, isError, error } = useAuth();
 
   // SECURITY: Cookie-only authentication - no token check needed
   // Backend validates session via HTTP-only cookie automatically

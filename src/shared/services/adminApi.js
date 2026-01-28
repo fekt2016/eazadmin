@@ -2,9 +2,15 @@ import api from "./api";
 export const authApi = {
   login: (credentials) => api.post("/admin/login", credentials),
   register: (userData) => api.post("/admin/register", userData),
-  logout: () => api.post("/admin/logout"),
+  // Use shared device-session logout for admin.
+  // Backend route: DELETE /api/v1/sessions/admin/logout-all
+  // This clears the admin_jwt cookie and blacklists the current token.
+  logout: () => api.delete("/sessions/admin/logout-all"),
   getCurrentUser: async () => {
-    const response = await api.get("/admin/me");
+    // Increase timeout for auth endpoint as it may take longer
+    const response = await api.get("/admin/me", {
+      timeout: 30000, // 30 seconds for auth endpoints
+    });
     return response;
   },
   // ==================================================

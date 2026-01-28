@@ -35,7 +35,11 @@ const adminUserApi = {
       Object.entries(validatedParams).filter(([v]) => v !== undefined)
     );
 
-    return api.get(`/admin`, { params: cleanParams });
+    // Use shorter timeout for admin list (10 seconds)
+    return api.get(`/admin`, { 
+      params: cleanParams,
+      timeout: 10000, // 10 seconds timeout
+    });
   },
   getAdminDetails: (adminId) => api.get(`/admin/${adminId}`),
   updateAdmin: (adminId, data) => api.patch(`/admin/${adminId}`, data),

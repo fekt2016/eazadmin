@@ -6,19 +6,33 @@ import useCategory from '../../hooks/useCategory';
 import useProduct from '../../hooks/useProduct';
 import { LoadingSpinner } from '../LoadingSpinner';
 
-const CategoryListView = ({
-  currentCategories,
+// Separate component for individual category card to allow hooks inside
+const CategoryCardComponent = ({
+  category,
   categories,
+  expandedCategories,
+  setExpandedCategories,
   setFilters,
   handleEdit,
   handleDelete,
-  // handleEditVariants,
+  getImmediateSubcategories,
+  getSubCategoryCount,
+  updateCategory,
+  useGetProductsByCategory,
 }) => {
-  const [expandedCategories, setExpandedCategories] = useState({});
-  const getImmediateSubcategories = useGetImmediateSubcategories(categories);
-  const getSubCategoryCount = useGetSubCategoryCount(categories);
-  const { updateCategory } = useCategory();
-  const { useGetProductsByCategory } = useProduct();
+  const subCount = getSubCategoryCount(category._id);
+  const hasChildren = subCount > 0;
+  const subcategories = getImmediateSubcategories(category._id);
+  const isExpanded = expandedCategories[category._id];
+  
+  // Fetch products for this category - hooks can be used here since it's a separate component
+  const { data: productsData, isLoading: isLoadingProducts } = useGetProductsByCategory(
+    category._id,
+    { limit: 10, page: 1 }
+  );
+  
+  const products = productsData?.data?.products || productsData?.products || [];
+  const totalProducts = productsData?.data?.totalCount || productsData?.totalCount || products.length;
 
   const handleToggleStatus = (category) => {
     const newStatus = category.status === "active" ? "inactive" : "active";
@@ -39,174 +53,196 @@ const CategoryListView = ({
     );
   };
 
-  const toggleCategoryExpansion = (categoryId) => {
-    setExpandedCategories(prev => ({
-      ...prev,
-      [categoryId]: !prev[categoryId]
-    }));
-  };
-
   return (
-    <CategoriesGrid>
-      {currentCategories.map((category) => {
-        const subCount = getSubCategoryCount(category._id);
-        const hasChildren = subCount > 0;
-        const subcategories = getImmediateSubcategories(category._id);
-        const isExpanded = expandedCategories[category._id];
-        
-        // Fetch products for this category
-        const { data: productsData, isLoading: isLoadingProducts } = useGetProductsByCategory(
-          category._id,
-          { limit: 10, page: 1 }
-        );
-        
-        const products = productsData?.data?.products || productsData?.products || [];
-        const totalProducts = productsData?.data?.totalCount || productsData?.totalCount || products.length;
+    <CategoryCard>
+      <CategoryImageContainer>
+        {category.image ? (
+          <CategoryImage
+            src={category?.image}
+            alt={category?.name}
+            onError={(e) => {
+              console.log("error", e);
+              e.target.onerror = null;
+              e.target.src = "https://placehold.co/150x150?text=Error";
+            }}
+          />
+        ) : (
+          "No Image"
+        )}
+      </CategoryImageContainer>
+      <CategoryHeader>
+        <CategoryName>{category.name}</CategoryName>
+        <StatusBadge $status={category.status}>
+          {category.status.charAt(0).toUpperCase() +
+            category.status.slice(1)}
+        </StatusBadge>
+      </CategoryHeader>
 
-        return (
-          <CategoryCard key={category._id}>
-            <CategoryImageContainer>
-              {category.image ? (
-                <CategoryImage
-                  src={category?.image}
-                  alt={category?.name}
+      <CategoryDescription>{category.description}</CategoryDescription>
+
+      <CategoryMeta>
+        <MetaItem>
+          <MetaLabel>Products:</MetaLabel>
+          <MetaValue>
+            {isLoadingProducts ? (
+              <LoadingSpinner size="sm" />
+            ) : (
+              totalProducts || 0
+            )}
+          </MetaValue>
+        </MetaItem>
+
+        <MetaItem>
+          <MetaLabel>Sub-categories:</MetaLabel>
+          <MetaValue>{subCount}</MetaValue>
+        </MetaItem>
+
+        <MetaItem>
+          <MetaLabel>Parent:</MetaLabel>
+          <MetaValue>
+            {category.parentId
+              ? categories.find((c) => c._id === category.parentId)
+                  ?.name || "None"
+              : "None"}
+          </MetaValue>
+        </MetaItem>
+
+        <MetaItem>
+          <MetaLabel>Created:</MetaLabel>
+          <MetaValue>
+            {new Date(category.createdAt).toLocaleDateString()}
+          </MetaValue>
+        </MetaItem>
+      </CategoryMeta>
+
+      {/* Products Section */}
+      {!isLoadingProducts && products.length > 0 && (
+        <ProductsSection>
+          <ProductsLabel>Products in this category ({totalProducts}):</ProductsLabel>
+          <ProductsList>
+            {products.slice(0, 5).map((product) => (
+              <ProductItem key={product._id || product.id}>
+                <ProductImage
+                  src={product.imageCover || product.image || "https://placehold.co/50x50?text=No+Image"}
+                  alt={product.name}
                   onError={(e) => {
-                    console.log("error", e);
-                    e.target.onerror = null;
-                    e.target.src = "https://placehold.co/150x150?text=Error";
+                    e.target.src = "https://placehold.co/50x50?text=Error";
                   }}
                 />
-              ) : (
-                "No Image"
-              )}
-            </CategoryImageContainer>
-            <CategoryHeader>
-              <CategoryName>{category.name}</CategoryName>
-              <StatusBadge $status={category.status}>
-                {category.status.charAt(0).toUpperCase() +
-                  category.status.slice(1)}
-              </StatusBadge>
-            </CategoryHeader>
-
-            <CategoryDescription>{category.description}</CategoryDescription>
-
-            <CategoryMeta>
-              <MetaItem>
-                <MetaLabel>Products:</MetaLabel>
-                <MetaValue>
-                  {isLoadingProducts ? (
-                    <LoadingSpinner size="sm" />
-                  ) : (
-                    totalProducts || 0
-                  )}
-                </MetaValue>
-              </MetaItem>
-
-              <MetaItem>
-                <MetaLabel>Sub-categories:</MetaLabel>
-                <MetaValue>{subCount}</MetaValue>
-              </MetaItem>
-
-              <MetaItem>
-                <MetaLabel>Parent:</MetaLabel>
-                <MetaValue>
-                  {category.parentId
-                    ? categories.find((c) => c._id === category.parentId)
-                        ?.name || "None"
-                    : "None"}
-                </MetaValue>
-              </MetaItem>
-
-              <MetaItem>
-                <MetaLabel>Created:</MetaLabel>
-                <MetaValue>
-                  {new Date(category.createdAt).toLocaleDateString()}
-                </MetaValue>
-              </MetaItem>
-            </CategoryMeta>
-
-            {/* Products Section */}
-            {!isLoadingProducts && products.length > 0 && (
-              <ProductsSection>
-                <ProductsLabel>Products in this category ({totalProducts}):</ProductsLabel>
-                <ProductsList>
-                  {products.slice(0, 5).map((product) => (
-                    <ProductItem key={product._id || product.id}>
-                      <ProductImage
-                        src={product.imageCover || product.image || "https://placehold.co/50x50?text=No+Image"}
-                        alt={product.name}
-                        onError={(e) => {
-                          e.target.src = "https://placehold.co/50x50?text=Error";
-                        }}
-                      />
-                      <ProductInfo>
-                        <ProductName>{product.name}</ProductName>
-                        <ProductPrice>GH₵{product.price?.toFixed(2) || "0.00"}</ProductPrice>
-                      </ProductInfo>
-                    </ProductItem>
-                  ))}
-                  {products.length > 5 && (
-                    <MoreProductsText>
-                      +{products.length - 5} more products
-                    </MoreProductsText>
-                  )}
-                </ProductsList>
-              </ProductsSection>
+                <ProductInfo>
+                  <ProductName>{product.name}</ProductName>
+                  <ProductPrice>GH₵{product.price?.toFixed(2) || "0.00"}</ProductPrice>
+                </ProductInfo>
+              </ProductItem>
+            ))}
+            {products.length > 5 && (
+              <MoreProductsText>
+                +{products.length - 5} more products
+              </MoreProductsText>
             )}
+          </ProductsList>
+        </ProductsSection>
+      )}
 
-            {hasChildren && (
-              <SubcategorySection>
-                <SubcategoryLabel>Subcategories:</SubcategoryLabel>
-                <SubcategoryList>
-                  {subcategories.map((sub) => (
-                    <SubcategoryItem
-                      key={sub._id}
-                      onClick={() =>
-                        setFilters((prev) => ({
-                          ...prev,
-                          parentFilter: sub._id.toString(),
-                        }))
-                      }
-                    >
-                      {sub.name}
-                    </SubcategoryItem>
-                  ))}
-                </SubcategoryList>
-              </SubcategorySection>
-            )}
-
-            <CategoryActions>
-              <ActionButton onClick={() => handleEdit(category)}>
-                Edit
-              </ActionButton>
-
-              <ActionButton
-                $status={category.status}
-                onClick={() => handleToggleStatus(category)}
-              >
-                {category.status === "active" ? "Deactivate" : "Activate"}
-              </ActionButton>
-
-              <DeleteButton onClick={() => handleDelete(category._id)}>
-                Delete
-              </DeleteButton>
-            </CategoryActions>
-
-            {hasChildren && (
-              <ViewSubButton
+      {hasChildren && (
+        <SubcategorySection>
+          <SubcategoryLabel>Subcategories:</SubcategoryLabel>
+          <SubcategoryList>
+            {subcategories.map((sub) => (
+              <SubcategoryItem
+                key={sub._id}
                 onClick={() =>
                   setFilters((prev) => ({
                     ...prev,
-                    parentFilter: category._id.toString(),
+                    parentFilter: sub._id.toString(),
                   }))
                 }
               >
-                View All Sub-categories
-              </ViewSubButton>
-            )}
-          </CategoryCard>
-        );
-      })}
+                {sub.name}
+              </SubcategoryItem>
+            ))}
+          </SubcategoryList>
+        </SubcategorySection>
+      )}
+
+      <CategoryActions>
+        <ActionButton onClick={() => handleEdit(category)}>
+          Edit
+        </ActionButton>
+
+        <ActionButton
+          $status={category.status}
+          onClick={() => handleToggleStatus(category)}
+        >
+          {category.status === "active" ? "Deactivate" : "Activate"}
+        </ActionButton>
+
+        <DeleteButton onClick={() => handleDelete(category._id)}>
+          Delete
+        </DeleteButton>
+      </CategoryActions>
+
+      {hasChildren && (
+        <ViewSubButton
+          onClick={() => {
+            console.log('[CategoryListView] View All Sub-categories clicked:', {
+              categoryId: category._id,
+              categoryName: category.name,
+              subCount,
+              subcategories: subcategories.map(s => ({ name: s.name, _id: s._id })),
+            });
+            setFilters((prev) => {
+              const newFilters = {
+                ...prev,
+                parentFilter: category._id.toString(),
+              };
+              console.log('[CategoryListView] Setting filter:', {
+                oldFilter: prev.parentFilter,
+                newFilter: newFilters.parentFilter,
+              });
+              return newFilters;
+            });
+          }}
+        >
+          View All Sub-categories
+        </ViewSubButton>
+      )}
+    </CategoryCard>
+  );
+};
+
+const CategoryListView = ({
+  currentCategories,
+  categories,
+  setFilters,
+  handleEdit,
+  handleDelete,
+  // handleEditVariants,
+}) => {
+  const [expandedCategories, setExpandedCategories] = useState({});
+  const getImmediateSubcategories = useGetImmediateSubcategories(categories);
+  const getSubCategoryCount = useGetSubCategoryCount(categories);
+  const { updateCategory } = useCategory();
+  const { useGetProductsByCategory } = useProduct();
+
+  return (
+    <CategoriesGrid>
+      {currentCategories.map((category) => (
+        <CategoryCardComponent
+          key={category._id}
+          category={category}
+          categories={categories}
+          expandedCategories={expandedCategories}
+          setExpandedCategories={setExpandedCategories}
+          setFilters={setFilters}
+          handleEdit={handleEdit}
+          handleDelete={handleDelete}
+          getImmediateSubcategories={getImmediateSubcategories}
+          getSubCategoryCount={getSubCategoryCount}
+          updateCategory={updateCategory}
+          useGetProductsByCategory={useGetProductsByCategory}
+        />
+      ))}
     </CategoriesGrid>
   );
 };

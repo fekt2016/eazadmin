@@ -119,6 +119,54 @@ export const getParentName = (parentId, categories) => {
   return parent ? parent.name : "Unknown";
 };
 
+/**
+ * Normalize technical errors (Axios / React Query / network)
+ * into calm, user-friendly messages for display in the UI.
+ *
+ * IMPORTANT:
+ * - Never surface raw error objects, stack traces or HTTP codes to users.
+ * - Keep wording non-technical and action-oriented.
+ */
+export const getUserFriendlyErrorMessage = (
+  error,
+  fallbackMessage = "Something went wrong. Please try again."
+) => {
+  if (!error) return fallbackMessage;
+
+  // Axios interceptor in api.js may already decorate the error
+  const status = error.status || error.response?.status;
+  const message = (error.message || "").toLowerCase();
+
+  // Timeout
+  if (error.isTimeout || message.includes("timeout")) {
+    return "This is taking longer than expected. Please try again.";
+  }
+
+  // Pure network / connection issues (no response object)
+  if (!error.response) {
+    return "We couldn’t connect to the server. Check your internet and try again.";
+  }
+
+  // Auth / permission issues
+  if (status === 401 || status === 403) {
+    return "You don’t have permission to perform this action.";
+  }
+
+  // Not found
+  if (status === 404) {
+    return "The requested information could not be found.";
+  }
+
+  // Server-side errors
+  if (typeof status === "number" && status >= 500) {
+    return "Something went wrong on our side. Please try again later.";
+  }
+
+  // Fallback – avoid exposing raw server copy
+  return fallbackMessage;
+};
+
+
 // utils/phoneValidation.js
 const networks = {
   MTN: ["24", "54", "55", "59", "50"],

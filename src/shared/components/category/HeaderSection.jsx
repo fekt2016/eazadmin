@@ -28,7 +28,7 @@ export default function HeaderSection({
           <SearchInput
             type="text"
             name="search"
-            placeholder="Search categories by name or description..."
+            placeholder="Search categories by name..."
             value={filters.search}
             onChange={handleFilterChange}
           />
@@ -58,12 +58,16 @@ export default function HeaderSection({
             >
               <option value="ALL">All Categories</option>
               <option value="TOP_LEVEL">Top Level Only</option>
-              <optgroup label="Top Level Categories">
-                {topLevelCategories.map((cat) => (
-                  <option key={cat._id} value={cat._id}>
-                    {cat.name}
-                  </option>
-                ))}
+              <optgroup label={`Top Level Categories (${topLevelCategories.length} available)`}>
+                {topLevelCategories.length === 0 ? (
+                  <option value="" disabled>No top-level categories found</option>
+                ) : (
+                  topLevelCategories.map((cat) => (
+                    <option key={cat._id} value={cat._id}>
+                      {cat.name}
+                    </option>
+                  ))
+                )}
               </optgroup>
             </FilterSelect>
           </FilterWrapper>

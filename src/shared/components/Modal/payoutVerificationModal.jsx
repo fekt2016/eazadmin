@@ -1,13 +1,18 @@
 import { useState } from "react";
 import styled from "styled-components";
 import useSellerAdmin from '../../hooks/useSellerAdmin';
+import { getUserFriendlyErrorMessage } from '../../utils/helpers';
+import normalizeError from '../../utils/normalizeError';
+import { useQueryClient } from "@tanstack/react-query";
 import { FaCheckCircle, FaTimesCircle, FaBuilding, FaMobileAlt, FaWallet, FaExclamationTriangle } from "react-icons/fa";
 import { toast } from "react-toastify";
 
-const PayoutVerificationModal = ({ seller, paymentMethodType: propPaymentMethodType, onClose }) => {
+const PayoutVerificationModal = ({ seller, paymentMethodType: propPaymentMethodType, paymentMethodRecord, onClose }) => {
   const { approvePayout, rejectPayout } = useSellerAdmin();
+  const queryClient = useQueryClient();
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
+  const [actionError, setActionError] = useState(null);
 
   if (!seller) {
     return null;
@@ -18,6 +23,18 @@ const PayoutVerificationModal = ({ seller, paymentMethodType: propPaymentMethodT
     // If payment method type is provided as prop, use it
     if (propPaymentMethodType) {
       return propPaymentMethodType;
+    }
+    
+    // If we have a paymentMethodRecord, determine type from it
+    if (paymentMethodRecord) {
+      if (paymentMethodRecord.type === 'bank_transfer') {
+        return 'bank';
+      } else if (paymentMethodRecord.type === 'mobile_money') {
+        const provider = paymentMethodRecord.provider;
+        if (provider === 'MTN') return 'mtn_momo';
+        if (provider === 'Vodafone' || provider === 'vodafone') return 'vodafone_cash';
+        return 'airtel_tigo_money';
+      }
     }
     
     // Otherwise, auto-detect from seller's payment methods
@@ -34,8 +51,30 @@ const PayoutVerificationModal = ({ seller, paymentMethodType: propPaymentMethodT
 
   const paymentMethodType = getPaymentMethodType();
   
-  // Get payment details based on the selected payment method type
+  // Get payment details - prefer paymentMethodRecord if provided, otherwise use seller.paymentMethods
   const getPaymentDetails = () => {
+    // If we have a paymentMethodRecord, convert it to the expected format
+    if (paymentMethodRecord) {
+      if (paymentMethodRecord.type === 'bank_transfer') {
+        return {
+          accountName: paymentMethodRecord.accountName || paymentMethodRecord.name || '',
+          accountNumber: paymentMethodRecord.accountNumber || '',
+          bankName: paymentMethodRecord.bankName || '',
+          branch: paymentMethodRecord.branch || '',
+          bankCode: paymentMethodRecord.bankCode || '',
+          payoutStatus: paymentMethodRecord.verificationStatus || 'pending',
+        };
+      } else if (paymentMethodRecord.type === 'mobile_money') {
+        return {
+          accountName: paymentMethodRecord.accountName || paymentMethodRecord.name || '',
+          phone: paymentMethodRecord.mobileNumber || '',
+          network: paymentMethodRecord.provider || '',
+          payoutStatus: paymentMethodRecord.verificationStatus || 'pending',
+        };
+      }
+    }
+    
+    // Fallback to seller.paymentMethods
     if (paymentMethodType === 'bank') {
       return seller.paymentMethods?.bankAccount;
     } else if (['mtn_momo', 'vodafone_cash', 'airtel_tigo_money'].includes(paymentMethodType)) {
@@ -69,14 +108,37 @@ const PayoutVerificationModal = ({ seller, paymentMethodType: propPaymentMethodT
     }
 
     try {
+      setActionError(null);
       await approvePayout.mutateAsync({
         sellerId: seller._id,
         paymentMethod: paymentMethodType,
       });
       toast.success('Payout verification approved successfully');
+      
+      // Wait a moment for backend transaction to commit
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Invalidate queries to refresh the data and show updated status
+      await queryClient.invalidateQueries(["admin", "seller", seller._id, "payout-verification"]);
+      await queryClient.invalidateQueries(["admin", "seller", seller._id]);
+      // Force refetch immediately
+      await queryClient.refetchQueries(["admin", "seller", seller._id, "payout-verification"]);
+      await queryClient.refetchQueries(["admin", "seller", seller._id]);
+      
       onClose();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to approve payout verification');
+      console.error('[PayoutVerificationModal] Error approving payout verification:', error);
+      const { title, message } = normalizeError(error, {
+        fallbackTitle: "Approval failed",
+        fallbackMessage: "Approval failed. Please try again.",
+        defaultCanRetry: true,
+      });
+      const friendly = message || getUserFriendlyErrorMessage(
+        error,
+        "Approval failed. Please try again."
+      );
+      setActionError(`${title}. ${friendly}`);
+      toast.error(friendly);
     }
   };
 
@@ -92,6 +154,9 @@ const PayoutVerificationModal = ({ seller, paymentMethodType: propPaymentMethodT
         reason: rejectionReason.trim(),
       });
       toast.success('Payout verification rejected');
+      // Invalidate queries to refresh the data
+      queryClient.invalidateQueries(["admin", "seller", seller._id, "payout-verification"]);
+      queryClient.invalidateQueries(["admin", "seller", seller._id]);
       setShowRejectModal(false);
       setRejectionReason("");
       onClose();
@@ -185,28 +250,28 @@ const PayoutVerificationModal = ({ seller, paymentMethodType: propPaymentMethodT
                 <InfoLabel>
                   {paymentMethodType === 'bank' ? 'Bank Account' : 'Mobile Money'} Details
                 </InfoLabel>
-                {paymentMethodType === 'bank' && seller.paymentMethods?.bankAccount ? (
+                {paymentMethodType === 'bank' ? (
                   <PaymentMethodCard>
                     <FaBuilding style={{ fontSize: '2rem', color: '#007bff', marginRight: '1rem', flexShrink: 0 }} />
                     <PaymentMethodInfo>
                       <PaymentMethodTitle>Bank Account Verification</PaymentMethodTitle>
                       <PaymentMethodDetail>
-                        <strong>Account Name:</strong> {seller.paymentMethods.bankAccount.accountName || 'N/A'}
+                        <strong>Account Name:</strong> {paymentDetails.accountName || 'N/A'}
                       </PaymentMethodDetail>
                       <PaymentMethodDetail>
-                        <strong>Account Number:</strong> {seller.paymentMethods.bankAccount.accountNumber || 'N/A'}
+                        <strong>Account Number:</strong> {paymentDetails.accountNumber || 'N/A'}
                       </PaymentMethodDetail>
                       <PaymentMethodDetail>
-                        <strong>Bank Name:</strong> {seller.paymentMethods.bankAccount.bankName || 'N/A'}
+                        <strong>Bank Name:</strong> {paymentDetails.bankName || 'N/A'}
                       </PaymentMethodDetail>
-                      {seller.paymentMethods.bankAccount.branch && (
+                      {paymentDetails.branch && (
                         <PaymentMethodDetail>
-                          <strong>Branch:</strong> {seller.paymentMethods.bankAccount.branch}
+                          <strong>Branch:</strong> {paymentDetails.branch}
                         </PaymentMethodDetail>
                       )}
-                      {seller.paymentMethods.bankAccount.bankCode && (
+                      {paymentDetails.bankCode && (
                         <PaymentMethodDetail>
-                          <strong>Bank Code:</strong> {seller.paymentMethods.bankAccount.bankCode}
+                          <strong>Bank Code:</strong> {paymentDetails.bankCode}
                         </PaymentMethodDetail>
                       )}
                       {/* Name Match Check */}
@@ -215,29 +280,29 @@ const PayoutVerificationModal = ({ seller, paymentMethodType: propPaymentMethodT
                         <span>
                           <strong>Seller Name:</strong> {seller.name || seller.shopName || 'N/A'}
                         </span>
-                        {seller.paymentMethods.bankAccount.accountName && (
+                        {paymentDetails.accountName && (
                           <span style={{ marginLeft: '1rem' }}>
-                            <strong>Account Name:</strong> {seller.paymentMethods.bankAccount.accountName}
+                            <strong>Account Name:</strong> {paymentDetails.accountName}
                           </span>
                         )}
                       </NameMatchCheck>
                     </PaymentMethodInfo>
                   </PaymentMethodCard>
-                ) : ['mtn_momo', 'vodafone_cash', 'airtel_tigo_money'].includes(paymentMethodType) && seller.paymentMethods?.mobileMoney ? (
+                ) : ['mtn_momo', 'vodafone_cash', 'airtel_tigo_money'].includes(paymentMethodType) ? (
                   <PaymentMethodCard>
                     <FaMobileAlt style={{ fontSize: '2rem', color: '#28a745', marginRight: '1rem', flexShrink: 0 }} />
                     <PaymentMethodInfo>
                       <PaymentMethodTitle>
-                        Mobile Money Verification ({seller.paymentMethods.mobileMoney.network || 'Unknown'})
+                        Mobile Money Verification ({paymentDetails.network || 'Unknown'})
                       </PaymentMethodTitle>
                       <PaymentMethodDetail>
-                        <strong>Account Name:</strong> {seller.paymentMethods.mobileMoney.accountName || 'N/A'}
+                        <strong>Account Name:</strong> {paymentDetails.accountName || 'N/A'}
                       </PaymentMethodDetail>
                       <PaymentMethodDetail>
-                        <strong>Phone Number:</strong> {seller.paymentMethods.mobileMoney.phone || 'N/A'}
+                        <strong>Phone Number:</strong> {paymentDetails.phone || 'N/A'}
                       </PaymentMethodDetail>
                       <PaymentMethodDetail>
-                        <strong>Network:</strong> {seller.paymentMethods.mobileMoney.network || 'N/A'}
+                        <strong>Network:</strong> {paymentDetails.network || 'N/A'}
                       </PaymentMethodDetail>
                       {/* Name Match Check */}
                       <NameMatchCheck>
@@ -245,9 +310,9 @@ const PayoutVerificationModal = ({ seller, paymentMethodType: propPaymentMethodT
                         <span>
                           <strong>Seller Name:</strong> {seller.name || seller.shopName || 'N/A'}
                         </span>
-                        {seller.paymentMethods.mobileMoney.accountName && (
+                        {paymentDetails.accountName && (
                           <span style={{ marginLeft: '1rem' }}>
-                            <strong>Account Name:</strong> {seller.paymentMethods.mobileMoney.accountName}
+                            <strong>Account Name:</strong> {paymentDetails.accountName}
                           </span>
                         )}
                       </NameMatchCheck>
@@ -330,7 +395,7 @@ const PayoutVerificationModal = ({ seller, paymentMethodType: propPaymentMethodT
               }
               return null;
             })()}
-            <ActionButton variant="secondary" onClick={onClose}>
+            <ActionButton $variant="secondary" onClick={onClose}>
               Close
             </ActionButton>
           </ModalFooter>
@@ -633,6 +698,8 @@ const ActionButton = styled.button`
   display: flex;
   align-items: center;
   transition: all 0.2s;
+  /* Use the public variant prop (not $variant) so callers can pass
+     variant=\"success\" / \"danger\" / \"secondary\" and get the correct colors. */
   background: ${({ variant }) =>
     variant === "success"
       ? "#10b981"

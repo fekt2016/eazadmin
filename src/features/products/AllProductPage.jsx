@@ -10,9 +10,22 @@ import { PATHS } from "../../routes/routhPath";
 import { toast } from "react-toastify";
 import { FaAward } from "react-icons/fa";
 
+// Helper function to calculate total stock from variants
+const calculateTotalStock = (product) => {
+  if (product.totalStock !== undefined && product.totalStock !== null) {
+    return product.totalStock;
+  }
+  if (Array.isArray(product.variants) && product.variants.length > 0) {
+    return product.variants.reduce((sum, variant) => {
+      return sum + (variant.stock || 0);
+    }, 0);
+  }
+  return 0;
+};
+
 export default function AllProductPage() {
   const navigate = useNavigate();
-  const { getProducts, approveProduct, rejectProduct } = useProduct();
+  const { getProducts, approveProduct, rejectProduct, deleteProduct } = useProduct();
   const { data, isLoading: productLoading, error: productError } = getProducts;
   
   // Debug: Log the raw response
@@ -171,9 +184,43 @@ export default function AllProductPage() {
   );
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
 
-  const handleDelete = (productId) => {
-    console.log("productId", productId);
-    // setProducts(products.filter((product) => product.id !== productId));
+  const handleDelete = async (productId) => {
+    if (!productId) {
+      toast.error("Product ID is missing");
+      return;
+    }
+    
+    // Show confirmation with more context about soft delete
+    const confirmed = window.confirm(
+      `Are you sure you want to remove this product from the marketplace?\n\n` +
+      `This will archive the product (soft delete). If the product has order history, ` +
+      `it will be preserved for records. Only products with zero orders can be permanently deleted.`
+    );
+    
+    if (!confirmed) {
+      return;
+    }
+    
+    try {
+      const result = await deleteProduct.mutateAsync(productId);
+      
+      // Handle different response formats
+      const message = result?.message || 
+                     result?.data?.note || 
+                     "Product removed from marketplace";
+      
+      toast.success(message);
+      
+      // CRITICAL: Delete mutation already invalidates queries in onSuccess
+      // Do NOT call refetch() here - it causes immediate full fetch of all products
+      // React Query will automatically refetch when component re-renders
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || 
+                          error.message || 
+                          "Failed to delete product";
+      toast.error(`Failed to remove product: ${errorMessage}`);
+      console.error("Delete product error:", error);
+    }
   };
 
   const handleMarkAsEazShop = async (productId) => {
@@ -364,23 +411,24 @@ export default function AllProductPage() {
                 </TableCell>
                 <TableCell>
                   <ProductName>{product.name}</ProductName>
-                  <ProductId>ID: {product.id || product._id}</ProductId>
                 </TableCell>
                 <TableCell>
                   <SellerInfo>{product.seller?.shopName || "N/A"}</SellerInfo>
                 </TableCell>
-                {/* <TableCell>₵{product.price.toFixed(2)}</TableCell> */}
                 <TableCell>
-                  <StockIndicator stock={product.totalStock}>
-                    {product.totalStock > 0
-                      ? product.totalStock
+                  <PriceInfo>₵{product.price?.toFixed(2) || "0.00"}</PriceInfo>
+                </TableCell>
+                <TableCell>
+                  <StockIndicator stock={product.totalStock || calculateTotalStock(product)}>
+                    {(product.totalStock || calculateTotalStock(product)) > 0
+                      ? (product.totalStock || calculateTotalStock(product))
                       : "Out of stock"}
                   </StockIndicator>
                 </TableCell>
                 <TableCell>
                   <CategoryInfo>
                     {product.parentCategory?.name ||
-                      product.parentCategory?.name ||
+                      product.subCategory?.name ||
                       "Uncategorized"}
                   </CategoryInfo>
                 </TableCell>
@@ -441,9 +489,10 @@ export default function AllProductPage() {
                     <ActionButton
                       title="Delete"
                       danger
-                      onClick={() => handleDelete(product.id)}
+                      onClick={() => handleDelete(product.id || product._id)}
+                      disabled={deleteProduct.isPending}
                     >
-                      <FiTrash2 />
+                      {deleteProduct.isPending ? "..." : <FiTrash2 />}
                     </ActionButton>
                   </ActionButtons>
                 </TableCell>
@@ -686,6 +735,12 @@ const ProductId = styled.div`
   font-size: 0.8rem;
   color: #94a3b8;
   margin-top: 0.2rem;
+`;
+
+const PriceInfo = styled.div`
+  font-weight: 600;
+  color: #059669;
+  font-size: 0.95rem;
 `;
 
 const StockIndicator = styled.span`
