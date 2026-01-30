@@ -545,7 +545,7 @@ const TrackingPage = () => {
                     <InfoLabel>Delivery Method</InfoLabel>
                     <InfoValue>
                       {orderData.deliveryMethod === 'pickup_center' 
-                        ? 'Pickup from EazShop Center'
+                        ? 'Pickup from Saiisai Center'
                         : orderData.deliveryMethod === 'dispatch'
                         ? 'EazShop Dispatch Rider'
                         : orderData.deliveryMethod === 'seller_delivery'
@@ -584,7 +584,7 @@ const TrackingPage = () => {
                         Pickup Center
                       </InfoLabel>
                       <InfoValue>
-                        <strong>{orderData.pickupCenter.pickupName || 'EazShop Pickup Center'}</strong>
+                        <strong>{orderData.pickupCenter.pickupName || 'Saiisai Pickup Center'}</strong>
                       </InfoValue>
                     </InfoRow>
                     {orderData.pickupCenter.address && (

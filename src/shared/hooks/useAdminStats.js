@@ -14,6 +14,11 @@ export const useAdminStats = () => {
     staleTime: 1000 * 60 * 1, // 1 minute
     refetchOnWindowFocus: true,
     refetchOnMount: true,
+    retry: (failureCount, error) => {
+      // Don't retry when backend is unreachable (connection refused)
+      if (error?.isNetworkError) return false;
+      return failureCount < 2;
+    },
   });
 };
 

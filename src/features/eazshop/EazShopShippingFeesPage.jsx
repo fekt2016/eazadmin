@@ -56,8 +56,8 @@ export default function EazShopShippingFeesPage() {
     <DashboardContainer>
       <Header>
         <TitleContainer>
-          <Title>EazShop Shipping Fees</Title>
-          <Subtitle>Manage shipping fees for EazShop official store</Subtitle>
+          <Title>Saiisai Shipping Fees</Title>
+          <Subtitle>Manage shipping fees for Saiisai official store</Subtitle>
         </TitleContainer>
       </Header>
 

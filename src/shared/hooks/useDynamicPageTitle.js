@@ -32,7 +32,7 @@ export const useDynamicPageTitle = (config = {}) => {
       description = '',
       dynamicDescription = '',
       defaultTitle = 'Admin Panel',
-      defaultDescription = 'EazShop Admin Dashboard',
+      defaultDescription = 'Saiisai Admin Dashboard',
       keywords = '',
       image = '',
       type = 'website',
@@ -95,7 +95,7 @@ export const useDynamicPageTitle = (config = {}) => {
     if (image) createMetaTag('og:image', image, true);
     createMetaTag('og:url', currentUrl, true);
     createMetaTag('og:type', type, true);
-    createMetaTag('og:site_name', 'EazShop Admin', true);
+    createMetaTag('og:site_name', 'Saiisai Admin', true);
 
     // Twitter Card tags
     createMetaTag('twitter:card', 'summary_large_image');

@@ -128,27 +128,39 @@ export default function AdminDashboard() {
     ];
   }, [stats]);
 
-  // Extract and format recent orders
+  // Extract and format recent orders (support multiple API response shapes)
   const recentOrders = useMemo(() => {
-    if (!ordersData?.data?.results) return [];
-    
-    const allOrders = ordersData.data.results;
-    // Sort by createdAt (most recent first) and take first 5
+    const rawOrders =
+      ordersData?.data?.results ??
+      ordersData?.data?.data ??
+      ordersData?.results ??
+      [];
+    if (!Array.isArray(rawOrders) || rawOrders.length === 0) return [];
+
+    const allOrders = rawOrders;
     const sorted = [...allOrders].sort((a, b) => {
       const dateA = new Date(a.createdAt || a.created_at || 0);
       const dateB = new Date(b.createdAt || b.created_at || 0);
       return dateB - dateA;
     });
-    
-    return sorted.slice(0, 5).map((order) => ({
-      id: order.id || order._id,
-      orderNumber: order.orderNumber || order.order_number || `#${order.id?.slice(-6) || 'N/A'}`,
-      customer: order.user?.name || order.buyer?.name || "Unknown Customer",
-      date: formatDate(order.createdAt || order.created_at),
-      amount: `GH₵${(order.totalPrice || order.total_price || 0).toFixed(2)}`,
-      status: order.orderStatus || order.currentStatus || order.status || "pending",
-      statusColor: getStatusColor(order.orderStatus || order.currentStatus || order.status),
-    }));
+
+    return sorted.slice(0, 5).map((order) => {
+      const id = order._id ?? order.id;
+      const u = order.user;
+      const customerName =
+        u && typeof u === "object"
+          ? u.name || u.email || "—"
+          : order.buyer?.name || order.shippingAddress?.fullName || order.shippingAddress?.name || "—";
+      return {
+        id: id?.toString?.() ?? id,
+        orderNumber: order.orderNumber ?? order.order_number ?? "—",
+        customer: customerName !== "—" ? customerName : "Unknown Customer",
+        date: formatDate(order.createdAt || order.created_at),
+        amount: `GH₵${(order.totalPrice || order.total_price || order.total || 0).toFixed(2)}`,
+        status: order.orderStatus ?? order.currentStatus ?? order.status ?? "pending",
+        statusColor: getStatusColor(order.orderStatus ?? order.currentStatus ?? order.status),
+      };
+    });
   }, [ordersData]);
   console.log("recentOrders", recentOrders);
 
@@ -304,10 +316,10 @@ export default function AdminDashboard() {
                 <tbody>
                   {recentOrders.length > 0 ? (
                     recentOrders.map((order) => (
-                      <tr 
+                      <tr
                         key={order.id}
-                        style={{ cursor: 'pointer' }}
-                        onClick={() => navigate(`/dashboard/orders/detail/${order.id}`)}
+                        style={{ cursor: "pointer" }}
+                        onClick={() => navigate(`/dashboard/orders/detail/${order.id}`, { replace: false })}
                       >
                         <td>{order.orderNumber}</td>
                         <td>{order.customer}</td>

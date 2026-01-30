@@ -246,15 +246,52 @@ api.interceptors.response.use(
       }
     }
     
-    // Handle session expiration - DO NOT immediately logout
-    // Let React Query and useAuth handle 401 errors with retry logic
-    if (error.response?.status === 401) {
+    // Handle admin session required (401) or wrong role (403) – redirect to admin login
+    const status = error.response?.status;
+    const message = error.response?.data?.message || "";
+    const requestUrl = error.config?.url || "";
+    const isAdminApi = typeof requestUrl === "string" && requestUrl.includes("/admin/");
+    const isAdminSessionRequired =
+      status === 401 && (message.includes("Admin session required") || message.includes("admin panel"));
+    const isWrongRole =
+      status === 403 && message.includes("Required role: admin") && message.includes("Your role: user");
+    // Any 401 from admin API (expired/missing cookie) – send to login
+    const isUnauthenticatedAdmin = status === 401 && isAdminApi;
+
+    // #region agent log
+    if (typeof window !== "undefined" && (status === 401 || status === 403)) {
+      fetch("http://127.0.0.1:7242/ingest/8853a92f-8faa-4d51-b197-e8e74c838dc7", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ location: "api.js:interceptor", message: "401/403 auth decision", data: { status, requestUrl, isAdminApi, pathname: window.location.pathname, willRedirect: !!(isAdminSessionRequired || isWrongRole || isUnauthenticatedAdmin) }, timestamp: Date.now(), sessionId: "debug-session", hypothesisId: "H3" }) }).catch(() => {});
+    }
+    // #endregion
+
+    if (isAdminSessionRequired || isWrongRole || isUnauthenticatedAdmin) {
+      // Redirect to admin login (/) when not already there
+      const isLoginPage = window.location.pathname === "/" || window.location.pathname === "/login";
+      if (typeof window !== "undefined" && !isLoginPage) {
+        sessionStorage.setItem(
+          "eazadmin_login_message",
+          isWrongRole || isAdminSessionRequired ? "Please log in with your admin account." : "Session expired. Please log in again."
+        );
+        window.location.href = "/";
+      }
+      return Promise.reject(error);
+    }
+
+    // Handle other 401 – let useAuth handle retry/refresh
+    if (status === 401) {
       console.warn("[API] 401 Unauthorized - letting useAuth handle retry/refresh");
-      
-      // Only log the error, don't clear tokens or redirect
-      // React Query will retry, and useAuth will handle logout if retry fails
-      const errorMessage = error.response?.data?.message || "Unauthorized";
+      const errorMessage = message || "Unauthorized";
       console.warn(`[API] Auth error: ${errorMessage}`);
+    }
+
+    // Handle network errors (backend not running / connection refused)
+    if (!error.response && (error.message === 'Network Error' || error.code === 'ERR_NETWORK' || error.code === 'ECONNREFUSED')) {
+      const networkError = new Error('Cannot reach the API server. Please ensure the backend is running (e.g. on port 4000).');
+      networkError.isNetworkError = true;
+      networkError.status = 0;
+      networkError.code = error.code;
+      console.warn('[API] Network error:', error.config?.url, error.message);
+      return Promise.reject(networkError);
     }
 
     // Handle timeout errors with better messaging

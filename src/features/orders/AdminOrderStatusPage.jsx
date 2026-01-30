@@ -149,7 +149,7 @@ const AdminOrderStatusPage = () => {
       <PageHeader>
         <HeaderTitle>
           <h1>Update Order Status</h1>
-          <p>Order #{order.orderNumber || order._id}</p>
+          <p>Order #{order.orderNumber ?? "—"}</p>
         </HeaderTitle>
         <BackButton onClick={() => navigate(-1)}>← Back</BackButton>
       </PageHeader>

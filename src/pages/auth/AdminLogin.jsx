@@ -28,6 +28,15 @@ export default function AdminLogin() {
     emailInputRef.current?.focus();
   }, []);
 
+  // Show message when redirected here due to wrong role / admin session required
+  useEffect(() => {
+    const msg = sessionStorage.getItem("eazadmin_login_message");
+    if (msg) {
+      sessionStorage.removeItem("eazadmin_login_message");
+      toast.info(msg);
+    }
+  }, []);
+
   // Handle Enter key press
   const handleKeyPress = (e) => {
     if (e.key === "Enter" && formData.email && formData.password) {

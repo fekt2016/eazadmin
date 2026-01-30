@@ -6,23 +6,12 @@ export const orderService = {
   //   return response;
   // },
   getAllOrders: async () => {
-    try {
-      const response = await api.get("/order");
-      console.log("API Response - getAllOrders:", response);
-      
-      return response;
-    } catch (error) {
-      console.log("API Error - getAllOrders:", error);
-    }
+    const response = await api.get("/order");
+    return response;
   },
   getOrderById: async (id) => {
-    try {
-      const response = await api.get(`/order/${id}`);
-      console.log("API Response - getOrderById:", response);
-      return response;
-    } catch (error) {
-      console.log("API Error - getOrderById:", error);
-    }
+    const response = await api.get(`/order/${id}`);
+    return response;
   },
   getOrderByTrackingNumber: async (trackingNumber) => {
     try {

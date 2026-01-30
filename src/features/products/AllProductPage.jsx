@@ -227,9 +227,9 @@ export default function AllProductPage() {
     if (window.confirm("Mark this product as an EazShop Official Store product?")) {
       try {
         await markAsEazShopMutation.mutateAsync(productId);
-        toast.success("Product marked as EazShop product!");
+        toast.success("Product marked as Saiisai product!");
       } catch (error) {
-        toast.error("Failed to mark product as EazShop: " + (error.message || "Unknown error"));
+        toast.error("Failed to mark product as Saiisai: " + (error.message || "Unknown error"));
       }
     }
   };
@@ -478,7 +478,7 @@ export default function AllProductPage() {
                     </ActionButton>
                     {!product.isEazShopProduct && (
                       <ActionButton
-                        title="Mark as EazShop Product"
+                        title="Mark as Saiisai Product"
                         onClick={() => handleMarkAsEazShop(product.id || product._id)}
                         $eazshop
                         disabled={markAsEazShopMutation.isPending}

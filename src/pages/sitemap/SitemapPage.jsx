@@ -68,7 +68,7 @@ const SitemapPage = () => {
         { label: 'Categories', path: PATHS.CATEGORY },
         { label: 'Category Details', path: PATHS.CATEGORYDETAIL },
         { label: 'Discount Products', path: PATHS.DISCOUNTPRODUCT },
-        { label: 'EazShop Products', path: PATHS.EAZSHOP_PRODUCTS },
+        { label: 'Saiisai Products', path: PATHS.EAZSHOP_PRODUCTS },
         { label: 'Reviews', path: PATHS.REVIEWS },
       ],
     },
@@ -102,7 +102,7 @@ const SitemapPage = () => {
       links: [
         { label: 'Shipping Rates', path: PATHS.SHIPPING_RATES },
         { label: 'Distance Overview', path: PATHS.DISTANCE_OVERVIEW },
-        { label: 'EazShop Shipping Fees', path: PATHS.EAZSHOP_SHIPPING_FEES },
+        { label: 'Saiisai Shipping Fees', path: PATHS.EAZSHOP_SHIPPING_FEES },
         { label: 'Pickup Centers', path: PATHS.EAZSHOP_PICKUP_CENTERS },
       ],
     },

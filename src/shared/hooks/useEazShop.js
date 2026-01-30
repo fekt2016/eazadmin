@@ -47,7 +47,7 @@ export const useEazShop = () => {
           return [];
         } catch (error) {
           console.error('❌ [useEazShop] Failed to fetch EazShop products:', error);
-          const errorMessage = error?.response?.data?.message || error?.message || 'Failed to load EazShop products';
+          const errorMessage = error?.response?.data?.message || error?.message || 'Failed to load Saiisai products';
           const statusCode = error?.response?.status;
           console.error('❌ [useEazShop] Error details:', {
             message: errorMessage,
@@ -108,7 +108,7 @@ export const useEazShop = () => {
           return response.data?.orders || [];
         } catch (error) {
           console.error('Failed to fetch EazShop orders:', error);
-          throw new Error('Failed to load EazShop orders');
+          throw new Error('Failed to load Saiisai orders');
         }
       },
       staleTime: 1000 * 60 * 2,
@@ -125,7 +125,7 @@ export const useEazShop = () => {
           return response.data?.fees || null;
         } catch (error) {
           console.error('Failed to fetch EazShop shipping fees:', error);
-          throw new Error('Failed to load EazShop shipping fees');
+          throw new Error('Failed to load Saiisai shipping fees');
         }
       },
       staleTime: 1000 * 60 * 10,

@@ -393,7 +393,7 @@ export default function ReviewsPage() {
                         <FiCheck />
                       </ActionButton>
                     )}
-                    {review.status !== "rejected" && (
+                    {review.status !== "rejected" && review.status !== "approved" && (
                       <ActionButton
                         title="Reject Review"
                         $warning
@@ -403,7 +403,7 @@ export default function ReviewsPage() {
                         <FiX />
                       </ActionButton>
                     )}
-                    {review.status !== "flagged" && (
+                    {review.status !== "flagged" && review.status !== "approved" && (
                       <ActionButton
                         title="Flag Review"
                         $warning

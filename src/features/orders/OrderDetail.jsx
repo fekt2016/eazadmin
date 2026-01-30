@@ -14,6 +14,8 @@ import {
   FaMoneyBillWave,
   FaCheckCircle,
   FaSpinner,
+  FaStore,
+  FaEnvelope,
 } from "react-icons/fa";
 import { useGetOrderById, useConfirmPayment } from '../../shared/hooks/useOrder';
 import { useUpdateOrderStatus } from '../../shared/hooks/useUpdateOrderStatus';
@@ -40,20 +42,24 @@ const OrderDetail = () => {
   // SEO - Dynamic page title based on order
   useDynamicPageTitle({
     title: "Order Overview",
-    dynamicTitle: order && `Order #${order._id?.slice(-8) || order._id} — Admin`,
+    dynamicTitle: order && `Order #${order.orderNumber ?? "—"} — Admin`,
     description: "Manage and view order details",
     defaultTitle: "Admin Panel",
   });
 
-  console.log("order", order);
-
   useEffect(() => {
     if (orderData) {
-      console.log("orderData", orderData);
-      const orderform = orderData?.data?.data?.data;
-      console.log("orderform", orderform);
-      // Format dates
-      const createdAt = new Date(orderform.createdAt);
+      const orderform =
+        orderData?.data?.data?.data ??
+        orderData?.data?.data ??
+        orderData?.data ??
+        null;
+      const rawOrder = orderform?.data ?? orderform ?? null;
+      if (!rawOrder || typeof rawOrder.orderNumber === "undefined") {
+        return;
+      }
+      // Format dates (use rawOrder as source of truth)
+      const createdAt = new Date(rawOrder.createdAt ?? orderform?.createdAt);
       const formattedDate = createdAt.toLocaleDateString("en-US", {
         year: "numeric",
         month: "long",
@@ -76,45 +82,65 @@ const OrderDetail = () => {
         credit_balance: "Credit Balance",
       };
 
-      // Transform order items
-      const items = orderform.orderItems.map((item, index) => ({
-        id: item._id || `item-${index}`,
-        name: item.product.name,
-        price: item.product.price,
-        quantity: item.quantity,
-        total: item.product.price * item.quantity,
-        sku: item.product.defaultSku || "N/A",
-      }));
+      // Transform order items – use product ref when present, fallback to snapshot fields
+      const items = (rawOrder.orderItems || orderform?.orderItems || []).map((item, index) => {
+        const name = item.product?.name ?? item.productName ?? "Product";
+        const price = item.price ?? item.product?.price ?? 0;
+        const sku = item.sku ?? item.product?.defaultSku ?? "N/A";
+        const image = item.productImage ?? item.product?.imageCover ?? null;
+        const description = item.product?.description ?? null;
+        const variantName = item.variantName ?? null;
+        const variantAttributes = item.variantAttributes ?? [];
+        return {
+          id: item._id || `item-${index}`,
+          name,
+          price,
+          quantity: item.quantity,
+          total: price * item.quantity,
+          sku,
+          image,
+          description,
+          variantName,
+          variantAttributes,
+        };
+      });
 
       // Calculate totals
       const subtotal = items.reduce((sum, item) => sum + item.total, 0);
-      const shipping = orderform.sellerOrder?.[0]?.shippingCost || 0;
-      const tax = orderform.tax || 0;
+      const shipping = (rawOrder.sellerOrder?.[0]?.shippingCost ?? orderform?.sellerOrder?.[0]?.shippingCost) || 0;
+      const tax = (rawOrder.tax ?? orderform?.tax) || 0;
       const total = subtotal + shipping + tax;
 
+      const currentStatus = (rawOrder.currentStatus || rawOrder.orderStatus || rawOrder.status || "").toString().toLowerCase();
+      const isDelivered = currentStatus === "delivered" || currentStatus === "delievered" || rawOrder.status === "completed";
+
+      const trackingNumber =
+        rawOrder.trackingNumber ?? orderform?.trackingNumber ?? null;
+
       setOrder({
-        id: orderform.id,
-        orderNumber: orderform.orderNumber,
+        id: rawOrder._id ?? orderform?.id,
+        orderNumber: rawOrder.orderNumber ?? orderform?.orderNumber,
+        trackingNumber: trackingNumber && String(trackingNumber).trim() ? String(trackingNumber).trim() : null,
         date: formattedDate,
         time: formattedTime,
-        status: orderform.orderStatus || orderform.status || 'pending', // Use orderStatus (set to 'confirmed' after payment)
-        paymentStatus: orderform.paymentStatus || 'pending', // Include paymentStatus
+        status: rawOrder.orderStatus || rawOrder.status || 'pending',
+        paymentStatus: rawOrder.paymentStatus || 'pending',
         paymentMethod:
-          paymentMethodMap[orderform.paymentMethod] || orderform.paymentMethod,
-        rawPaymentMethod: orderform.paymentMethod, // Store raw payment method for button logic
+          paymentMethodMap[rawOrder.paymentMethod] ?? rawOrder.paymentMethod,
+        rawPaymentMethod: rawOrder.paymentMethod,
         customer: {
-          name: orderform.user.name,
-          email: orderform.user.email,
-          phone: orderform.user.phone,
+          name: rawOrder.user?.name ?? "—",
+          email: rawOrder.user?.email ?? "—",
+          phone: rawOrder.user?.phone ?? "—",
         },
         shippingAddress: {
-          name: orderform.user.name,
-          street: orderform.shippingAddress.streetAddress,
-          landmark: orderform.shippingAddress.landmark,
-          city: orderform.shippingAddress.city,
-          region: orderform.shippingAddress.region,
-          country: orderform.shippingAddress.country,
-          digitalAddress: orderform.shippingAddress.digitalAddress,
+          name: rawOrder.user?.name ?? "—",
+          street: rawOrder.shippingAddress?.streetAddress ?? "—",
+          landmark: rawOrder.shippingAddress?.landmark ?? "—",
+          city: rawOrder.shippingAddress?.city ?? "—",
+          region: rawOrder.shippingAddress?.region ?? "—",
+          country: rawOrder.shippingAddress?.country ?? "—",
+          digitalAddress: rawOrder.shippingAddress?.digitalAddress ?? "—",
         },
         items,
         summary: {
@@ -133,12 +159,12 @@ const OrderDetail = () => {
           },
           {
             id: 2,
-            title: orderform.orderStatus === "confirmed" ? "Confirmed" : "Processing",
-            description: orderform.orderStatus === "confirmed" 
-              ? "Order confirmed and payment received" 
+            title: rawOrder.orderStatus === "confirmed" ? "Confirmed" : "Processing",
+            description: rawOrder.orderStatus === "confirmed"
+              ? "Order confirmed and payment received"
               : "Order is being prepared for shipment",
             date: formattedDate,
-            completed: orderform.orderStatus !== "pending" && orderform.orderStatus !== "pending_payment",
+            completed: rawOrder.orderStatus !== "pending" && rawOrder.orderStatus !== "pending_payment",
           },
           {
             id: 3,
@@ -146,20 +172,47 @@ const OrderDetail = () => {
             description: "Order has been shipped",
             date: formattedDate,
             completed:
-              orderform.orderStatus === "shipped" ||
-              orderform.orderStatus === "delivered",
+              currentStatus === "shipped" ||
+              currentStatus === "out_for_delivery" ||
+              isDelivered,
           },
           {
             id: 4,
             title: "Delivered",
             description: "Package delivered to customer",
             date: formattedDate,
-            completed: orderform.orderStatus === "delivered",
+            completed: isDelivered,
           },
         ],
+        sellers: (rawOrder.sellerOrder || []).map((so) => ({
+          id: so._id,
+          name: so.seller?.name ?? "—",
+          shopName: so.seller?.shopName ?? "—",
+          email: so.seller?.email ?? "—",
+          subtotal: so.subtotal ?? 0,
+          total: so.total ?? 0,
+          shippingCost: so.shippingCost ?? 0,
+          totalBasePrice: so.totalBasePrice ?? 0,
+          status: so.status ?? "pending",
+          payoutStatus: so.payoutStatus ?? "pending",
+        })),
       });
 
-      setStatus(orderform.orderStatus);
+      console.log("[OrderDetail] Raw API response:", orderData);
+      console.log("[OrderDetail] Extracted order document (rawOrder):", rawOrder);
+      console.log("[OrderDetail] Formatted order summary:", {
+        id: rawOrder._id ?? rawOrder.id,
+        orderNumber: rawOrder.orderNumber,
+        customer: { name: rawOrder.user?.name ?? "—", email: rawOrder.user?.email ?? "—", phone: rawOrder.user?.phone ?? "—" },
+        shippingAddress: rawOrder.shippingAddress,
+        itemsCount: items.length,
+        summary: { subtotal, shipping, tax, total },
+        status: rawOrder.orderStatus ?? rawOrder.status,
+        paymentStatus: rawOrder.paymentStatus,
+        sellersCount: (rawOrder.sellerOrder || []).length,
+      });
+
+      setStatus(isDelivered ? "delivered" : (rawOrder.orderStatus || rawOrder.status || "pending"));
     }
   }, [orderData]);
 
@@ -253,7 +306,7 @@ const OrderDetail = () => {
     }
   };
 
-  if (!order) {
+  if (!order || order.orderNumber == null) {
     return <LoadingContainer>Loading order details...</LoadingContainer>;
   }
 
@@ -261,10 +314,20 @@ const OrderDetail = () => {
     <OrderDetailContainer>
       <PageHeader>
         <HeaderInfo>
-          <PageTitle>Order #{order.orderNumber}</PageTitle>
+          <PageTitle>Order #{order.orderNumber ?? "—"}</PageTitle>
           <OrderDate>
             <FaCalendarAlt /> {order.date} at {order.time}
           </OrderDate>
+          <TrackingNumberRow>
+            <strong>Tracking:</strong>{" "}
+            {order.trackingNumber ? (
+              <Link to={`/dashboard/tracking/${order.trackingNumber}`} style={{ marginLeft: "0.25rem", color: "var(--color-primary-600)", fontWeight: 600 }}>
+                {order.trackingNumber}
+              </Link>
+            ) : (
+              <span style={{ marginLeft: "0.25rem", color: "var(--color-neutral-500)" }}>—</span>
+            )}
+          </TrackingNumberRow>
         </HeaderInfo>
         <HeaderActions>
           <ActionButton>
@@ -415,21 +478,89 @@ const OrderDetail = () => {
           {order.items.map((item) => (
             <ItemRow key={item.id}>
               <ItemImage>
-                <FaBox />
+                {item.image ? (
+                  <ProductThumb src={item.image} alt={item.name} />
+                ) : (
+                  <FaBox />
+                )}
               </ItemImage>
               <ItemDetails>
                 <ItemName>{item.name}</ItemName>
+                {item.variantName && (
+                  <ItemVariant>Variant: {item.variantName}</ItemVariant>
+                )}
+                {item.variantAttributes?.length > 0 && (
+                  <ItemVariant>
+                    {item.variantAttributes.map((a) => `${a.key}: ${a.value}`).join(" · ")}
+                  </ItemVariant>
+                )}
                 <ItemSku>SKU: {item.sku}</ItemSku>
+                {item.description && (
+                  <ItemDescription title={item.description}>
+                    {item.description.length > 120
+                      ? `${item.description.slice(0, 120)}…`
+                      : item.description}
+                  </ItemDescription>
+                )}
               </ItemDetails>
               <ItemPricing>
-                <ItemPrice>₵{item.price.toFixed(2)}</ItemPrice>
+                <ItemPrice>₵{(item.price ?? 0).toFixed(2)}</ItemPrice>
                 <ItemQuantity>Qty: {item.quantity}</ItemQuantity>
-                <ItemTotal>₵{item.total.toFixed(2)}</ItemTotal>
+                <ItemTotal>₵{(item.total ?? 0).toFixed(2)}</ItemTotal>
               </ItemPricing>
             </ItemRow>
           ))}
         </ItemsList>
       </OrderItemsCard>
+
+      {order.sellers && order.sellers.length > 0 && (
+        <OrderItemsCard>
+          <CardTitle>
+            <FaStore style={{ marginRight: "0.5rem", verticalAlign: "middle" }} />
+            Sellers in this order
+          </CardTitle>
+          <SellersList>
+            {order.sellers.map((seller) => (
+              <SellerRow key={seller.id}>
+                <SellerInfo>
+                  <SellerName>{seller.shopName !== "—" ? seller.shopName : seller.name}</SellerName>
+                  {seller.shopName !== "—" && seller.name !== "—" && (
+                    <SellerContact>{seller.name}</SellerContact>
+                  )}
+                  <SellerContact>
+                    <FaEnvelope style={{ marginRight: "0.25rem" }} />
+                    {seller.email}
+                  </SellerContact>
+                </SellerInfo>
+                <SellerAmounts>
+                  <SellerAmountRow>
+                    <span>Subtotal</span>
+                    <span>₵{(seller.subtotal ?? 0).toFixed(2)}</span>
+                  </SellerAmountRow>
+                  {seller.shippingCost > 0 && (
+                    <SellerAmountRow>
+                      <span>Shipping</span>
+                      <span>₵{(seller.shippingCost ?? 0).toFixed(2)}</span>
+                    </SellerAmountRow>
+                  )}
+                  <SellerAmountRow>
+                    <span>Total</span>
+                    <span>₵{(seller.total ?? 0).toFixed(2)}</span>
+                  </SellerAmountRow>
+                  <SellerBadges>
+                    <StatusBadge status={seller.status}>
+                      {String(seller.status).charAt(0).toUpperCase() + String(seller.status).slice(1)}
+                    </StatusBadge>
+                    <PayoutBadge $status={seller.payoutStatus}>
+                      Payout: {String(seller.payoutStatus).charAt(0).toUpperCase() + String(seller.payoutStatus).slice(1)}
+                    </PayoutBadge>
+                  </SellerBadges>
+                </SellerAmounts>
+              </SellerRow>
+            ))}
+          </SellersList>
+        </OrderItemsCard>
+      )}
 
       <SummaryGrid>
         <SummaryCard>
@@ -936,6 +1067,27 @@ const ItemSku = styled.p`
   margin-bottom: 0.25rem;
 `;
 
+const ItemVariant = styled.p`
+  color: #475569;
+  font-size: 0.875rem;
+  margin: 0.125rem 0;
+`;
+
+const ItemDescription = styled.p`
+  color: #64748b;
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+  line-height: 1.4;
+  max-width: 100%;
+`;
+
+const ProductThumb = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 0.5rem;
+`;
+
 const ItemPricing = styled.div`
   text-align: right;
   min-width: 120px;
@@ -956,6 +1108,74 @@ const ItemTotal = styled.p`
   font-weight: 600;
   color: #1e293b;
   margin: 0;
+`;
+
+const SellersList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+`;
+
+const SellerRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 0.5rem;
+  border: 1px solid #e2e8f0;
+`;
+
+const SellerInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+`;
+
+const SellerName = styled.div`
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 1rem;
+`;
+
+const SellerContact = styled.div`
+  font-size: 0.875rem;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+`;
+
+const SellerAmounts = styled.div`
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+`;
+
+const SellerAmountRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.875rem;
+  color: #475569;
+`;
+
+const SellerBadges = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+`;
+
+const PayoutBadge = styled.span`
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  background: ${(p) => (p.$status === "paid" ? "#dcfce7" : p.$status === "pending" ? "#fef3c7" : "#e2e8f0")};
+  color: ${(p) => (p.$status === "paid" ? "#166534" : p.$status === "pending" ? "#92400e" : "#475569")};
 `;
 
 const SummaryGrid = styled.div`

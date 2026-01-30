@@ -105,7 +105,7 @@ export default function EazShopProductsPage() {
     return (
       <ErrorContainer>
         <ErrorTitle>Error Loading Products</ErrorTitle>
-        <ErrorMessage>{error.message || 'Failed to load EazShop products'}</ErrorMessage>
+        <ErrorMessage>{error.message || 'Failed to load Saiisai products'}</ErrorMessage>
         <ErrorDetails>
           Please check the browser console for more details.
         </ErrorDetails>
@@ -128,8 +128,8 @@ export default function EazShopProductsPage() {
     <DashboardContainer>
       <Header>
         <TitleContainer>
-          <Title>EazShop Products</Title>
-          <Subtitle>Manage official EazShop store products</Subtitle>
+          <Title>Saiisai Products</Title>
+          <Subtitle>Manage official Saiisai store products</Subtitle>
         </TitleContainer>
         <Controls>
           <SearchContainer>
@@ -258,21 +258,21 @@ export default function EazShopProductsPage() {
           <NoResultsIcon>📦</NoResultsIcon>
           <NoResultsTitle>
             {products.length === 0 
-              ? "No EazShop Products Found" 
+              ? "No Saiisai Products Found" 
               : "No Products Match Your Filters"}
           </NoResultsTitle>
           <NoResultsMessage>
             {products.length === 0 
               ? "You haven't created any EazShop products yet. Create your first EazShop product to get started!" 
-              : `Try adjusting your search or filter. You have ${products.length} total EazShop products.`}
+              : `Try adjusting your search or filter. You have ${products.length} total Saiisai products.`}
           </NoResultsMessage>
           {products.length === 0 && (
             <NoResultsAction>
               <CreateButton onClick={() => {
-                toast.info('EazShop product creation is managed through the product management system. Please use the Products page to create new products.');
+                toast.info('Saiisai product creation is managed through the product management system. Please use the Products page to create new products.');
                 navigate(`/dashboard/${PATHS.PRODUCTS}`);
               }}>
-                Create EazShop Product
+                Create Saiisai Product
               </CreateButton>
             </NoResultsAction>
           )}

@@ -45,7 +45,7 @@ export default function Sidebar({ role }) {
     },
     {
       path: "eazshop/products",
-      label: "EazShop Products",
+      label: "Saiisai Products",
       icon: <FaAward />,
     },
     {

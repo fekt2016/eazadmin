@@ -54,13 +54,16 @@ export default function OrdersPage() {
     );
   }
 
-  // Extract data from response
-  // API returns: { status: 'success', results: [...], meta: {...} }
-  // Axios wraps it in response.data, so ordersData = { status: 'success', results: [...], meta: {...} }
-  const orders = ordersData?.results || ordersData?.data?.results || [];
+  // Extract data from response (support multiple shapes: axios response.data.results or direct results)
+  const orders =
+    ordersData?.data?.results ??
+    ordersData?.data?.data ??
+    ordersData?.results ??
+    [];
+  const ordersList = Array.isArray(orders) ? orders : [];
 
   // Pagination is in meta object
-  const pagination = ordersData?.meta || ordersData?.data?.pagination || {};
+  const pagination = ordersData?.data?.meta ?? ordersData?.meta ?? ordersData?.data?.pagination ?? {};
   const {
     total = 0,
     totalPages = 1,
@@ -71,12 +74,12 @@ export default function OrdersPage() {
   // Calculate pagination flags
   const hasNext = currentPageFromApi < totalPages;
   const hasPrev = currentPageFromApi > 1;
-  const totalOrders = total || orders.length;
+  const totalOrders = total || ordersList.length;
 
   // Stats from backend
 
   const stats = () => {
-    if (!orders || orders.length === 0) {
+    if (!ordersList.length) {
       return {
         totalOrders: 0,
         pendingCount: 0,
@@ -88,31 +91,25 @@ export default function OrdersPage() {
     }
 
     return {
-      totalOrders: orders.length,
-      pendingCount: orders.filter((order) => {
-        const status = order.orderStatus || order.currentStatus;
-        return status === "pending" || status === "pending_payment";
+      totalOrders: ordersList.length,
+      pendingCount: ordersList.filter((o) => {
+        const s = o.orderStatus ?? o.currentStatus;
+        return s === "pending" || s === "pending_payment";
       }).length,
-      processing: orders.filter((order) => {
-        const status = order.orderStatus || order.currentStatus;
-        return status === "processing" || status === "preparing" || status === "ready_for_dispatch";
+      processing: ordersList.filter((o) => {
+        const s = o.orderStatus ?? o.currentStatus;
+        return ["processing", "preparing", "ready_for_dispatch"].includes(s);
       }).length,
-      confirmed: orders.filter((order) => {
-        const status = order.orderStatus || order.currentStatus;
-        return status === "confirmed";
+      confirmed: ordersList.filter((o) => (o.orderStatus ?? o.currentStatus) === "confirmed").length,
+      shipped: ordersList.filter((o) => {
+        const s = o.orderStatus ?? o.currentStatus;
+        return s === "shipped" || s === "out_for_delivery";
       }).length,
-      shipped: orders.filter((order) => {
-        const status = order.orderStatus || order.currentStatus;
-        return status === "shipped" || status === "out_for_delivery";
+      delivered: ordersList.filter((o) => {
+        const s = o.orderStatus ?? o.currentStatus ?? o.status;
+        return s === "delivered" || s === "completed";
       }).length,
-      delivered: orders.filter((order) => {
-        const status = order.orderStatus || order.currentStatus;
-        return status === "delivered";
-      }).length,
-      cancelled: orders.filter((order) => {
-        const status = order.orderStatus || order.currentStatus;
-        return status === "cancelled";
-      }).length,
+      cancelled: ordersList.filter((o) => (o.orderStatus ?? o.currentStatus) === "cancelled").length,
     };
   };
   console.log("stats", stats());
@@ -139,6 +136,15 @@ export default function OrdersPage() {
     // If orderItems are just IDs (not populated)
     return order.orderItems.length;
   };
+  const getCustomerDisplay = (order) => {
+    const u = order.user;
+    if (u && typeof u === "object" && (u.name || u.email)) return u.name || u.email || "—";
+    if (order.buyer?.name) return order.buyer.name;
+    if (order.shippingAddress?.fullName || order.shippingAddress?.name) return order.shippingAddress.fullName || order.shippingAddress.name;
+    if (typeof u === "string" || (u && u.toString)) return "—"; // user is id only
+    return "—";
+  };
+
   const getStatusIcon = (status) => {
     switch (status) {
       case "pending":
@@ -321,15 +327,18 @@ export default function OrdersPage() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {orders.length > 0 ? (
-            orders.map((order) => (
-              <TableRow key={order._id || order.id}>
-                <TableCell>{order.orderNumber}</TableCell>
-                <TableCell>{order.user?.name || "Unknown Customer"}</TableCell>
+          {ordersList.length > 0 ? (
+            ordersList.map((order) => {
+              const orderId = order._id ?? order.id;
+              const orderIdStr = orderId?.toString?.() ?? orderId;
+              return (
+              <TableRow key={orderIdStr}>
+                <TableCell>{order.orderNumber ?? "—"}</TableCell>
+                <TableCell title={order.user?.email ?? ""}>{getCustomerDisplay(order)}</TableCell>
                 <TableCell>{formatDate(order.createdAt)}</TableCell>
                 <TableCell>
                   {order.trackingNumber ? (
-                    <TrackingLink 
+                    <TrackingLink
                       onClick={() => navigate(`/dashboard/tracking/${order.trackingNumber}`, { replace: false })}
                       title="Track Order"
                     >
@@ -341,13 +350,14 @@ export default function OrdersPage() {
                 </TableCell>
                 <TableCell>{calculateTotalQuantity(order)}</TableCell>
                 <TableCell>
-                  Gh₵{order.totalPrice?.toFixed(2) || "0.00"}
+                  Gh₵{(order.totalPrice ?? order.total ?? 0).toFixed(2)}
                 </TableCell>
                 <TableCell>
-                  <StatusBadge $color={getStatusColor(order.orderStatus || order.currentStatus)}>
-                    {getStatusIcon(order.orderStatus || order.currentStatus)}
-                    {(order.orderStatus || order.currentStatus)?.charAt(0).toUpperCase() +
-                      (order.orderStatus || order.currentStatus)?.slice(1) || "Unknown"}
+                  <StatusBadge $color={getStatusColor(order.orderStatus ?? order.currentStatus ?? order.status)}>
+                    {getStatusIcon(order.orderStatus ?? order.currentStatus ?? order.status)}
+                    {(order.orderStatus ?? order.currentStatus ?? order.status ?? "Unknown")
+                      .toString().charAt(0).toUpperCase() +
+                      (order.orderStatus ?? order.currentStatus ?? order.status ?? "unknown").toString().slice(1)}
                   </StatusBadge>
                 </TableCell>
                 <TableCell>
@@ -355,7 +365,7 @@ export default function OrdersPage() {
                     <ActionIcon
                       $color="#3498db"
                       title="View details"
-                      to={`detail/${order._id || order.id}`}
+                      to={`detail/${orderIdStr}`}
                     >
                       <FaEye />
                     </ActionIcon>
@@ -369,7 +379,8 @@ export default function OrdersPage() {
                   </ActionButtons>
                 </TableCell>
               </TableRow>
-            ))
+              );
+            })
           ) : (
             <NoOrdersRow>
               <td colSpan="7">

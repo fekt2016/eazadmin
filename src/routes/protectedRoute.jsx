@@ -32,6 +32,11 @@ const ProtectedRoutes = ({ children }) => {
   // Handle errors
   if (error) {
     console.error("[ProtectedRoute] Error fetching user data:", error);
+    // #region agent log
+    if (typeof window !== "undefined") {
+      fetch("http://127.0.0.1:7242/ingest/8853a92f-8faa-4d51-b197-e8e74c838dc7", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ location: "protectedRoute.jsx:error", message: "ProtectedRoute redirect reason", data: { reason: "error", status: error?.response?.status, pathname: window.location.pathname }, timestamp: Date.now(), sessionId: "debug-session", hypothesisId: "H2" }) }).catch(() => {});
+    }
+    // #endregion
     // If it's a 401, redirect to login
     if (error?.response?.status === 401) {
       console.log("[ProtectedRoute] 401 error, redirecting to login");
@@ -51,6 +56,11 @@ const ProtectedRoutes = ({ children }) => {
   
   // If admin data is not available after loading, redirect to login
   if (!admin) {
+    // #region agent log
+    if (typeof window !== "undefined") {
+      fetch("http://127.0.0.1:7242/ingest/8853a92f-8faa-4d51-b197-e8e74c838dc7", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ location: "protectedRoute.jsx:noAdmin", message: "ProtectedRoute redirect no admin", data: { reason: "noAdmin", pathname: window.location.pathname }, timestamp: Date.now(), sessionId: "debug-session", hypothesisId: "H4" }) }).catch(() => {});
+    }
+    // #endregion
     console.warn("[ProtectedRoute] No admin data found after loading. adminData:", adminData);
     return <Navigate to="/" replace />;
   }

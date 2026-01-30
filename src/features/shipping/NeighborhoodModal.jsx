@@ -431,7 +431,7 @@ const NeighborhoodModal = ({ isOpen, onClose, neighborhood = null }) => {
                     allowFullScreen
                     loading="lazy"
                     referrerPolicy="no-referrer-when-downgrade"
-                    title="Route from EazShop HQ to Neighborhood"
+                    title="Route from Saiisai HQ to Neighborhood"
                   />
                   <MapInfo>
                     <MapInfoItem>

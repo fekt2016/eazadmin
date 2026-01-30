@@ -3,7 +3,7 @@ import styled from "styled-components";
 import { Link } from "react-router-dom";
 
 /**
- * EazShop Logo Component
+ * Saiisai Logo Component
  * Can be used as a standalone logo or as a link to home
  */
 const Logo = ({ 
@@ -15,38 +15,13 @@ const Logo = ({
   const logoContent = (
     <LogoContainer className={className} $variant={variant} {...props}>
       <LogoIcon $variant={variant}>
-        <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
-          {/* Modern Shopping Cart Icon */}
-          <g transform="translate(4, 4)">
-            {/* Cart Base */}
-            <rect x="4" y="20" width="24" height="20" rx="2.5" fill="currentColor" opacity="0.15"/>
-            <rect x="4" y="20" width="24" height="20" rx="2.5" fill="none" stroke="currentColor" strokeWidth="2.5"/>
-            
-            {/* Cart Handle */}
-            <path 
-              d="M8 20 L8 8 C8 5.8 9.8 4 12 4 L20 4 C22.2 4 24 5.8 24 8 L24 20" 
-              fill="none" 
-              stroke="currentColor" 
-              strokeWidth="3" 
-              strokeLinecap="round"
-            />
-            
-            {/* Shopping Items */}
-            <circle cx="12" cy="28" r="3.5" fill="currentColor"/>
-            <circle cx="20" cy="28" r="3.5" fill="currentColor"/>
-            
-            {/* Cart Wheels */}
-            <circle cx="10" cy="36" r="2.5" fill="currentColor" opacity="0.6"/>
-            <circle cx="22" cy="36" r="2.5" fill="currentColor" opacity="0.6"/>
-          </g>
-        </svg>
+        {/* Use shared PNG logo from public folder */}
+        <img
+          src="/saiisailogo.png"
+          alt="Saiisai logo"
+          style={{ width: "100%", height: "100%", objectFit: "contain" }}
+        />
       </LogoIcon>
-      {variant !== "icon" && (
-        <LogoText $variant={variant}>
-          <LogoTextPrimary>Eaz</LogoTextPrimary>
-          <LogoTextSecondary>Shop</LogoTextSecondary>
-        </LogoText>
-      )}
     </LogoContainer>
   );
 
