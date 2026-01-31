@@ -1505,11 +1505,11 @@ const SellerDetailPage = () => {
           </CardBody>
         </InfoCard>
 
-        {/* Payment Methods */}
+        {/* Payment Methods (Payout Verification) - Where admin sees bank/MoMo added by seller */}
         <InfoCard>
           <CardHeader>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-              <CardTitle>Payment Methods</CardTitle>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <CardTitle>Payment Methods (Payout Verification)</CardTitle>
               <ActionButton 
                 variant="info" 
                 onClick={() => {
@@ -1517,9 +1517,10 @@ const SellerDetailPage = () => {
                   queryClient.invalidateQueries(["admin", "seller", sellerId, "payout-verification"]);
                   toast.info('Refreshing payment methods...');
                 }}
+                disabled={isPayoutVerificationLoading}
                 style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
               >
-                <FaUndo style={{ marginRight: '0.5rem' }} /> Refresh
+                <FaUndo style={{ marginRight: '0.5rem' }} /> {isPayoutVerificationLoading ? 'Loading…' : 'Refresh'}
               </ActionButton>
             </div>
           </CardHeader>
@@ -1808,7 +1809,10 @@ const SellerDetailPage = () => {
                     <FaWallet style={{ fontSize: '3rem', color: '#8d99ae', marginBottom: '1rem' }} />
                     <EmptyStateTitle>No Payment Methods Added</EmptyStateTitle>
                     <EmptyStateText>
-                      This seller has not added any payment methods yet. They need to add a bank account or mobile money details before payout verification can be completed.
+                      This seller has not added any payment methods yet. They need to add a bank account or mobile money in the seller app (Finance → Payment Methods) before payout verification can be completed.
+                    </EmptyStateText>
+                    <EmptyStateText style={{ marginTop: '0.75rem', fontSize: '0.9rem', color: '#64748b' }}>
+                      If the seller just added payment info, click <strong>Refresh</strong> above to load it.
                     </EmptyStateText>
                   </EmptyState>
                 );

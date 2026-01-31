@@ -38,17 +38,17 @@ const GlobalStyles = createGlobalStyle`
   --color-instagram: #FFDC80:
 
 
+  /* Primary (blue) – darker steps for contrast with white (WCAG AA) */
   --color-primary-100: #d4efff;
   --color-primary-200: #bbceff;
   --color-primary-300: #83c9ff;
   --color-primary-400: #52a2ff;
-  --color-primary-500: #2b7aff;
-  --color-primary-600: #084dff;
-  --color-primary-700: #0046ff;
-  --color-primary-800: #033ed3;
-  //used
-  --color-primary-900: #0d3aa2;
-  --color-primary-950: #08205e;
+  --color-primary-500: #084dff;
+  --color-primary-600: #0046ff;
+  --color-primary-700: #033ed3;
+  --color-primary-800: #0d3aa2;
+  --color-primary-900: #08205e;
+  --color-primary-950: #051a47;
 
 
   /* Grey */
