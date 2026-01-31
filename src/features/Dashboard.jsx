@@ -1,12 +1,15 @@
 import { useState, useMemo } from "react";
-import { FaBox, FaChartLine, FaShoppingCart, FaUsers, FaCheckCircle, FaStar } from "react-icons/fa";
+import { FaBox, FaChartLine, FaShoppingCart, FaUsers, FaCheckCircle, FaStar, FaSync } from "react-icons/fa";
 import styled from "styled-components";
 import { Link, useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "react-toastify";
 import useAdminStats from "../shared/hooks/useAdminStats";
 import { useGetAllOrders } from "../shared/hooks/useOrder";
 import { useGetTopSellers } from "../shared/hooks/useGetTopSellers";
 import { formatDate } from "../shared/utils/helpers";
 import { LoadingState, ErrorState } from "../shared/components/ui/LoadingComponents";
+import { orderService } from "../shared/services/orderApi";
 
 // Format currency
 const formatCurrency = (amount) => {
@@ -88,9 +91,42 @@ const statusColorMap = {
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { data: stats, isLoading: statsLoading, error: statsError } = useAdminStats();
   const { data: ordersData, isLoading: ordersLoading, error: ordersError } = useGetAllOrders();
   const { data: sellersData, isLoading: sellersLoading } = useGetTopSellers(5);
+
+  const [backfillLoading, setBackfillLoading] = useState(false);
+  const [lastBackfillErrors, setLastBackfillErrors] = useState(null);
+  const runBackfill = async () => {
+    setBackfillLoading(true);
+    setLastBackfillErrors(null);
+    try {
+      const res = await orderService.backfillSellerCredits({ limit: 100 });
+      const data = res?.data?.data ?? res?.data ?? res;
+      const credited = data?.credited ?? 0;
+      const processed = data?.processed ?? 0;
+      const skipped = data?.skipped ?? 0;
+      const errors = Array.isArray(data?.errors) ? data.errors : [];
+      if (skipped > 0 && errors.length > 0) {
+        setLastBackfillErrors(errors);
+      }
+      if (credited > 0) {
+        queryClient.invalidateQueries({ queryKey: ["adminStats"] });
+        queryClient.invalidateQueries({ queryKey: ["orders"] });
+        toast.success(`Backfill complete: ${credited} order(s) credited, ${skipped} skipped (${processed} processed).`);
+      } else if (processed === 0) {
+        toast.info("No delivered orders needed crediting.");
+      } else {
+        toast.info(`Backfill complete: ${skipped} order(s) skipped (${processed} processed). See reasons below.`);
+      }
+    } catch (err) {
+      const msg = err?.response?.data?.message || err?.message || "Backfill failed";
+      toast.error(msg);
+    } finally {
+      setBackfillLoading(false);
+    }
+  };
 
   // Calculate metrics from stats
   const metrics = useMemo(() => {
@@ -218,8 +254,33 @@ export default function AdminDashboard() {
                 efficiently.
               </p>
             </div>
-            <button>Generate Report</button>
+            <BannerButtons>
+              <button type="button" onClick={runBackfill} disabled={backfillLoading} title="Credit sellers for delivered orders that were never credited">
+                {backfillLoading ? (
+                  <>Running…</>
+                ) : (
+                  <>
+                    <FaSync style={{ marginRight: "6px", verticalAlign: "middle" }} />
+                    Backfill seller credits
+                  </>
+                )}
+              </button>
+              <button type="button">Generate Report</button>
+            </BannerButtons>
           </WelcomeBanner>
+
+          {lastBackfillErrors && lastBackfillErrors.length > 0 && (
+            <BackfillSkipReasons>
+              <h4>Why were orders skipped?</h4>
+              <ul>
+                {lastBackfillErrors.map((e, i) => (
+                  <li key={e.orderId || i}>
+                    <strong>{e.orderNumber || e.orderId || `Order ${i + 1}`}:</strong> {e.message || "Unknown reason"}
+                  </li>
+                ))}
+              </ul>
+            </BackfillSkipReasons>
+          )}
           
           <CardsContainer>
             {metrics.map((metric, index) => (
@@ -442,11 +503,59 @@ const WelcomeBanner = styled.div`
       padding: 10px 20px;
     }
 
-    &:hover {
+    &:hover:not(:disabled) {
       transform: translateY(-3px);
       box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
       background: var(--color-grey-50);
     }
+
+    &:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+  }
+`;
+
+const BannerButtons = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+
+  @media (min-width: 768px) {
+    flex-direction: row;
+    width: auto;
+    gap: 12px;
+  }
+`;
+
+const BackfillSkipReasons = styled.div`
+  background: var(--color-yellow-50, #fffbeb);
+  border: 1px solid var(--color-yellow-200, #fde68a);
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 25px;
+
+  h4 {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-grey-800);
+  }
+
+  ul {
+    margin: 0;
+    padding-left: 20px;
+  }
+
+  li {
+    margin-bottom: 6px;
+    font-size: 13px;
+    color: var(--color-grey-700);
+  }
+
+  li:last-child {
+    margin-bottom: 0;
   }
 `;
 

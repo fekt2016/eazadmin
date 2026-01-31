@@ -63,8 +63,9 @@ export default function AdminRoutes() {
   
   return (
     <Routes>
-      {/* Admin login route */}
+      {/* Admin login route - both / and /login so /login does not 404 */}
       <Route path={PATHS.LOGIN} element={<AdminLogin />} />
+      <Route path="/login" element={<AdminLogin />} />
       
       {/* Password reset routes */}
       <Route path="/forgot-password" element={

@@ -24,6 +24,7 @@ const adminSellerApi = {
     return api.patch(`/seller/${sellerId}/status`, { newStatus });
   },
   updateSeller: (sellerId, data) => api.patch(`/seller/${sellerId}`, data),
+  reactivateSeller: (sellerId) => api.patch(`/seller/${sellerId}/reactivate`),
   getSellerDetails: (sellerId, config = {}) => api.get(`/seller/${sellerId}`, config),
   deleteSeller: (sellerId) => api.delete(`/seller/${sellerId}`),
   approveSellerVerification: (sellerId) => api.patch(`/seller/${sellerId}/approve-verification`),

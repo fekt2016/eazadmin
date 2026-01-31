@@ -61,8 +61,10 @@ export const productService = {
     }
   },
 
-  getAllProductsBySeller: async () => {
-    const response = await api.get("/seller/me/products");
+  // Admin/seller: use shared GET /product (supports ?seller= for admin viewing a seller's products)
+  getAllProductsBySeller: async (sellerId) => {
+    const params = sellerId ? { seller: sellerId, limit: 500 } : { limit: 500 };
+    const response = await api.get("/product", { params });
     return response.data;
   },
   createProduct: async (formData) => {
@@ -96,7 +98,7 @@ export const productService = {
   updateProduct: async (id, productData) => {
     try {
       const response = await api.patch(
-        `/seller/me/products/${id}`,
+        `/product/${id}`,
         productData
       );
 

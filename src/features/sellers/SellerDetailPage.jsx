@@ -93,9 +93,22 @@ const SellerDetailPage = () => {
     isLoading: isPayoutVerificationLoading,
     error: payoutVerificationError,
   } = usePayoutVerificationDetails(sellerId);
-  const { approveVerification, rejectVerification, approvePayout, rejectPayout } = useSellerAdmin();
+  const { approveVerification, rejectVerification, approvePayout, rejectPayout, updateStatus } = useSellerAdmin();
   const resetBalanceMutation = useResetSellerBalance();
   const resetLockedBalanceMutation = useResetLockedBalance();
+
+  // Reactivate seller (set active: true) — for sellers who previously deleted their account
+  const reactivateSellerMutation = useMutation({
+    mutationFn: () => adminSellerApi.reactivateSeller(sellerId),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["admin", "seller", sellerId, "details"]);
+      queryClient.invalidateQueries(["admin", "sellers"]);
+      toast.success("Seller reactivated. They can log in and use their account again.");
+    },
+    onError: (err) => {
+      toast.error(err?.response?.data?.message || "Failed to reactivate seller.");
+    },
+  });
 
   // Admin document verification mutation (shared for all documents)
   // CACHE UPDATE STRATEGY:
@@ -979,7 +992,16 @@ const SellerDetailPage = () => {
           <PageSubtitle>{seller.email}</PageSubtitle>
         </HeaderLeft>
         <HeaderRight>
-          {/* Header actions can be added here if needed */}
+          {seller.active === false && (
+            <ActionButton
+              $variant="success"
+              onClick={() => reactivateSellerMutation.mutate()}
+              disabled={reactivateSellerMutation.isPending}
+            >
+              <FaUndo />
+              {reactivateSellerMutation.isPending ? "Reactivating…" : "Reactivate this seller"}
+            </ActionButton>
+          )}
         </HeaderRight>
       </PageHeader>
 
@@ -1027,11 +1049,52 @@ const SellerDetailPage = () => {
               </InfoValue>
             </InfoRow>
             <InfoRow>
-              <InfoLabel>Status</InfoLabel>
-              <StatusBadge $status={seller.status || 'active'}>
-                {seller.status === 'active' ? <FaCheckCircle /> : <FaTimesCircle />}
-                {seller.status || 'active'}
-              </StatusBadge>
+              <InfoLabel>Business status</InfoLabel>
+              <InfoValue style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                <StatusBadge $status={seller.status || 'pending'}>
+                  {seller.status === 'active' ? <FaCheckCircle /> : <FaTimesCircle />}
+                  {seller.status || 'pending'}
+                </StatusBadge>
+                {seller.status !== 'active' && (
+                  <ActionButton
+                    $variant="success"
+                    onClick={async () => {
+                      try {
+                        await reactivateSellerMutation.mutateAsync();
+                        await updateStatus.mutateAsync({ sellerId, status: 'active' });
+                        queryClient.invalidateQueries(['admin', 'seller', sellerId, 'details']);
+                        queryClient.invalidateQueries(['admin', 'sellers']);
+                        toast.success('Seller status and account set to active.');
+                      } catch (err) {
+                        toast.error(err?.response?.data?.message || 'Failed to set active.');
+                      }
+                    }}
+                    disabled={updateStatus.isPending || reactivateSellerMutation.isPending}
+                  >
+                    {updateStatus.isPending || reactivateSellerMutation.isPending ? 'Updating…' : 'Set status to active'}
+                  </ActionButton>
+                )}
+              </InfoValue>
+            </InfoRow>
+            <InfoRow>
+              <InfoLabel>Account</InfoLabel>
+              <InfoValue style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                {seller.active === false ? (
+                  <>
+                    <StatusBadge $status="inactive">Inactive (deactivated)</StatusBadge>
+                    <ActionButton
+                      $variant="success"
+                      onClick={() => reactivateSellerMutation.mutate()}
+                      disabled={reactivateSellerMutation.isPending}
+                    >
+                      <FaUndo />
+                      {reactivateSellerMutation.isPending ? 'Reactivating…' : 'Reactivate this seller'}
+                    </ActionButton>
+                  </>
+                ) : (
+                  <StatusBadge $status="active">Active</StatusBadge>
+                )}
+              </InfoValue>
             </InfoRow>
           </CardBody>
         </InfoCard>
@@ -1042,33 +1105,91 @@ const SellerDetailPage = () => {
             <CardTitle>Verification Status</CardTitle>
           </CardHeader>
           <CardBody>
-            <InfoRow>
-              <InfoLabel>Document Verification</InfoLabel>
-              <StatusBadge $status={seller.verificationStatus || 'pending'}>
-                {seller.verificationStatus === 'verified' && <FaCheckCircle />}
-                {seller.verificationStatus === 'rejected' && <FaTimesCircle />}
-                {(seller.verificationStatus === 'pending' || !seller.verificationStatus) && <FaExclamationTriangle />}
-                {seller.verificationStatus ? seller.verificationStatus.toUpperCase() : 'PENDING'}
-              </StatusBadge>
-            </InfoRow>
-            <InfoRow>
-              <InfoLabel>Onboarding Stage</InfoLabel>
-              <InfoValue>{seller.onboardingStage || 'N/A'}</InfoValue>
-            </InfoRow>
-            <InfoRow>
-              <InfoLabel>Email Verified</InfoLabel>
-              <StatusBadge $status={seller.verification?.emailVerified ? 'verified' : 'pending'}>
-                {seller.verification?.emailVerified ? (
-                  <>
-                    <FaCheckCircle /> Verified
-                  </>
-                ) : (
-                  <>
-                    <FaTimesCircle /> Not Verified
-                  </>
-                )}
-              </StatusBadge>
-            </InfoRow>
+            {(() => {
+              // Compute identity fully verified: all 3 documents + email + phone verified
+              const businessCertInfo = getDocumentInfo(seller.verificationDocuments?.businessCert);
+              const idProofInfo = getDocumentInfo(seller.verificationDocuments?.idProof);
+              const addressProofInfo = getDocumentInfo(seller.verificationDocuments?.addresProof);
+              const allDocsVerified =
+                businessCertInfo.isVerified && idProofInfo.isVerified && addressProofInfo.isVerified;
+              const isPhoneVerified =
+                seller.phone != null && String(seller.phone).trim() !== '';
+              const isIdentityFullyVerified =
+                allDocsVerified &&
+                Boolean(seller.verification?.emailVerified) &&
+                isPhoneVerified;
+              return (
+                <>
+                  <InfoRow>
+                    <InfoLabel>Overall verification</InfoLabel>
+                    <StatusBadge
+                      $status={
+                        seller.verificationStatus === 'rejected'
+                          ? 'rejected'
+                          : isIdentityFullyVerified || seller.verificationStatus === 'verified'
+                            ? 'verified'
+                            : 'pending'
+                      }
+                    >
+                      {seller.verificationStatus === 'rejected' && <FaTimesCircle />}
+                      {(isIdentityFullyVerified || seller.verificationStatus === 'verified') && seller.verificationStatus !== 'rejected' && <FaCheckCircle />}
+                      {!isIdentityFullyVerified && seller.verificationStatus !== 'verified' && seller.verificationStatus !== 'rejected' && <FaExclamationTriangle />}
+                      {seller.verificationStatus === 'rejected'
+                        ? 'REJECTED'
+                        : isIdentityFullyVerified || seller.verificationStatus === 'verified'
+                          ? 'VERIFIED'
+                          : 'PENDING'}
+                    </StatusBadge>
+                  </InfoRow>
+                  <InfoRow>
+                    <InfoLabel>Fully verified (identity & contact)</InfoLabel>
+                    <StatusBadge $status={isIdentityFullyVerified ? 'verified' : 'pending'}>
+                      {isIdentityFullyVerified ? (
+                        <>
+                          <FaCheckCircle /> Verified
+                        </>
+                      ) : (
+                        <>
+                          <FaExclamationTriangle /> Pending
+                        </>
+                      )}
+                    </StatusBadge>
+                  </InfoRow>
+                  <InfoRow>
+                    <InfoLabel>Onboarding Stage</InfoLabel>
+                    <InfoValue>{seller.onboardingStage || 'N/A'}</InfoValue>
+                  </InfoRow>
+                  <InfoRow>
+                    <InfoLabel>Email Verified</InfoLabel>
+                    <StatusBadge $status={seller.verification?.emailVerified ? 'verified' : 'pending'}>
+                      {seller.verification?.emailVerified ? (
+                        <>
+                          <FaCheckCircle /> Verified
+                        </>
+                      ) : (
+                        <>
+                          <FaTimesCircle /> Not Verified
+                        </>
+                      )}
+                    </StatusBadge>
+                  </InfoRow>
+                  <InfoRow>
+                    <InfoLabel>Phone Verified</InfoLabel>
+                    <StatusBadge $status={isPhoneVerified ? 'verified' : 'pending'}>
+                      {isPhoneVerified ? (
+                        <>
+                          <FaCheckCircle /> Verified
+                        </>
+                      ) : (
+                        <>
+                          <FaTimesCircle /> Not Verified
+                        </>
+                      )}
+                    </StatusBadge>
+                  </InfoRow>
+                </>
+              );
+            })()}
             {seller.verifiedAt && (
               <InfoRow>
                 <InfoLabel>Verified At</InfoLabel>

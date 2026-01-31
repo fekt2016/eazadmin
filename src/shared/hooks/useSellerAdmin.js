@@ -93,10 +93,12 @@ const useSellerAdmin = (pageParam = 1, limit = 10) => {
   // Status update mutation
   const updateStatus = useMutation({
     mutationFn: (statusData) => adminApi.updateSellerStatus(statusData),
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       console.log("Status updated successfully:", data);
-      // Invalidate the sellers query
       queryClient.invalidateQueries(["admin", "sellers"]);
+      if (variables?.sellerId) {
+        queryClient.invalidateQueries(["admin", "seller", variables.sellerId, "details"]);
+      }
     },
   });
   const updateSeller = useMutation({

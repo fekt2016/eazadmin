@@ -23,12 +23,17 @@ import { useParams, Link } from "react-router-dom";
 import { PATHS } from '../../routes/routhPath';
 import useDynamicPageTitle from '../../shared/hooks/useDynamicPageTitle';
 import { toast } from 'react-toastify';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQueries } from '@tanstack/react-query';
 import { orderService } from '../../shared/services/orderApi';
+import adminSellerApi from '../../shared/services/adminSellerApi';
+
+// Platform store ID – display "EazShop Store" when seller details are not available
+const EAZSHOP_STORE_ID = '000000000000000000000001';
 
 const OrderDetail = () => {
   const { id: orderId } = useParams();
   const { data: orderData, refetch: refetchOrder } = useGetOrderById(orderId);
+  console.log("[OrderDetail] Order data:", orderData);
   const queryClient = useQueryClient();
   const confirmPaymentMutation = useConfirmPayment();
   const updateOrderStatusMutation = useUpdateOrderStatus();
@@ -38,6 +43,46 @@ const OrderDetail = () => {
     "Please leave the package at the front door if I'm not home."
   );
   const [order, setOrder] = useState(null);
+
+  // Seller IDs from the fetched order – use sellerId (actual seller), not id (SellerOrder id).
+  // Exclude EazShop store ID so we don't fetch it (display "EazShop Store" instead).
+  const sellerIdsToFetch = order?.sellers?.length
+    ? [...new Set(
+        order.sellers
+          .filter((s) => s.sellerId && String(s.sellerId) !== EAZSHOP_STORE_ID)
+          .map((s) => String(s.sellerId))
+      )]
+    : [];  
+
+  const sellerQueries = useQueries({
+    queries: sellerIdsToFetch.map((sellerId) => ({
+      queryKey: ['seller', sellerId],
+      queryFn: async () => {
+        try {
+          const res = await adminSellerApi.getSellerDetails(sellerId);
+          const data = res?.data?.data ?? res?.data ?? res;
+          return data?.data ?? data ?? null;
+        } catch (err) {
+          if (err?.response?.status === 404) {
+            console.warn(`[OrderDetail] Seller not found (may be inactive): ${sellerId}`, err?.response?.data?.message);
+            return null;
+          }
+          throw err;
+        }
+      },
+      enabled: !!sellerId,
+      staleTime: 5 * 60 * 1000,
+      retry: false,
+    })),
+  });
+
+  const sellerById = sellerIdsToFetch.length
+    ? sellerIdsToFetch.reduce((acc, id, i) => {
+        const result = sellerQueries[i]?.data;
+        if (result) acc[id] = result;
+        return acc;
+      }, {})
+    : {};
 
   // SEO - Dynamic page title based on order
   useDynamicPageTitle({
@@ -49,15 +94,22 @@ const OrderDetail = () => {
 
   useEffect(() => {
     if (orderData) {
-      const orderform =
-        orderData?.data?.data?.data ??
-        orderData?.data?.data ??
-        orderData?.data ??
-        null;
-      const rawOrder = orderform?.data ?? orderform ?? null;
+      // Support multiple API response shapes: { data: { data: doc } }, { data: { order: doc } }, { data: doc }
+      // Axios response: orderData.data = body; handleFactory returns { status, data: { data: doc } }
+      const body = orderData?.data ?? null;
+      const inner = body?.data ?? body ?? null;
+      const rawOrder = inner?.data ?? inner?.order ?? inner ?? null;
       if (!rawOrder || typeof rawOrder.orderNumber === "undefined") {
         return;
       }
+      // sellerOrder: from fetched order doc (rawOrder) — seller IDs come from here
+      const sellerOrderList = Array.isArray(rawOrder.sellerOrder)
+        ? rawOrder.sellerOrder
+        : Array.isArray(inner?.sellerOrder)
+          ? inner.sellerOrder
+          : Array.isArray(body?.sellerOrder)
+            ? body.sellerOrder
+            : [];
       // Format dates (use rawOrder as source of truth)
       const createdAt = new Date(rawOrder.createdAt ?? orderform?.createdAt);
       const formattedDate = createdAt.toLocaleDateString("en-US", {
@@ -107,7 +159,7 @@ const OrderDetail = () => {
 
       // Calculate totals
       const subtotal = items.reduce((sum, item) => sum + item.total, 0);
-      const shipping = (rawOrder.sellerOrder?.[0]?.shippingCost ?? orderform?.sellerOrder?.[0]?.shippingCost) || 0;
+      const shipping = (sellerOrderList?.[0]?.shippingCost ?? rawOrder.sellerOrder?.[0]?.shippingCost ?? orderform?.sellerOrder?.[0]?.shippingCost) || 0;
       const tax = (rawOrder.tax ?? orderform?.tax) || 0;
       const total = subtotal + shipping + tax;
 
@@ -117,6 +169,14 @@ const OrderDetail = () => {
       const trackingNumber =
         rawOrder.trackingNumber ?? orderform?.trackingNumber ?? null;
 
+      // Backend uses both 'paid' and 'completed' for payment status (e.g. Paystack webhook sets 'completed')
+      const rawPaymentStatus = (rawOrder.paymentStatus || "pending").toString().toLowerCase();
+      const isPaid = rawPaymentStatus === "paid" || rawPaymentStatus === "completed";
+      const paidAtDate = rawOrder.paidAt ? new Date(rawOrder.paidAt) : null;
+      const paidAtFormatted = paidAtDate
+        ? paidAtDate.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
+        : null;
+
       setOrder({
         id: rawOrder._id ?? orderform?.id,
         orderNumber: rawOrder.orderNumber ?? orderform?.orderNumber,
@@ -125,6 +185,8 @@ const OrderDetail = () => {
         time: formattedTime,
         status: rawOrder.orderStatus || rawOrder.status || 'pending',
         paymentStatus: rawOrder.paymentStatus || 'pending',
+        isPaid,
+        paidAtFormatted: paidAtFormatted || formattedDate,
         paymentMethod:
           paymentMethodMap[rawOrder.paymentMethod] ?? rawOrder.paymentMethod,
         rawPaymentMethod: rawOrder.paymentMethod,
@@ -160,11 +222,11 @@ const OrderDetail = () => {
           {
             id: 2,
             title: rawOrder.orderStatus === "confirmed" ? "Confirmed" : "Processing",
-            description: rawOrder.orderStatus === "confirmed"
+            description: isPaid ? "Order confirmed and payment received" : (rawOrder.orderStatus === "confirmed"
               ? "Order confirmed and payment received"
-              : "Order is being prepared for shipment",
+              : "Order is being prepared for shipment"),
             date: formattedDate,
-            completed: rawOrder.orderStatus !== "pending" && rawOrder.orderStatus !== "pending_payment",
+            completed: isPaid || (rawOrder.orderStatus !== "pending" && rawOrder.orderStatus !== "pending_payment"),
           },
           {
             id: 3,
@@ -184,18 +246,38 @@ const OrderDetail = () => {
             completed: isDelivered,
           },
         ],
-        sellers: (rawOrder.sellerOrder || []).map((so) => ({
-          id: so._id,
-          name: so.seller?.name ?? "—",
-          shopName: so.seller?.shopName ?? "—",
-          email: so.seller?.email ?? "—",
-          subtotal: so.subtotal ?? 0,
-          total: so.total ?? 0,
-          shippingCost: so.shippingCost ?? 0,
-          totalBasePrice: so.totalBasePrice ?? 0,
-          status: so.status ?? "pending",
-          payoutStatus: so.payoutStatus ?? "pending",
-        })),
+        // Seller IDs from the fetched order: look for id in sellerOrder[].sellerId, .seller.id, .seller._id, or .seller (ref)
+        sellers: (sellerOrderList || []).map((so) => {
+          const rawSellerRef = so.seller;
+          const isPopulatedSeller = rawSellerRef && typeof rawSellerRef === "object" && rawSellerRef !== null && (rawSellerRef.name != null || rawSellerRef.email != null || rawSellerRef.shopName != null);
+          const sellerObj = isPopulatedSeller ? rawSellerRef : null;
+          const sellerIdFromOrder =
+            so.sellerId != null ? so.sellerId
+            : sellerObj?.id ?? sellerObj?._id
+            ?? (rawSellerRef != null ? (typeof rawSellerRef === "string" ? rawSellerRef : rawSellerRef.id ?? rawSellerRef.toString?.()) : null)
+            ?? null;
+          const sellerId = sellerIdFromOrder != null ? String(sellerIdFromOrder) : null;
+          const sellerEmail = sellerObj?.email ?? "—";
+          return {
+            id: so._id,
+            name: sellerObj?.name ?? "—",
+            shopName: sellerObj?.shopName ?? "—",
+            email: sellerEmail,
+            sellerId,
+            subtotal: so.subtotal ?? 0,
+            total: so.total ?? 0,
+            shippingCost: so.shippingCost ?? 0,
+            totalBasePrice: so.totalBasePrice ?? 0,
+            status: so.status ?? "pending",
+            payoutStatus: so.payoutStatus ?? so.sellerPayoutStatus ?? "pending",
+          };
+        }),
+        sellerEmails: (sellerOrderList || [])
+          .map((so) => {
+            const sellerObj = so.seller && typeof so.seller === "object" && so.seller !== null ? so.seller : null;
+            return sellerObj?.email;
+          })
+          .filter(Boolean),
       });
 
       console.log("[OrderDetail] Raw API response:", orderData);
@@ -209,12 +291,43 @@ const OrderDetail = () => {
         summary: { subtotal, shipping, tax, total },
         status: rawOrder.orderStatus ?? rawOrder.status,
         paymentStatus: rawOrder.paymentStatus,
-        sellersCount: (rawOrder.sellerOrder || []).length,
+        sellersCount: (sellerOrderList || []).length,
       });
 
       setStatus(isDelivered ? "delivered" : (rawOrder.orderStatus || rawOrder.status || "pending"));
     }
   }, [orderData]);
+
+  useEffect(() => {
+    if (order) {
+      console.log("[OrderDetail] Order:", order);
+    }
+  }, [order]);
+
+  // Log each seller's information (e.g. for orders with 2 sellers)
+  useEffect(() => {
+    if (!order?.sellers?.length) return;
+    const sellersInfo = order.sellers.map((s, index) => {
+      const fetched = s.sellerId ? sellerById[String(s.sellerId)] : null;
+      return {
+        index: index + 1,
+        sellerId: s.sellerId,
+        name: fetched?.name ?? s.name,
+        shopName: fetched?.shopName ?? s.shopName,
+        email: fetched?.email ?? s.email,
+        subtotal: s.subtotal,
+        total: s.total,
+        shippingCost: s.shippingCost,
+        status: s.status,
+        payoutStatus: s.payoutStatus,
+        fromFetch: !!fetched,
+      };
+    });
+    console.log(`[OrderDetail] Sellers (${sellersInfo.length}):`, sellersInfo);
+    sellersInfo.forEach((info, i) => {
+      console.log(`[OrderDetail] Seller ${i + 1}:`, info);
+    });
+  }, [order?.sellers, sellerById]);
 
   const handleStatusChange = async (newStatus) => {
     try {
@@ -262,11 +375,11 @@ const OrderDetail = () => {
     }
 
     // Get current payment status and method from order or orderData
-    const currentPaymentStatus = order?.paymentStatus || orderData?.data?.data?.paymentStatus || 'pending';
+    const rawPs = (order?.paymentStatus || orderData?.data?.data?.paymentStatus || 'pending').toString().toLowerCase();
     const currentPaymentMethod = order?.rawPaymentMethod || orderData?.data?.data?.paymentMethod;
 
-    // Double-check conditions
-    if (currentPaymentStatus !== 'pending') {
+    // Double-check conditions (treat both 'paid' and 'completed' as already paid)
+    if (rawPs === 'paid' || rawPs === 'completed') {
       toast.error('Payment has already been confirmed');
       return;
     }
@@ -412,28 +525,27 @@ const OrderDetail = () => {
               </CardTitle>
               <PaymentSection>
                 <PaymentMethod>{order.paymentMethod}</PaymentMethod>
-                <PaymentStatus status={order.paymentStatus || orderData?.data?.data?.paymentStatus || 'pending'}>
-                  Payment Status: {order.paymentStatus || orderData?.data?.data?.paymentStatus || 'pending'}
+                <PaymentStatus status={order.isPaid ? 'paid' : (order.paymentStatus || orderData?.data?.data?.paymentStatus || 'pending')}>
+                  Payment Status: {order.isPaid ? 'Paid' : (order.paymentStatus || orderData?.data?.data?.paymentStatus || 'pending')}
                 </PaymentStatus>
-                {order.paymentStatus === 'paid' && (
-                  <PaymentDate>Paid on {order.date}</PaymentDate>
+                {order.isPaid && (
+                  <PaymentDate>Paid on {order.paidAtFormatted ?? order.date}</PaymentDate>
                 )}
                 
                 {/* Payment Confirmation Button */}
                 {(() => {
                   const orderform = orderData?.data?.data?.data || orderData?.data?.data;
-                  const currentPaymentStatus = order?.paymentStatus || orderform?.paymentStatus || 'pending';
+                  const rawPs = (order?.paymentStatus || orderform?.paymentStatus || 'pending').toString().toLowerCase();
+                  const currentPaymentStatus = rawPs; // keep raw for button logic
                   const currentPaymentMethod = order?.rawPaymentMethod || orderform?.paymentMethod;
                   const currentStatus = orderform?.currentStatus || orderform?.orderStatus || orderform?.status || 'pending';
                   
-                  // Show button only if:
-                  // 1. Payment is pending
-                  // 2. Payment method is bank_transfer or payment_on_delivery
-                  // 3. Order is delivered (currentStatus === 'delivered' or 'delievered')
+                  // Show button only if payment is truly pending (not paid or completed)
+                  const paymentIsPending = currentPaymentStatus !== 'paid' && currentPaymentStatus !== 'completed';
                   const isDelivered = currentStatus === 'delivered' || currentStatus === 'delievered'; // Note: typo in backend enum
                   
                   const shouldShowButton = 
-                    currentPaymentStatus === 'pending' &&
+                    paymentIsPending &&
                     (currentPaymentMethod === 'bank_transfer' || currentPaymentMethod === 'payment_on_delivery') &&
                     isDelivered;
                   
@@ -513,54 +625,99 @@ const OrderDetail = () => {
         </ItemsList>
       </OrderItemsCard>
 
-      {order.sellers && order.sellers.length > 0 && (
-        <OrderItemsCard>
-          <CardTitle>
-            <FaStore style={{ marginRight: "0.5rem", verticalAlign: "middle" }} />
-            Sellers in this order
-          </CardTitle>
+      <OrderItemsCard>
+        <CardTitle>
+          <FaStore style={{ marginRight: "0.5rem", verticalAlign: "middle" }} />
+          Sellers in this order
+        </CardTitle>
+        {order.sellers && order.sellers.length > 0 ? (
           <SellersList>
-            {order.sellers.map((seller) => (
-              <SellerRow key={seller.id}>
-                <SellerInfo>
-                  <SellerName>{seller.shopName !== "—" ? seller.shopName : seller.name}</SellerName>
-                  {seller.shopName !== "—" && seller.name !== "—" && (
-                    <SellerContact>{seller.name}</SellerContact>
-                  )}
-                  <SellerContact>
-                    <FaEnvelope style={{ marginRight: "0.25rem" }} />
-                    {seller.email}
-                  </SellerContact>
-                </SellerInfo>
-                <SellerAmounts>
-                  <SellerAmountRow>
-                    <span>Subtotal</span>
-                    <span>₵{(seller.subtotal ?? 0).toFixed(2)}</span>
-                  </SellerAmountRow>
-                  {seller.shippingCost > 0 && (
+            {order.sellers.map((seller) => {
+              const sellerIdStr = seller.sellerId ? String(seller.sellerId) : null;
+              const isEazShopStore = sellerIdStr === EAZSHOP_STORE_ID;
+              const fetched = sellerIdStr ? sellerById[sellerIdStr] : null;
+              const queryIndex = sellerIdStr ? sellerIdsToFetch.indexOf(sellerIdStr) : -1;
+              const isLoadingSeller = queryIndex >= 0 && sellerQueries[queryIndex]?.isLoading;
+              const name = isEazShopStore ? "EazShop Store" : (fetched?.name ?? seller.name ?? "—");
+              const shopName = isEazShopStore ? "EazShop Store" : (fetched?.shopName ?? seller.shopName ?? "—");
+              const email = isEazShopStore ? "Platform store" : (fetched?.email ?? seller.email ?? "—");
+              const isInactive = fetched && (fetched.active === false || fetched.status !== "active");
+              const fetchFailed = sellerIdStr && !isEazShopStore && !fetched && !isLoadingSeller;
+              return (
+                <SellerRow key={seller.id}>
+                  <SellerInfo>
+                    <SellerShopName>
+                      <strong>Shop name:</strong> {shopName && shopName !== "—" ? shopName : "—"}
+                    </SellerShopName>
+                    <SellerName>
+                      {shopName && shopName !== "—" ? shopName : name && name !== "—" ? name : "Seller"}
+                    </SellerName>
+                    {shopName !== "—" && name !== "—" && name && (
+                      <SellerContact>{name}</SellerContact>
+                    )}
+                    <SellerContact>
+                      <FaEnvelope style={{ marginRight: "0.25rem" }} />
+                      {email && email !== "—" ? email : "—"}
+                    </SellerContact>
+                    {isLoadingSeller && !isEazShopStore && (
+                      <SellerContact style={{ fontStyle: "italic", color: "#6b7280" }}>
+                        <FaSpinner style={{ marginRight: "0.25rem" }} />
+                        Loading seller…
+                      </SellerContact>
+                    )}
+                    {fetchFailed && (
+                      <SellerContact style={{ fontStyle: "italic", color: "#6b7280" }}>
+                        Seller details unavailable (seller may be deactivated). Reactivate from Sellers to view.
+                      </SellerContact>
+                    )}
+                    {isInactive && fetched && (
+                      <SellerContact style={{ fontStyle: "italic", color: "#b45309" }}>
+                        Account or status not active — set to active in Seller detail to enable full access.
+                      </SellerContact>
+                    )}
+                    {sellerIdStr && !isEazShopStore && (
+                      <SellerContact style={{ marginTop: "0.25rem" }}>
+                        <Link
+                          to={`/dashboard/${PATHS.SELLERDETAIL.replace(":id", sellerIdStr)}`}
+                          style={{ color: "#4361ee", fontSize: "0.875rem" }}
+                        >
+                          View seller →
+                        </Link>
+                      </SellerContact>
+                    )}
+                  </SellerInfo>
+                  <SellerAmounts>
                     <SellerAmountRow>
-                      <span>Shipping</span>
-                      <span>₵{(seller.shippingCost ?? 0).toFixed(2)}</span>
+                      <span>Subtotal</span>
+                      <span>₵{(seller.subtotal ?? 0).toFixed(2)}</span>
                     </SellerAmountRow>
-                  )}
-                  <SellerAmountRow>
-                    <span>Total</span>
-                    <span>₵{(seller.total ?? 0).toFixed(2)}</span>
-                  </SellerAmountRow>
-                  <SellerBadges>
-                    <StatusBadge status={seller.status}>
-                      {String(seller.status).charAt(0).toUpperCase() + String(seller.status).slice(1)}
-                    </StatusBadge>
-                    <PayoutBadge $status={seller.payoutStatus}>
-                      Payout: {String(seller.payoutStatus).charAt(0).toUpperCase() + String(seller.payoutStatus).slice(1)}
-                    </PayoutBadge>
-                  </SellerBadges>
-                </SellerAmounts>
-              </SellerRow>
-            ))}
+                    {seller.shippingCost > 0 && (
+                      <SellerAmountRow>
+                        <span>Shipping</span>
+                        <span>₵{(seller.shippingCost ?? 0).toFixed(2)}</span>
+                      </SellerAmountRow>
+                    )}
+                    <SellerAmountRow>
+                      <span>Total</span>
+                      <span>₵{(seller.total ?? 0).toFixed(2)}</span>
+                    </SellerAmountRow>
+                    <SellerBadges>
+                      <StatusBadge status={seller.status}>
+                        {String(seller.status).charAt(0).toUpperCase() + String(seller.status).slice(1)}
+                      </StatusBadge>
+                      <PayoutBadge $status={seller.payoutStatus}>
+                        Payout: {String(seller.payoutStatus).charAt(0).toUpperCase() + String(seller.payoutStatus).slice(1)}
+                      </PayoutBadge>
+                    </SellerBadges>
+                  </SellerAmounts>
+                </SellerRow>
+              );
+            })}
           </SellersList>
-        </OrderItemsCard>
-      )}
+        ) : (
+          <SellerEmptyState>No seller data for this order.</SellerEmptyState>
+        )}
+      </OrderItemsCard>
 
       <SummaryGrid>
         <SummaryCard>
@@ -656,6 +813,15 @@ const OrderDate = styled.p`
   gap: 0.5rem;
   color: #64748b;
   font-size: 1rem;
+`;
+
+const TrackingNumberRow = styled.p`
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #64748b;
+  font-size: 0.95rem;
+  margin-top: 0.25rem;
 `;
 
 const HeaderActions = styled.div`
@@ -959,13 +1125,13 @@ const PaymentStatus = styled.div`
   margin-top: 0.5rem;
   font-size: 0.9rem;
   background-color: ${(props) =>
-    props.status === "completed"
+    props.status === "paid" || props.status === "completed"
       ? "#dcfce7"
       : props.status === "failed"
       ? "#fee2e2"
       : "#e0f2fe"};
   color: ${(props) =>
-    props.status === "completed"
+    props.status === "paid" || props.status === "completed"
       ? "#166534"
       : props.status === "failed"
       ? "#b91c1c"
@@ -1110,6 +1276,13 @@ const ItemTotal = styled.p`
   margin: 0;
 `;
 
+const SellerEmptyState = styled.p`
+  padding: 1rem;
+  color: #64748b;
+  font-size: 0.95rem;
+  margin: 0;
+`;
+
 const SellersList = styled.div`
   display: flex;
   flex-direction: column;
@@ -1132,6 +1305,15 @@ const SellerInfo = styled.div`
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+`;
+
+const SellerShopName = styled.div`
+  font-size: 0.9rem;
+  color: #475569;
+  margin-bottom: 0.25rem;
+  strong {
+    color: #1e293b;
+  }
 `;
 
 const SellerName = styled.div`

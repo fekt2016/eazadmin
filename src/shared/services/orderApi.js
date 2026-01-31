@@ -111,4 +111,14 @@ export const orderService = {
       throw error;
     }
   },
+  /**
+   * Run backfill to credit sellers for delivered orders that were never credited.
+   * Admin only. POST /order/backfill-seller-credits
+   * @param {{ limit?: number }} options - optional, limit (default 100)
+   * @returns {{ processed, credited, skipped, errors }}
+   */
+  backfillSellerCredits: async (options = {}) => {
+    const response = await api.post("/order/backfill-seller-credits", options);
+    return response.data;
+  },
 };

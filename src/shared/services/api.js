@@ -70,6 +70,12 @@ const normalizePath = (path) => {
 
 // Request interceptor
 api.interceptors.request.use((config) => {
+  // Strip trailing slashes from path so backend route matching works (e.g. GET /seller not GET /seller/)
+  if (config.url && typeof config.url === 'string' && !config.url.startsWith('http')) {
+    const [path, query] = config.url.split('?');
+    const pathNorm = path.replace(/\/+$/, '') || '/';
+    config.url = query ? `${pathNorm}?${query}` : pathNorm;
+  }
   const relativePath = getRelativePath(config.url);
   const normalizedPath = normalizePath(relativePath);
 

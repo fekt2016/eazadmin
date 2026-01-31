@@ -147,7 +147,7 @@ export default function Sidebar({ role }) {
       </MenuList>
       <LogoutButton onClick={handleLogout}>
         <FaSignOutAlt />
-        {logout.isloading ? "Logging out..." : "Logout"}
+        {(logout.isPending ?? logout.isLoading) ? "Logging out..." : "Logout"}
       </LogoutButton>
     </Container>
   );
