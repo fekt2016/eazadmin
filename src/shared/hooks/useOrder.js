@@ -141,6 +141,19 @@ export const useGetAllOrders = () =>
       return response;
     },
   });
+
+/**
+ * Fetches order counts by status for admin order management cards.
+ * Returns real totals from the database, not just the current page.
+ */
+export const useGetOrderStats = () =>
+  useQuery({
+    queryKey: ["orderStats"],
+    queryFn: async () => {
+      const response = await orderService.getOrderStats();
+      return response;
+    },
+  });
 export const useGetOrderById = (id) => {
   return useQuery({
     queryKey: ["order", id],

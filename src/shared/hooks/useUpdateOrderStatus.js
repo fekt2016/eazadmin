@@ -3,14 +3,15 @@ import api from '../services/api';
 
 /**
  * Hook to update order status (Admin/Seller only)
- * POST /api/v1/orders/:orderId/status
+ * POST /api/v1/admin/orders/:orderId/status
  */
 export const useUpdateOrderStatus = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ orderId, status, message, location }) => {
-      const response = await api.post(`/order/${orderId}/status`, {
+      // Use admin-scoped endpoint to ensure admin auth middleware is applied
+      const response = await api.post(`/admin/orders/${orderId}/status`, {
         status,
         message,
         location,

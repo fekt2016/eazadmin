@@ -111,7 +111,7 @@ const OrderDetail = () => {
             ? body.sellerOrder
             : [];
       // Format dates (use rawOrder as source of truth)
-      const createdAt = new Date(rawOrder.createdAt ?? orderform?.createdAt);
+      const createdAt = new Date((rawOrder.createdAt ?? orderform?.createdAt));
       const formattedDate = createdAt.toLocaleDateString("en-US", {
         year: "numeric",
         month: "long",
@@ -177,13 +177,22 @@ const OrderDetail = () => {
         ? paidAtDate.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
         : null;
 
+      // Display status: if paid but backend still says pending_payment/pending, show "confirmed" so Order Status matches Payment Status
+      const rawOrderStatus = (rawOrder.currentStatus || rawOrder.orderStatus || rawOrder.status || "pending").toString().toLowerCase();
+      const isPendingStatus = rawOrderStatus === "pending" || rawOrderStatus === "pending_payment";
+      const displayStatus = isDelivered
+        ? "delivered"
+        : isPaid && isPendingStatus
+          ? "confirmed"
+          : rawOrder.orderStatus || rawOrder.status || rawOrder.currentStatus || "pending";
+
       setOrder({
         id: rawOrder._id ?? orderform?.id,
         orderNumber: rawOrder.orderNumber ?? orderform?.orderNumber,
         trackingNumber: trackingNumber && String(trackingNumber).trim() ? String(trackingNumber).trim() : null,
         date: formattedDate,
         time: formattedTime,
-        status: rawOrder.orderStatus || rawOrder.status || 'pending',
+        status: displayStatus,
         paymentStatus: rawOrder.paymentStatus || 'pending',
         isPaid,
         paidAtFormatted: paidAtFormatted || formattedDate,
@@ -294,7 +303,7 @@ const OrderDetail = () => {
         sellersCount: (sellerOrderList || []).length,
       });
 
-      setStatus(isDelivered ? "delivered" : (rawOrder.orderStatus || rawOrder.status || "pending"));
+      setStatus(displayStatus);
     }
   }, [orderData]);
 

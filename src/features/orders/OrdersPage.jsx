@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import { useGetAllOrders } from '../../shared/hooks/useOrder';
+import { useGetAllOrders, useGetOrderStats } from '../../shared/hooks/useOrder';
 import { Link, useNavigate } from "react-router-dom";
 import { formatDate } from '../../shared/utils/helpers';
 import { useState, useEffect } from "react";
@@ -24,10 +24,8 @@ export default function OrdersPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
 
-  // Hook with pagination and filtering parameters
-  // const { getAllOrders } = useOrder();
   const { data: ordersData, isLoading, error, refetch } = useGetAllOrders();
-  console.log("Orders data:", ordersData);
+  const { data: statsData } = useGetOrderStats();
 
   // Refetch data when parameters change
   useEffect(() => {
@@ -76,45 +74,17 @@ export default function OrdersPage() {
   const hasPrev = currentPageFromApi > 1;
   const totalOrders = total || ordersList.length;
 
-  // Stats from backend
-
-  const stats = () => {
-    if (!ordersList.length) {
-      return {
-        totalOrders: 0,
-        pendingCount: 0,
-        processing: 0,
-        shipped: 0,
-        delivered: 0,
-        cancelled: 0,
-      };
-    }
-
-    return {
-      totalOrders: ordersList.length,
-      pendingCount: ordersList.filter((o) => {
-        const s = o.orderStatus ?? o.currentStatus;
-        return s === "pending" || s === "pending_payment";
-      }).length,
-      processing: ordersList.filter((o) => {
-        const s = o.orderStatus ?? o.currentStatus;
-        return ["processing", "preparing", "ready_for_dispatch"].includes(s);
-      }).length,
-      confirmed: ordersList.filter((o) => (o.orderStatus ?? o.currentStatus) === "confirmed").length,
-      shipped: ordersList.filter((o) => {
-        const s = o.orderStatus ?? o.currentStatus;
-        return s === "shipped" || s === "out_for_delivery";
-      }).length,
-      delivered: ordersList.filter((o) => {
-        const s = o.orderStatus ?? o.currentStatus ?? o.status;
-        return s === "delivered" || s === "completed";
-      }).length,
-      cancelled: ordersList.filter((o) => (o.orderStatus ?? o.currentStatus) === "cancelled").length,
-    };
+  // Real counts from backend (order stats API); fallback to 0 while loading
+  const statsFromApi = statsData?.data?.data ?? statsData?.data ?? statsData ?? {};
+  const stats = {
+    totalOrders: statsFromApi.totalOrders ?? 0,
+    pendingCount: statsFromApi.pendingCount ?? 0,
+    processing: statsFromApi.processing ?? 0,
+    shipped: statsFromApi.shipped ?? 0,
+    delivered: statsFromApi.delivered ?? 0,
+    cancelled: statsFromApi.cancelled ?? 0,
   };
-  console.log("stats", stats());
 
-  // console.log("Stats:", stats());
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
       setCurrentPage(newPage);
@@ -206,7 +176,7 @@ export default function OrdersPage() {
             <FaShoppingBag />
           </StatIcon>
           <StatContent>
-            <StatValue>{stats().totalOrders}</StatValue>
+            <StatValue>{stats.totalOrders}</StatValue>
             <StatLabel>Total Orders</StatLabel>
           </StatContent>
         </StatCard>
@@ -216,7 +186,7 @@ export default function OrdersPage() {
             <FaExclamationCircle />
           </StatIcon>
           <StatContent>
-            <StatValue>{stats().pendingCount}</StatValue>
+            <StatValue>{stats.pendingCount}</StatValue>
             <StatLabel>Pending</StatLabel>
           </StatContent>
         </StatCard>
@@ -226,7 +196,7 @@ export default function OrdersPage() {
             <FaShoppingBag />
           </StatIcon>
           <StatContent>
-            <StatValue>{stats().processing}</StatValue>
+            <StatValue>{stats.processing}</StatValue>
             <StatLabel>Processing</StatLabel>
           </StatContent>
         </StatCard>
@@ -236,7 +206,7 @@ export default function OrdersPage() {
             <FaTruck />
           </StatIcon>
           <StatContent>
-            <StatValue>{stats().shipped}</StatValue>
+            <StatValue>{stats.shipped}</StatValue>
             <StatLabel>Shipped</StatLabel>
           </StatContent>
         </StatCard>
@@ -246,7 +216,7 @@ export default function OrdersPage() {
             <FaCheckCircle />
           </StatIcon>
           <StatContent>
-            <StatValue>{stats().delivered}</StatValue>
+            <StatValue>{stats.delivered}</StatValue>
             <StatLabel>Delivered</StatLabel>
           </StatContent>
         </StatCard>
@@ -256,7 +226,7 @@ export default function OrdersPage() {
             <FaTimesCircle />
           </StatIcon>
           <StatContent>
-            <StatValue>{stats().cancelled}</StatValue>
+            <StatValue>{stats.cancelled}</StatValue>
             <StatLabel>Cancelled</StatLabel>
           </StatContent>
         </StatCard>

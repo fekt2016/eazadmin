@@ -32,13 +32,21 @@ const AdminOrderStatusPage = () => {
   const [location, setLocation] = useState('');
   const [optimisticTrackingEntry, setOptimisticTrackingEntry] = useState(null);
 
-  const order = orderData?.data?.data || orderData?.data || orderData;
+  // API returns { status: 'success', data: { data: doc } } — order doc at data.data.data
+  const order =
+    orderData?.data?.data?.data ??
+    orderData?.data?.data ??
+    orderData?.data ??
+    orderData;
 
   useEffect(() => {
-    if (order?.currentStatus) {
-      setStatus(order.currentStatus);
-    }
-  }, [order]);
+    if (!order) return;
+    const rawPs = (order.paymentStatus ?? orderData?.data?.data?.data?.paymentStatus ?? orderData?.data?.data?.paymentStatus ?? '').toString().toLowerCase();
+    const isPaid = rawPs === 'paid' || rawPs === 'completed';
+    const raw = (order.currentStatus ?? order.status ?? order.orderStatus ?? 'pending_payment').toString().toLowerCase();
+    const isPending = raw === 'pending' || raw === 'pending_payment';
+    setStatus(isPaid && isPending ? 'confirmed' : (order.currentStatus ?? order.status ?? order.orderStatus ?? 'pending_payment'));
+  }, [order, orderData]);
 
   const statusOptions = [
     { value: 'pending_payment', label: 'Pending Payment', icon: FaCreditCard },
@@ -134,6 +142,23 @@ const AdminOrderStatusPage = () => {
 
   const trackingHistory = order.trackingHistory || [];
   
+  // Payment status: read from order or nested API response (data.data.data)
+  const rawPaymentStatus = (
+    order.paymentStatus ??
+    orderData?.data?.data?.data?.paymentStatus ??
+    orderData?.data?.data?.paymentStatus ??
+    orderData?.data?.paymentStatus ??
+    ''
+  ).toString().toLowerCase();
+  const isPaid = rawPaymentStatus === 'paid' || rawPaymentStatus === 'completed';
+
+  // Current status: if buyer has paid but backend still says pending_payment, show Confirmed so it matches payment
+  const rawCurrentStatus = (order.currentStatus ?? order.status ?? order.orderStatus ?? 'pending_payment').toString().toLowerCase();
+  const isPendingStatus = rawCurrentStatus === 'pending' || rawCurrentStatus === 'pending_payment';
+  const displayStatusValue = isPaid && isPendingStatus ? 'confirmed' : (order.currentStatus || order.status || order.orderStatus || 'pending_payment');
+  const currentStatusOption = statusOptions.find((opt) => opt.value === displayStatusValue);
+  const currentStatusLabel = currentStatusOption?.label ?? 'Unknown';
+
   // Add optimistic entry if it exists (for instant UI update)
   let historyWithOptimistic = [...trackingHistory];
   if (optimisticTrackingEntry) {
@@ -149,7 +174,7 @@ const AdminOrderStatusPage = () => {
       <PageHeader>
         <HeaderTitle>
           <h1>Update Order Status</h1>
-          <p>Order #{order.orderNumber ?? "—"}</p>
+          <p>Order #{order.orderNumber ?? orderData?.data?.data?.data?.orderNumber ?? orderData?.data?.data?.orderNumber ?? "—"}</p>
         </HeaderTitle>
         <BackButton onClick={() => navigate(-1)}>← Back</BackButton>
       </PageHeader>
@@ -166,10 +191,12 @@ const AdminOrderStatusPage = () => {
           <Form onSubmit={handleSubmit}>
             <FormGroup>
               <Label>Current Status</Label>
-              <CurrentStatusBadge status={order.currentStatus || 'pending_payment'}>
-                {statusOptions.find((opt) => opt.value === (order.currentStatus || 'pending_payment'))
-                  ?.label || 'Unknown'}
+              <CurrentStatusBadge status={displayStatusValue}>
+                {currentStatusLabel}
               </CurrentStatusBadge>
+              {isPaid && isPendingStatus && (
+                <PaymentNoteSpan>Payment received; order is confirmed.</PaymentNoteSpan>
+              )}
             </FormGroup>
 
             <FormGroup>
@@ -391,6 +418,7 @@ const CurrentStatusBadge = styled.div`
   background: ${(props) => {
     const status = props.status || 'pending_payment';
     if (status === 'delivered') return '#d4edda';
+    if (status === 'confirmed') return '#d4edda';
     if (status === 'cancelled') return '#f8d7da';
     if (status === 'out_for_delivery') return '#d1ecf1';
     return '#fff3cd';
@@ -398,10 +426,18 @@ const CurrentStatusBadge = styled.div`
   color: ${(props) => {
     const status = props.status || 'pending_payment';
     if (status === 'delivered') return '#155724';
+    if (status === 'confirmed') return '#155724';
     if (status === 'cancelled') return '#721c24';
     if (status === 'out_for_delivery') return '#0c5460';
     return '#856404';
   }};
+`;
+
+const PaymentNoteSpan = styled.span`
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: #155724;
 `;
 
 const Select = styled.select`

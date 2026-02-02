@@ -360,7 +360,7 @@ const AdminNotificationsPage = () => {
   };
 
   const handleNotificationClick = (notification) => {
-    if (!notification.read) {
+    if (!(notification.read ?? notification.isRead)) {
       markAsRead.mutate(notification._id);
     }
 
@@ -522,7 +522,7 @@ const AdminNotificationsPage = () => {
           {notifications.map((notification) => (
             <NotificationItem
               key={notification._id}
-              read={notification.read}
+              read={!!(notification.read ?? notification.isRead)}
               onClick={() => handleNotificationClick(notification)}
             >
               <IconWrapper color={getNotificationColor(notification.type)}>
@@ -536,7 +536,7 @@ const AdminNotificationsPage = () => {
                 </NotificationTime>
               </NotificationContent>
               <ActionButtons>
-                {!notification.read && (
+                {!(notification.read ?? notification.isRead) && (
                   <MarkReadButton
                     onClick={(e) => handleMarkAsRead(e, notification._id)}
                     title="Mark as read"

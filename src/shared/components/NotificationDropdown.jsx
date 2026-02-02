@@ -117,7 +117,9 @@ const NotificationDropdown = ({ unreadCount }) => {
   };
 
   const handleNotificationClick = (notification) => {
-    if (!notification.read) {
+    // Support both read and isRead (backend returns read; isRead is virtual and may be absent when .lean())
+    const isUnread = !(notification.read ?? notification.isRead);
+    if (isUnread) {
       markAsRead.mutate(notification._id);
     }
 
@@ -183,7 +185,7 @@ const NotificationDropdown = ({ unreadCount }) => {
               notifications.map((notification) => (
                 <NotificationItem
                   key={notification._id}
-                  unread={!notification.read}
+                  unread={!(notification.read ?? notification.isRead)}
                   onClick={() => handleNotificationClick(notification)}
                 >
                   <IconWrapper color={getNotificationColor(notification.type)}>
@@ -195,7 +197,7 @@ const NotificationDropdown = ({ unreadCount }) => {
                     <NotificationTime>{formatTime(notification.createdAt)}</NotificationTime>
                   </NotificationContent>
                   <NotificationActions>
-                    {!notification.read && <UnreadDot />}
+                    {!(notification.read ?? notification.isRead) && <UnreadDot />}
                     <DeleteButton
                       onClick={(e) => {
                         e.stopPropagation();
