@@ -8,11 +8,15 @@ import { useMemo } from "react";
 export default function DashboardLayout() {
   const { adminData } = useAuth();
 
-  // Memoize user data
+  // Memoize user data (same extraction as ProtectedRoute: getCurrentUser response or plain user after login)
   const admin = useMemo(() => {
-    // adapt based on your hook's return shape
     if (!adminData) return null;
-    return adminData?.data?.data?.data || adminData?.data?.data || null;
+    return (
+      adminData?.data?.data?.data ||
+      adminData?.data?.data ||
+      adminData?.data ||
+      adminData
+    ) || null;
   }, [adminData]);
 
   return (

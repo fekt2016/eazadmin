@@ -1,26 +1,25 @@
 import { Navigate } from "react-router-dom";
-import { memo, Suspense, useEffect, useMemo, useState } from "react";
+import { memo, Suspense, useMemo, useRef } from "react";
 import useAuth from '../shared/hooks/useAuth';
 import { LoadingSpinner } from '../shared/components/LoadingSpinner';
 
 const ProtectedRoutes = ({ children }) => {
-  const { adminData, isLoading, isError, error } = useAuth();
+  const { adminData, isLoading, isFetching, isError, error, refetchAuth } = useAuth();
+  const refetchAttempted = useRef(false);
 
   // SECURITY: Cookie-only authentication - no token check needed
   // Backend validates session via HTTP-only cookie automatically
 
   // Extract admin data from nested response structure
-  // Backend returns: { status: 'success', data: { data: <admin> } }
-  // Axios wraps it: response = { data: { status: 'success', data: { data: <admin> } } }
+  // Backend getMe: { status: 'success', data: { data: <admin> } } → axios: response.data.data.data
+  // Login sets plain user: queryClient.setQueryData(["adminAuth"], user) → adminData is user
   const admin = useMemo(() => {
     if (!adminData) return null;
-    // Try different possible response structures
-    const extracted = 
-      adminData?.data?.data?.data ||  // Most common: response.data.data.data
-      adminData?.data?.data ||         // Alternative: response.data.data
-      adminData?.data ||               // Direct: response.data
-      adminData;                       // Fallback: response itself
-    
+    const extracted =
+      adminData?.data?.data?.data ||
+      adminData?.data?.data ||
+      adminData?.data ||
+      adminData;
     return extracted || null;
   }, [adminData]);
 
@@ -29,9 +28,9 @@ const ProtectedRoutes = ({ children }) => {
     return <LoadingSpinner />;
   }
 
-  // Handle errors
+  // Handle errors (auth query threw; 401/403 are caught in useAuth and return null → we hit !admin below)
   if (error) {
-    console.error("[ProtectedRoute] Error fetching user data:", error);
+    console.error("[ProtectedRoute] REDIRECT CAUSE: auth query error", { status: error?.response?.status, pathname: typeof window !== "undefined" ? window.location.pathname : "" });
     // #region agent log
     if (typeof window !== "undefined") {
       fetch("http://127.0.0.1:7242/ingest/8853a92f-8faa-4d51-b197-e8e74c838dc7", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ location: "protectedRoute.jsx:error", message: "ProtectedRoute redirect reason", data: { reason: "error", status: error?.response?.status, pathname: window.location.pathname }, timestamp: Date.now(), sessionId: "debug-session", hypothesisId: "H2" }) }).catch(() => {});
@@ -39,7 +38,6 @@ const ProtectedRoutes = ({ children }) => {
     // #endregion
     // If it's a 401, redirect to login
     if (error?.response?.status === 401) {
-      console.log("[ProtectedRoute] 401 error, redirecting to login");
       return <Navigate to="/" replace />;
     }
     return (
@@ -54,20 +52,29 @@ const ProtectedRoutes = ({ children }) => {
   // Check if admin exists and has allowed role
   const ALLOWED_ROLES = ["superadmin", "admin", "moderator"];
   
-  // If admin data is not available after loading, redirect to login
+  // No admin: getCurrentUser returned 401/403 or cache empty. Try one refetch before redirect (handles race / slow cookie).
   if (!admin) {
+    if (!refetchAttempted.current) {
+      refetchAttempted.current = true;
+      refetchAuth();
+      return <LoadingSpinner />;
+    }
+    if (isFetching) {
+      return <LoadingSpinner />;
+    }
+    console.warn("[ProtectedRoute] REDIRECT CAUSE: no admin data after refetch. adminData:", adminData);
     // #region agent log
     if (typeof window !== "undefined") {
       fetch("http://127.0.0.1:7242/ingest/8853a92f-8faa-4d51-b197-e8e74c838dc7", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ location: "protectedRoute.jsx:noAdmin", message: "ProtectedRoute redirect no admin", data: { reason: "noAdmin", pathname: window.location.pathname }, timestamp: Date.now(), sessionId: "debug-session", hypothesisId: "H4" }) }).catch(() => {});
     }
     // #endregion
-    console.warn("[ProtectedRoute] No admin data found after loading. adminData:", adminData);
     return <Navigate to="/" replace />;
   }
-  
-  // Check if role is allowed
+  refetchAttempted.current = false;
+
+  // Role not in allowed list
   if (!ALLOWED_ROLES.includes(admin.role)) {
-    console.warn(`[ProtectedRoute] Role '${admin.role}' not allowed. Allowed roles: ${ALLOWED_ROLES.join(", ")}`);
+    console.warn("[ProtectedRoute] REDIRECT CAUSE: role not allowed", { role: admin.role, allowed: ALLOWED_ROLES });
     return <Navigate to="/" replace />;
   }
 

@@ -55,6 +55,7 @@ export const PATHS = {
   COUPON_DETAIL: "/coupons/:id",
   COUPON_CREATE: "/coupons/new",
   PROMOTIONS: "/promotions",
+  ADS: "/ads",
 
   // Reports & Analytics
   REPORTS: "/reports",
@@ -193,6 +194,11 @@ export const ROUTE_CONFIG = {
     description: "Manage discount coupons and promotions",
     keywords: "coupons, admin, Saiisai",
   },
+  [PATHS.ADS]: {
+    title: "Advertisements - Admin | Saiisai",
+    description: "Create and manage buyer-facing advertisements",
+    keywords: "advertisements, marketing, admin, Saiisai",
+  },
 
   [PATHS.REPORTS]: {
     title: "Reports - Admin | Saiisai",
@@ -246,6 +252,7 @@ export const NAVIGATION_MENU = {
     { path: PATHS.CATEGORIES, label: "Categories" },
     { path: PATHS.BRANDS, label: "Brands" },
     { path: PATHS.COUPONS, label: "Coupons" },
+    { path: PATHS.ADS, label: "Advertisements" },
     { path: PATHS.PROMOTIONS, label: "Promotions" },
   ],
 

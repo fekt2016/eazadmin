@@ -39,4 +39,5 @@ export const PATHS = {
   SITEMAP: "sitemap",
   NOTIFICATIONS: "notifications",
   COUPONS: "coupons",
+  ADS: "ads",
 };

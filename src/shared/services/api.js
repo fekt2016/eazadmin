@@ -256,24 +256,34 @@ api.interceptors.response.use(
     const status = error.response?.status;
     const message = error.response?.data?.message || "";
     const requestUrl = error.config?.url || "";
-    const isAdminApi = typeof requestUrl === "string" && requestUrl.includes("/admin/");
+    const isAuthCheckRequest =
+      typeof requestUrl === "string" &&
+      (requestUrl === "/admin/me" || requestUrl.endsWith("/admin/me"));
     const isAdminSessionRequired =
       status === 401 && (message.includes("Admin session required") || message.includes("admin panel"));
     const isWrongRole =
       status === 403 && message.includes("Required role: admin") && message.includes("Your role: user");
-    // Any 401 from admin API (expired/missing cookie) – send to login
-    const isUnauthenticatedAdmin = status === 401 && isAdminApi;
+    // Only redirect to login when the auth-check request (/admin/me) fails with 401 – not on 401 from other endpoints (e.g. GET /ads)
+    const isUnauthenticatedAdmin = status === 401 && isAuthCheckRequest;
+    // Do not full-page redirect when the failed request is GET /admin/me – let ProtectedRoute handle it via <Navigate> so the app stays in React
+    const shouldRedirect =
+      isAdminSessionRequired || isWrongRole || (isUnauthenticatedAdmin && !isAuthCheckRequest);
 
     // #region agent log
     if (typeof window !== "undefined" && (status === 401 || status === 403)) {
-      fetch("http://127.0.0.1:7242/ingest/8853a92f-8faa-4d51-b197-e8e74c838dc7", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ location: "api.js:interceptor", message: "401/403 auth decision", data: { status, requestUrl, isAdminApi, pathname: window.location.pathname, willRedirect: !!(isAdminSessionRequired || isWrongRole || isUnauthenticatedAdmin) }, timestamp: Date.now(), sessionId: "debug-session", hypothesisId: "H3" }) }).catch(() => {});
+      fetch("http://127.0.0.1:7242/ingest/8853a92f-8faa-4d51-b197-e8e74c838dc7", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ location: "api.js:interceptor", message: "401/403 auth decision", data: { status, requestUrl, isAuthCheckRequest, pathname: window.location.pathname, willRedirect: !!shouldRedirect }, timestamp: Date.now(), sessionId: "debug-session", hypothesisId: "H3" }) }).catch(() => {});
     }
     // #endregion
 
-    if (isAdminSessionRequired || isWrongRole || isUnauthenticatedAdmin) {
-      // Redirect to admin login (/) when not already there
+    if (shouldRedirect) {
       const isLoginPage = window.location.pathname === "/" || window.location.pathname === "/login";
       if (typeof window !== "undefined" && !isLoginPage) {
+        console.warn("[API] REDIRECT CAUSE: 401/403 on auth or session – redirecting to login", {
+          status,
+          requestUrl,
+          pathname: window.location.pathname,
+          isAuthCheckRequest,
+        });
         sessionStorage.setItem(
           "eazadmin_login_message",
           isWrongRole || isAdminSessionRequired ? "Please log in with your admin account." : "Session expired. Please log in again."

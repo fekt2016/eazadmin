@@ -68,6 +68,7 @@ const SitemapPage = () => {
         { label: 'Categories', path: PATHS.CATEGORY },
         { label: 'Category Details', path: PATHS.CATEGORYDETAIL },
         { label: 'Discount Products', path: PATHS.DISCOUNTPRODUCT },
+        { label: 'Advertisements', path: PATHS.ADS },
         { label: 'Saiisai Products', path: PATHS.EAZSHOP_PRODUCTS },
         { label: 'Reviews', path: PATHS.REVIEWS },
       ],

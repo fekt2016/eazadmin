@@ -47,12 +47,12 @@ export const reviewService = {
   },
 
   /**
-   * Delete a review
-   * DELETE /api/v1/review/:id
+   * Delete a review (admin only - uses admin route for proper auth)
+   * DELETE /api/v1/admin/reviews/:id
    */
   deleteReview: async (id) => {
     try {
-      const response = await api.delete(`/review/${id}`);
+      const response = await api.delete(`/admin/reviews/${id}`);
       return response.data;
     } catch (error) {
       console.error(`Error deleting review ${id}:`, error);

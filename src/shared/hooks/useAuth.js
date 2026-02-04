@@ -25,8 +25,10 @@ export default function useAuth() {
   const {
     data: adminData,
     isLoading,
+    isFetching,
     isError,
     error: queryError,
+    refetch: refetchAuth,
   } = useQuery({
     queryKey: ["adminAuth"],
     queryFn: async () => {
@@ -34,8 +36,8 @@ export default function useAuth() {
         const response = await authApi.getCurrentUser();
         return response; // Return user object directly
       } catch (error) {
-        // 401 is expected when cookie is expired/missing - not an error, just unauthenticated state
-        if (error.response?.status === 401) {
+        // 401 = cookie expired/missing; 403 = wrong role (e.g. backend getMe only allowed 'admin') – treat as unauthenticated and redirect to login
+        if (error.response?.status === 401 || error.response?.status === 403) {
           return null;
         }
         throw error;
@@ -43,9 +45,9 @@ export default function useAuth() {
     },
     staleTime: 1000 * 60 * 10, // 10 minutes
     retry: (failureCount, error) => {
-      // Retry up to 2 times, but not on 401 (server confirmed auth failure)
-      if (error?.response?.status === 401) {
-        return false; // Don't retry 401s
+      // Retry up to 2 times, but not on 401/403 (server confirmed auth failure or wrong role)
+      if (error?.response?.status === 401 || error?.response?.status === 403) {
+        return false;
       }
       return failureCount < 2; // Retry network errors
     },
@@ -158,16 +160,15 @@ export default function useAuth() {
   });
 
   return {
-    adminData, // User object (or null)
-    isLoading, // Loading state
-    isError, // Error state
-    error: queryError, // Error object from query
-    // isAuthenticated: !!data, // True if user exists
-    // isAdmin: data?.role === "admin",
+    adminData,
+    isLoading,
+    isFetching,
+    isError,
+    error: queryError,
+    refetchAuth,
     login,
     register,
     logout,
-    // Unified email-only password reset
     requestPasswordReset,
     resetPasswordWithToken,
   };

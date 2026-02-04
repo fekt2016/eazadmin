@@ -20,104 +20,113 @@ import {
   FaHeadset,
   FaBell,
   FaTicketAlt,
+  FaBullhorn,
 } from "react-icons/fa";
 import useAuth from '../hooks/useAuth';
 import Logo from '../components/Logo';
 import { useUnreadCount } from '../hooks/notifications/useNotifications';
+
+// All dashboard child routes: use absolute path so nav works from any nested route
+const DASHBOARD_BASE = "/dashboard";
 
 export default function Sidebar({ role }) {
   const { logout } = useAuth();
   const { data: unreadData } = useUnreadCount();
   const unreadCount = unreadData?.data?.unreadCount || 0;
 
-  // Combine role-specific menu with common menu
+  // Combine role-specific menu with common menu (absolute paths under /dashboard)
   const menuItems = [
-    { path: "/dashboard", label: "Dashboard", icon: <FaUsersCog /> },
+    { path: DASHBOARD_BASE, label: "Dashboard", icon: <FaUsersCog /> },
     {
-      path: "orders",
+      path: `${DASHBOARD_BASE}/orders`,
       label: "Orders",
       icon: <FaShoppingCart />,
     },
     {
-      path: "products",
+      path: `${DASHBOARD_BASE}/products`,
       label: "All Products",
       icon: <FaBoxes />,
     },
     {
-      path: "eazshop/products",
+      path: `${DASHBOARD_BASE}/eazshop/products`,
       label: "Saiisai Products",
       icon: <FaAward />,
     },
     {
-      path: "reviews",
+      path: `${DASHBOARD_BASE}/reviews`,
       label: "Reviews",
       icon: <FaStar />,
     },
     {
-      path: "categories",
+      path: `${DASHBOARD_BASE}/categories`,
       label: "Categories",
       icon: <FaChartLine />,
     },
     {
-      path: "users",
+      path: `${DASHBOARD_BASE}/users`,
       label: "User Management",
       icon: <FaUsersCog />,
     },
     {
-      path: "payment-request",
+      path: `${DASHBOARD_BASE}/payment-request`,
       label: "Payment Request",
       icon: <FaChartLine />,
     },
     {
-      path: "refunds",
+      path: `${DASHBOARD_BASE}/refunds`,
       label: "Refunds & Returns",
       icon: <FaUndo />,
     },
     {
-      path: "balance-history",
+      path: `${DASHBOARD_BASE}/balance-history`,
       label: "Balance History",
       icon: <FaWallet />,
     },
     {
-      path: "support",
+      path: `${DASHBOARD_BASE}/support`,
       label: "Support",
       icon: <FaHeadset />,
     },
     {
-      path: "activity-logs",
+      path: `${DASHBOARD_BASE}/activity-logs`,
       label: "Activity Logs",
       icon: <FaHistory />,
     },
     {
-      path: "device-sessions",
+      path: `${DASHBOARD_BASE}/device-sessions`,
       label: "Device Sessions",
       icon: <FaDesktop />,
     },
     {
-      path: "shipping-rates",
+      path: `${DASHBOARD_BASE}/shipping-rates`,
       label: "Shipping Rates",
       icon: <FaTruck />,
     },
     {
-      path: "distance-overview",
+      path: `${DASHBOARD_BASE}/distance-overview`,
       label: "Distance Overview",
       icon: <FaMapMarkerAlt />,
     },
     {
-      path: "platform-settings",
+      path: `${DASHBOARD_BASE}/platform-settings`,
       label: "Platform Settings",
       icon: <FaCog />,
     },
     {
-      path: "notifications",
+      path: `${DASHBOARD_BASE}/notifications`,
       label: "Notifications",
       icon: <FaBell />,
       badge: unreadCount > 0 ? unreadCount : null,
     },
     {
-      path: "coupons",
+      path: `${DASHBOARD_BASE}/coupons`,
       label: "Coupons & Discounts",
       icon: <FaTicketAlt />,
+    },
+    {
+      path: `${DASHBOARD_BASE}/ads`,
+      label: "Advertisements",
+      icon: <FaBullhorn />,
     },
   ];
   const handleLogout = () => {

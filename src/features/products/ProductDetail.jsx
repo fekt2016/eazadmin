@@ -22,10 +22,12 @@ import { toast } from "react-toastify";
 export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { useGetProductById, approveProduct } = useProduct();
+  const { useGetProductById, approveProduct, updateProduct } = useProduct();
   const { data: productData, isLoading, error } = useGetProductById(id);
   const approveMutation = approveProduct;
+  const updatePromoMutation = updateProduct;
   const [selectedImage, setSelectedImage] = useState(0);
+  const [promotionKey, setPromotionKey] = useState("");
 
   const product = useMemo(() => {
     if (!productData) return null;
@@ -35,6 +37,13 @@ export default function ProductDetail() {
     if (productData.data?.data) return productData.data.data;
     return productData.data || productData;
   }, [productData]);
+
+  // Sync local promotionKey state when product loads/changes
+  useMemo(() => {
+    if (product) {
+      setPromotionKey(product.promotionKey || "");
+    }
+  }, [product?.id, product?._id, product?.promotionKey]);
 
   // Extract images
   const images = useMemo(() => {
@@ -68,6 +77,32 @@ export default function ProductDetail() {
         toast.error("Failed to approve product: " + (error.response?.data?.message || error.message || "Unknown error"));
       }
     }
+  };
+  const handleSavePromotionKey = () => {
+    const idToUpdate = product?.id || product?._id;
+    if (!idToUpdate) {
+      toast.error("Cannot update promotion key: missing product ID.");
+      return;
+    }
+    const trimmed = promotionKey.trim();
+    updatePromoMutation.mutate(
+      {
+        id: idToUpdate,
+        data: { promotionKey: trimmed || null },
+      },
+      {
+        onSuccess: () => {
+          toast.success("Promotion key updated.");
+        },
+        onError: (error) => {
+          toast.error(
+            error?.response?.data?.message ||
+              error?.message ||
+              "Failed to update promotion key."
+          );
+        },
+      }
+    );
   };
 
   const attributeKeys = useMemo(() => {
@@ -199,6 +234,28 @@ export default function ProductDetail() {
                 <InfoValue>
                   {product.parentCategory?.name || product.category?.name || "Uncategorized"}
                 </InfoValue>
+              </InfoItem>
+              <InfoItem>
+                <InfoLabel>Promotion Key</InfoLabel>
+                <PromoRow>
+                  <PromoInput
+                    type="text"
+                    value={promotionKey}
+                    onChange={(e) => setPromotionKey(e.target.value)}
+                    placeholder="e.g. back-to-school"
+                  />
+                  <PromoSaveButton
+                    type="button"
+                    onClick={handleSavePromotionKey}
+                    disabled={updatePromoMutation.isPending}
+                  >
+                    {updatePromoMutation.isPending ? "Saving…" : "Save"}
+                  </PromoSaveButton>
+                </PromoRow>
+                <PromoHelp>
+                  Links this product to offers like{" "}
+                  <code>/offers/{promotionKey || "<promotionKey>"}</code>.
+                </PromoHelp>
               </InfoItem>
             </InfoGrid>
           </InfoCard>
@@ -565,6 +622,61 @@ const InfoItem = styled.div`
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+`;
+
+const PromoRow = styled.div`
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+`;
+
+const PromoInput = styled.input`
+  flex: 1;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 0.6rem 0.85rem;
+  font-size: 0.95rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+  &:focus {
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.15);
+    outline: none;
+  }
+`;
+
+const PromoSaveButton = styled.button`
+  border: none;
+  padding: 0.6rem 0.9rem;
+  border-radius: 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: #111827;
+  color: #f9fafb;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s ease, transform 0.1s ease;
+
+  &:hover:enabled {
+    background: #020617;
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+`;
+
+const PromoHelp = styled.p`
+  margin: 0;
+  font-size: 0.8rem;
+  color: #6b7280;
 `;
 
 const InfoLabel = styled.label`
