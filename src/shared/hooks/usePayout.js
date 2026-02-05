@@ -103,3 +103,56 @@ export const useVerifyTransferStatus = () => {
   });
 };
 
+/**
+ * Verify Paystack OTP for a withdrawal (admin-only)
+ */
+export const useVerifyPaystackOtp = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ requestId, otp }) => {
+      return await adminPayoutApi.verifyPaystackOtp(requestId, otp);
+    },
+    onSuccess: (data) => {
+      // Check if this was a status sync (transfer already completed)
+      const message = data?.message || data?.data?.message;
+      if (message && message.includes('already completed')) {
+        toast.success(message || 'Transfer status synced successfully');
+      } else {
+        toast.success('Paystack OTP verified and transfer updated');
+      }
+      queryClient.invalidateQueries({ queryKey: ['withdrawalRequests'] });
+      queryClient.invalidateQueries({ queryKey: ['withdrawalRequest'] });
+    },
+    onError: (error) => {
+      const message =
+        error.response?.data?.message || 'Failed to verify Paystack OTP';
+      toast.error(message);
+    },
+  });
+};
+
+/**
+ * Resend Paystack OTP for a withdrawal
+ */
+export const useResendPaystackOtp = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (requestId) => {
+      return await adminPayoutApi.resendPaystackOtp(requestId);
+    },
+    onSuccess: () => {
+      toast.success(
+        'OTP resend requested. Check your Paystack business phone/email.'
+      );
+      queryClient.invalidateQueries({ queryKey: ['withdrawalRequest'] });
+    },
+    onError: (error) => {
+      const message =
+        error.response?.data?.message || 'Failed to resend Paystack OTP';
+      toast.error(message);
+    },
+  });
+};
+

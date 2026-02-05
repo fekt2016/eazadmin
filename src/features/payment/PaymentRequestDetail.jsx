@@ -20,7 +20,7 @@ import {
   FaGlobe,
   FaDesktop,
 } from "react-icons/fa";
-import { useGetWithdrawalRequest } from "../../shared/hooks/usePayout";
+import { useGetWithdrawalRequest, useVerifyPaystackOtp, useResendPaystackOtp } from "../../shared/hooks/usePayout";
 import { PATHS } from "../../routes/routhPath";
 import { LoadingSpinner } from "../../shared/components/LoadingSpinner";
 import { useApproveWithdrawalRequest, useRejectWithdrawalRequest, useVerifyTransferStatus } from "../../shared/hooks/usePayout";
@@ -34,6 +34,8 @@ const PaymentRequestDetail = () => {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [transactionId, setTransactionId] = useState("");
+  const [otpModalOpen, setOtpModalOpen] = useState(false);
+  const [otpValue, setOtpValue] = useState("");
 
   const {
     data: withdrawalData,
@@ -47,6 +49,14 @@ const PaymentRequestDetail = () => {
   const approveWithdrawal = useApproveWithdrawalRequest();
   const rejectWithdrawal = useRejectWithdrawalRequest();
   const verifyTransfer = useVerifyTransferStatus();
+  const verifyPaystackOtp = useVerifyPaystackOtp();
+  const resendPaystackOtp = useResendPaystackOtp();
+
+  // Check if transfer is already completed
+  const isTransferCompleted = (status) => {
+    const completedStatuses = ['paid', 'success', 'completed', 'settled'];
+    return completedStatuses.includes(status?.toLowerCase());
+  };
 
   // Format payment method for display
   const getMethodDisplay = (method) => {
@@ -124,14 +134,87 @@ const PaymentRequestDetail = () => {
     if (!requestId) return;
     verifyTransfer.mutate(requestId, {
       onSuccess: () => {
-        setSuccessMessage("Transfer status verified!");
+        setSuccessMessage("Transfer status verified and updated!");
         setErrorMessage(null);
+        // Refresh the withdrawal request data
+        queryClient.invalidateQueries(['withdrawalRequest', requestId]);
       },
       onError: (error) => {
         setErrorMessage(error.response?.data?.message || "Failed to verify transfer status");
         setSuccessMessage(null);
       },
     });
+  };
+
+  const handleOpenOtpModal = () => {
+    if (!requestId) return;
+    setOtpModalOpen(true);
+    setOtpValue("");
+  };
+
+  const handleSubmitOtp = () => {
+    const trimmedOtp = otpValue.trim();
+    
+    if (!trimmedOtp) {
+      setErrorMessage("Please enter the Paystack OTP");
+      return;
+    }
+    
+    // Validate OTP format (should be at least 4 characters, typically 6 digits)
+    if (trimmedOtp.length < 4) {
+      setErrorMessage("OTP must be at least 4 characters long");
+      return;
+    }
+    
+    // Check if withdrawal is in correct status
+    if (request?.status !== 'awaiting_paystack_otp') {
+      setErrorMessage(
+        `Cannot verify OTP. Current status: ${request?.status || 'unknown'}. The withdrawal must be in 'awaiting_paystack_otp' status.`
+      );
+      return;
+    }
+    
+    verifyPaystackOtp.mutate(
+      { requestId, otp: trimmedOtp },
+      {
+        onSuccess: (data) => {
+          // Check if this was a status sync (transfer already completed)
+          const responseMessage = data?.message || data?.data?.message;
+          if (responseMessage && responseMessage.includes('already completed')) {
+            setSuccessMessage(responseMessage || "Transfer was already completed. Status has been synced.");
+          } else {
+            setSuccessMessage("Paystack OTP verified and transfer updated!");
+          }
+          setErrorMessage(null);
+          setOtpModalOpen(false);
+          setOtpValue("");
+          queryClient.invalidateQueries(['withdrawalRequest', requestId]);
+        },
+        onError: (error) => {
+          // Extract error message from various possible response formats
+          let errorMessage = 
+            error.response?.data?.message ||
+            error.response?.data?.error?.message ||
+            error.message ||
+            "Failed to verify Paystack OTP";
+          
+          console.error('[PaymentRequestDetail] OTP verification error:', {
+            error,
+            response: error.response?.data,
+            status: error.response?.status,
+          });
+          
+          // If error indicates transfer is not awaiting OTP, suggest refreshing status
+          if (errorMessage.toLowerCase().includes('not currently awaiting otp') ||
+              errorMessage.toLowerCase().includes('transfer is not') ||
+              errorMessage.toLowerCase().includes('not awaiting otp')) {
+            errorMessage += " Please click 'Verify Transfer Status' to refresh the transfer status from Paystack.";
+          }
+          
+          setErrorMessage(errorMessage);
+        },
+      }
+    );
   };
 
   if (isLoading) {
@@ -558,7 +641,9 @@ const PaymentRequestDetail = () => {
             </Card>
           )}
 
-          {request.status === "pending" && request.isActive !== false && (
+          {request.status === "pending" && 
+           request.isActive !== false && 
+           !isTransferCompleted(request.status) && (
             <ActionCard>
               <ActionTitle>Actions</ActionTitle>
               <ActionButtons>
@@ -611,7 +696,8 @@ const PaymentRequestDetail = () => {
               </DeactivatedWarning>
             </ActionCard>
           )}
-          {(request.status === "processing" || request.status === "approved") && (
+          {(request.status === "processing" || request.status === "approved" || request.status === "awaiting_paystack_otp") && 
+           !isTransferCompleted(request.status) && (
             <ActionCard>
               <ActionTitle>Actions</ActionTitle>
               <ActionButtons>
@@ -630,11 +716,81 @@ const PaymentRequestDetail = () => {
                     </>
                   )}
                 </ApproveButton>
+                {request.status === "awaiting_paystack_otp" && (
+                  <>
+                    <ApproveButton
+                      type="button"
+                      onClick={handleOpenOtpModal}
+                      disabled={verifyPaystackOtp.isPending}
+                    >
+                      <FaCheck /> Enter Paystack OTP
+                    </ApproveButton>
+                    <ApproveButton
+                      type="button"
+                      onClick={() => resendPaystackOtp.mutate(requestId)}
+                      disabled={resendPaystackOtp.isPending}
+                    >
+                      <FaCheck /> Resend Paystack OTP
+                    </ApproveButton>
+                  </>
+                )}
               </ActionButtons>
             </ActionCard>
           )}
         </RightColumn>
       </Content>
+
+      {otpModalOpen && (
+        <ModalOverlay onClick={() => setOtpModalOpen(false)}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
+            <ModalHeader>
+              <ModalTitle>Enter Paystack OTP</ModalTitle>
+              <CloseButton onClick={() => setOtpModalOpen(false)}>
+                <FaTimes />
+              </CloseButton>
+            </ModalHeader>
+            <ModalBody>
+              <p>
+                Enter the OTP sent to your Paystack business phone/email to
+                finalize this transfer.
+              </p>
+              <p style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.5rem' }}>
+                If you're having issues, try refreshing the transfer status first.
+              </p>
+              <ModalInput
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={otpValue}
+                onChange={(e) => {
+                  // Only allow numeric input
+                  const value = e.target.value.replace(/\D/g, '');
+                  setOtpValue(value);
+                }}
+                placeholder="Enter OTP (numbers only)"
+                maxLength={10}
+              />
+            </ModalBody>
+            <ModalFooter>
+              <ModalButton
+                $secondary
+                type="button"
+                onClick={() => setOtpModalOpen(false)}
+              >
+                Cancel
+              </ModalButton>
+              <ModalButton
+                $primary
+                type="button"
+                onClick={handleSubmitOtp}
+                disabled={verifyPaystackOtp.isPending}
+              >
+                {verifyPaystackOtp.isPending ? 'Verifying...' : 'Confirm OTP'}
+              </ModalButton>
+            </ModalFooter>
+          </ModalContent>
+        </ModalOverlay>
+      )}
 
       {showRejectModal && (
         <ModalOverlay onClick={() => setShowRejectModal(false)}>
@@ -1005,6 +1161,15 @@ const CloseButton = styled.button`
 
 const ModalBody = styled.div`
   padding: 1.5rem;
+`;
+
+const ModalInput = styled.input`
+  width: 100%;
+  padding: 0.75rem 0.9rem;
+  border-radius: 0.5rem;
+  border: 1px solid #d1d5db;
+  font-size: 0.95rem;
+  margin-top: 0.75rem;
 `;
 
 const ModalLabel = styled.label`

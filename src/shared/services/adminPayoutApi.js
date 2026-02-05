@@ -55,6 +55,40 @@ const adminPayoutApi = {
       throw error;
     }
   },
+
+  // Resend Paystack OTP for a withdrawal
+  resendPaystackOtp: async (requestId) => {
+    try {
+      const response = await api.post(
+        `/admin/payout/request/${requestId}/resend-otp`,
+        {},
+        {
+          timeout: 30000, // 30 seconds timeout - Paystack API can be slow
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('[adminPayoutApi] Error resending Paystack OTP:', error);
+      throw error;
+    }
+  },
+
+  // Verify Paystack OTP for a withdrawal (admin-only)
+  verifyPaystackOtp: async (requestId, otp) => {
+    try {
+      const response = await api.post(
+        `/admin/payout/request/${requestId}/verify-otp`,
+        { otp },
+        {
+          timeout: 30000, // 30 seconds timeout - Paystack API can be slow
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('[adminPayoutApi] Error verifying Paystack OTP:', error);
+      throw error;
+    }
+  },
 };
 
 export default adminPayoutApi;

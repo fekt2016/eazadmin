@@ -223,9 +223,9 @@ export const useGetSellerById = (sellerId) => {
       if (!sellerId) {
         throw new Error("Seller ID is required");
       }
-      // Increase timeout for seller details (may have lots of data)
+      // Increased timeout for seller details (populates products, orders, documents, etc.)
       const response = await adminApi.getSellerDetails(sellerId, {
-        timeout: 30000, // 30 seconds for seller details
+        timeout: 45000, // 45 seconds for heavy seller detail requests
       });
       return response;
     },
@@ -239,12 +239,15 @@ export const useGetSellerById = (sellerId) => {
     // This prevents stale data from overwriting verified state
     refetchInterval: false, // Never auto-refetch
     retry: (failureCount, error) => {
-      // Don't retry on 404 errors or timeout errors
-      if (error.response?.status === 404 || error.isTimeout) {
-        return false;
+      // Don't retry on 404 errors
+      if (error.response?.status === 404) return false;
+      // Allow 1 retry on timeout (backend may be slow; second attempt might succeed)
+      if (error?.isTimeout || error?.code === 'ECONNABORTED') {
+        return failureCount < 1;
       }
       return failureCount < 2;
     },
+    retryDelay: 2000, // Wait 2 seconds before retry
   });
 };
 

@@ -85,7 +85,7 @@ const SellerDetailPage = () => {
   const [rejectionReason, setRejectionReason] = useState("");
   const [processingDocument, setProcessingDocument] = useState(null); // Track which document is being processed
 
-  const { data: sellerResponse, isLoading, error } = useGetSellerById(sellerId);
+  const { data: sellerResponse, isLoading, error, refetch: refetchSeller } = useGetSellerById(sellerId);
   const { data: balanceData, isLoading: isBalanceLoading } = useGetSellerBalance(sellerId);
   const { 
     data: payoutVerificationData, 
@@ -941,18 +941,27 @@ const SellerDetailPage = () => {
 
   if (error) {
     console.error('❌ [SellerDetailPage] Error loading seller:', error);
+    const isTimeout = error?.isTimeout || error?.status === 408 || error?.message?.toLowerCase?.().includes('timeout');
+    const errorMessage = isTimeout
+      ? 'Request timed out. The server may be slow or your connection is unstable. Please try again.'
+      : (error?.response?.data?.message || error?.message || 'Unable to load seller details');
     return (
       <Container>
         <ErrorState>
           <FaExclamationTriangle style={{ fontSize: '3rem', color: '#ef4444', marginBottom: '1rem' }} />
           <h2>Error Loading Seller</h2>
-          <p>{error?.response?.data?.message || error?.message || 'Unable to load seller details'}</p>
+          <p>{errorMessage}</p>
           <p style={{ fontSize: '0.9rem', color: '#8d99ae', marginTop: '0.5rem' }}>
-            Error details: {JSON.stringify(error, null, 2)}
+            Error details: {JSON.stringify({ isTimeout: error?.isTimeout, status: error?.status, message: error?.message }, null, 2)}
           </p>
-          <BackButton onClick={() => navigate(`/dashboard/${PATHS.USERS}`)}>
-            <FaArrowLeft /> Back to Users
-          </BackButton>
+          <ErrorActions>
+            <RetryButton onClick={() => refetchSeller()} disabled={isLoading}>
+              Try again
+            </RetryButton>
+            <BackButton onClick={() => navigate(`/dashboard/${PATHS.USERS}`)}>
+              <FaArrowLeft /> Back to Users
+            </BackButton>
+          </ErrorActions>
         </ErrorState>
       </Container>
     );
@@ -2673,6 +2682,37 @@ const ActionButton = styled.button`
   &:hover:not(:disabled) {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+`;
+
+const ErrorActions = styled.div`
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+`;
+
+const RetryButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: #4f46e5;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: #4338ca;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 `;
 
