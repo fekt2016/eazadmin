@@ -16,6 +16,29 @@ export function formatDate(dateStr) {
   return date;
 }
 
+/** Generate SKU for product variants (EazShop uses id 'eazshop') */
+export const generateSKU = ({ seller, variants, category }) => {
+  const safeUser = seller || { id: "EAZ" };
+  const safeVariants = variants || {};
+  const safeCategory = (typeof category === "string" ? category : "UNK") || "UNK";
+  try {
+    const cate = safeCategory.slice(0, 3).toUpperCase();
+    const variantString =
+      Object.entries(safeVariants)
+        .filter(([, value]) => value !== undefined && value !== null && value !== "")
+        .map(([, value]) => String(value).trim())
+        .join("-")
+        .replace(/\s+/g, "")
+        .substring(0, 3)
+        .toUpperCase() || "DEF";
+    const userId = String(safeUser.id || "EAZ").slice(-3);
+    const timestamp = Date.now().toString().slice(-4);
+    return `${userId}-${cate}-${variantString}-${timestamp}`;
+  } catch (e) {
+    return `EAZ-${Date.now().toString().slice(-4)}`;
+  }
+};
+
 export const randomOrderId = () => {
   const seq = (Math.floor(Math.random() * 100000) + 100000)
     .toString()
@@ -79,39 +102,6 @@ export function returnRole(token) {
 
 //   return `${prefix}-${index}-${randomPart}`;
 // };
-
-// utils/helpers.js
-export const generateSKU = ({ seller, variants, category }) => {
-  console.log("sku", seller);
-  // Provide default values for missing parameters
-  const safeUser = seller || { id: "UNK" };
-  const safeVariants = variants || {};
-  const safeCategory = category || "UNK";
-
-  try {
-    const cate = safeCategory.slice(0, 3).toUpperCase();
-
-    // Clean and format the variant string
-    const variantString =
-      Object.entries(safeVariants)
-        .filter(
-          ([, value]) => value !== undefined && value !== null && value !== ""
-        )
-        .map(([, value]) => String(value).trim())
-        .join("-")
-        .replace(/\s+/g, "")
-        .substring(0, 3)
-        .toUpperCase() || "DEF";
-
-    const userId = safeUser.id.slice(-3);
-    const timestamp = Date.now().toString().slice(-4);
-
-    return `${userId}-${cate}-${variantString}-${timestamp}`;
-  } catch (error) {
-    console.error("SKU generation error:", error);
-    return `ERR-${Date.now().toString().slice(-4)}`;
-  }
-};
 
 export const getParentName = (parentId, categories) => {
   if (!parentId) return "None";

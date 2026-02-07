@@ -7,6 +7,18 @@ import { LoadingSpinner } from "../../shared/components/LoadingSpinner";
 import { PATHS } from "../../routes/routhPath";
 import { toast } from "react-toastify";
 
+const EAZSHOP_SELLER_ID = "000000000000000000000001";
+
+function getShopName(product) {
+  if (product.isEazShopProduct === true) return "EazShop";
+  const sellerId = product.seller?._id?.toString?.() ?? product.seller?.toString?.() ?? "";
+  if (sellerId === EAZSHOP_SELLER_ID) return "EazShop";
+  if (product.seller && typeof product.seller === "object") {
+    return product.seller.shopName || product.seller.name || "—";
+  }
+  return "—";
+}
+
 export default function EazShopProductsPage() {
   const navigate = useNavigate();
   const { useGetEazShopProducts } = useEazShop();
@@ -105,7 +117,7 @@ export default function EazShopProductsPage() {
     return (
       <ErrorContainer>
         <ErrorTitle>Error Loading Products</ErrorTitle>
-        <ErrorMessage>{error.message || 'Failed to load Saiisai products'}</ErrorMessage>
+        <ErrorMessage>{error.message || 'Failed to load EazShop products'}</ErrorMessage>
         <ErrorDetails>
           Please check the browser console for more details.
         </ErrorDetails>
@@ -128,9 +140,17 @@ export default function EazShopProductsPage() {
     <DashboardContainer>
       <Header>
         <TitleContainer>
-          <Title>Saiisai Products</Title>
-          <Subtitle>Manage official Saiisai store products</Subtitle>
+          <Title>EazShop Products</Title>
+          <Subtitle>Manage EazShop (company store) products. Use “Add product” to create new items.</Subtitle>
         </TitleContainer>
+        <HeaderActions>
+          <AddProductButton
+            onClick={() => navigate(`/dashboard/${PATHS.EAZSHOP_PRODUCTS_NEW}`)}
+            title="Create a new EazShop product"
+          >
+            <FiPlus /> Add product
+          </AddProductButton>
+        </HeaderActions>
         <Controls>
           <SearchContainer>
             <SearchIcon />
@@ -192,7 +212,7 @@ export default function EazShopProductsPage() {
               </TableCell>
               <TableCell>
                 <ProductName>{product.name}</ProductName>
-                <ProductId>ID: {product._id || product.id}</ProductId>
+                <ShopName>{getShopName(product)}</ShopName>
               </TableCell>
               <TableCell>
                 <PriceInfo>
@@ -258,21 +278,18 @@ export default function EazShopProductsPage() {
           <NoResultsIcon>📦</NoResultsIcon>
           <NoResultsTitle>
             {products.length === 0 
-              ? "No Saiisai Products Found" 
+              ? "No EazShop Products Found" 
               : "No Products Match Your Filters"}
           </NoResultsTitle>
           <NoResultsMessage>
             {products.length === 0 
               ? "You haven't created any EazShop products yet. Create your first EazShop product to get started!" 
-              : `Try adjusting your search or filter. You have ${products.length} total Saiisai products.`}
+              : `Try adjusting your search or filter. You have ${products.length} total EazShop products.`}
           </NoResultsMessage>
           {products.length === 0 && (
             <NoResultsAction>
-              <CreateButton onClick={() => {
-                toast.info('Saiisai product creation is managed through the product management system. Please use the Products page to create new products.');
-                navigate(`/dashboard/${PATHS.PRODUCTS}`);
-              }}>
-                Create Saiisai Product
+              <CreateButton onClick={() => navigate(`/dashboard/${PATHS.EAZSHOP_PRODUCTS_NEW}`)}>
+                Create EazShop Product
               </CreateButton>
             </NoResultsAction>
           )}
@@ -333,6 +350,32 @@ const Header = styled.div`
 
 const TitleContainer = styled.div`
   flex: 1;
+`;
+
+const HeaderActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const AddProductButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.25rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.35);
+  }
 `;
 
 const Title = styled.h1`
@@ -479,9 +522,9 @@ const ProductName = styled.div`
   color: #1e293b;
 `;
 
-const ProductId = styled.div`
+const ShopName = styled.div`
   font-size: 0.8rem;
-  color: #94a3b8;
+  color: #64748b;
   margin-top: 0.2rem;
 `;
 

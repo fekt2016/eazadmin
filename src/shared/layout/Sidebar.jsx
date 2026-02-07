@@ -48,8 +48,8 @@ export default function Sidebar({ role }) {
       icon: <FaBoxes />,
     },
     {
-      path: `${DASHBOARD_BASE}/eazshop/products`,
-      label: "Saiisai Products",
+      path: `${DASHBOARD_BASE}/eazshop`,
+      label: "EazShop",
       icon: <FaAward />,
     },
     {

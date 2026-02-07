@@ -24,7 +24,11 @@ const OrderDetail = lazy(() => import("../features/orders/OrderDetail"));
 const ShippingRatesPage = lazy(() => import("../features/shipping/ShippingRatesPage"));
 const AdminOrderStatusPage = lazy(() => import("../features/orders/AdminOrderStatusPage"));
 const DistanceOverviewPage = lazy(() => import("../features/shipping/DistanceOverviewPage"));
+const EazShopLayout = lazy(() => import("../features/eazshop/EazShopLayout"));
+const EazShopOverviewPage = lazy(() => import("../features/eazshop/EazShopOverviewPage"));
 const EazShopProductsPage = lazy(() => import("../features/eazshop/EazShopProductsPage"));
+const EazShopCreateProductPage = lazy(() => import("../features/eazshop/EazShopCreateProductPage"));
+const EazShopOrdersPage = lazy(() => import("../features/eazshop/EazShopOrdersPage"));
 const EazShopShippingFeesPage = lazy(() => import("../features/eazshop/EazShopShippingFeesPage"));
 const PickupCentersPage = lazy(() => import("../features/eazshop/PickupCentersPage"));
 const ReviewsPage = lazy(() => import("../features/reviews/ReviewsPage"));
@@ -267,30 +271,64 @@ export default function AdminRoutes() {
             </Suspense>
           }
         />
+        {/* EazShop: single section for products, orders, shipping, pickup */}
         <Route
-          path={PATHS.EAZSHOP_PRODUCTS}
+          path={PATHS.EAZSHOP}
           element={
             <Suspense fallback={<LoadingSpinner />}>
-              <EazShopProductsPage />
+              <EazShopLayout />
             </Suspense>
           }
-        />
-        <Route
-          path={PATHS.EAZSHOP_SHIPPING_FEES}
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <EazShopShippingFeesPage />
-            </Suspense>
-          }
-        />
-        <Route
-          path={PATHS.EAZSHOP_PICKUP_CENTERS}
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <PickupCentersPage />
-            </Suspense>
-          }
-        />
+        >
+          <Route
+            index
+            element={
+              <Suspense fallback={<LoadingSpinner />}>
+                <EazShopOverviewPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="products"
+            element={
+              <Suspense fallback={<LoadingSpinner />}>
+                <EazShopProductsPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="products/new"
+            element={
+              <Suspense fallback={<LoadingSpinner />}>
+                <EazShopCreateProductPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="orders"
+            element={
+              <Suspense fallback={<LoadingSpinner />}>
+                <EazShopOrdersPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="shipping-fees"
+            element={
+              <Suspense fallback={<LoadingSpinner />}>
+                <EazShopShippingFeesPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="pickup-centers"
+            element={
+              <Suspense fallback={<LoadingSpinner />}>
+                <PickupCentersPage />
+              </Suspense>
+            }
+          />
+        </Route>
         <Route
           path={PATHS.REVIEWS}
           element={

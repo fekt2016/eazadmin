@@ -105,7 +105,7 @@ export const useEazShop = () => {
       queryFn: async () => {
         try {
           const response = await eazshopService.getEazShopOrders();
-          return response.data?.orders || [];
+          return response?.data?.orders ?? response?.orders ?? [];
         } catch (error) {
           console.error('Failed to fetch EazShop orders:', error);
           throw new Error('Failed to load Saiisai orders');

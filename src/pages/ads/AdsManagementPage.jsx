@@ -57,12 +57,17 @@ const resolveLink = (rawLink) => {
 
   // Otherwise, treat it as a path and ALWAYS convert to an absolute URL,
   // because the backend validation requires an absolute HTTP(S) URL.
+  // Prefer explicit frontend URLs from env:
+  // - VITE_MAIN_SITE_URL (newer)
+  // - VITE_FRONTEND_URL (existing in production)
   const envBase = import.meta.env.VITE_MAIN_SITE_URL;
+  const envFrontendBase = import.meta.env.VITE_FRONTEND_URL;
   const apiBase = import.meta.env.VITE_API_BASE_URL;
 
   // Prefer explicit buyer app base if configured
   let base =
     (envBase && envBase.trim()) ||
+    (envFrontendBase && envFrontendBase.trim()) ||
     deriveMainSiteFromApiBase(apiBase) ||
     (typeof window !== "undefined" ? window.location.origin : "");
 

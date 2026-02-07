@@ -178,15 +178,15 @@ export const ROUTE_CONFIG = {
   },
 
   [PATHS.EAZSHOP_STORE]: {
-    title: "Saiisai Store - Admin | Saiisai",
-    description: "Manage Saiisai official store",
-    keywords: "saiisai store, admin, Saiisai",
+    title: "EazShop - Admin | Saiisai",
+    description: "Manage EazShop (company store)",
+    keywords: "eazshop, company store, admin, Saiisai",
   },
 
   [PATHS.EAZSHOP_PRODUCTS]: {
-    title: "Saiisai Products - Admin | Saiisai",
-    description: "Manage Saiisai official products",
-    keywords: "saiisai products, admin, Saiisai",
+    title: "EazShop Products - Admin | Saiisai",
+    description: "Manage EazShop products",
+    keywords: "eazshop products, admin, Saiisai",
   },
 
   [PATHS.COUPONS]: {
@@ -257,7 +257,7 @@ export const NAVIGATION_MENU = {
   ],
 
   eazshop: [
-    { path: PATHS.EAZSHOP_STORE, label: "Saiisai Store" },
+    { path: PATHS.EAZSHOP_STORE, label: "EazShop" },
     { path: PATHS.EAZSHOP_PRODUCTS, label: "Products" },
     { path: PATHS.EAZSHOP_ORDERS, label: "Orders" },
     { path: PATHS.EAZSHOP_SHIPPING, label: "Shipping" },

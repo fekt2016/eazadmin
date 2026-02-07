@@ -101,10 +101,11 @@ export default function PaymentPage() {
     // No status or seller filter - get all withdrawal requests from all sellers
   });
 
-  // Memoize to prevent new array reference on every render
+  // Memoize to prevent new array reference on every render (handle both { data: { withdrawalRequests } } and { withdrawalRequests } shapes)
   const apiWithdrawalRequests = useMemo(() => {
-    return withdrawalData?.withdrawalRequests || [];
-  }, [withdrawalData?.withdrawalRequests]);
+    const list = withdrawalData?.data?.withdrawalRequests ?? withdrawalData?.withdrawalRequests;
+    return Array.isArray(list) ? list : [];
+  }, [withdrawalData]);
 
   const approveWithdrawal = useApproveWithdrawalRequest();
   const rejectWithdrawal = useRejectWithdrawalRequest();
@@ -124,27 +125,47 @@ export default function PaymentPage() {
   const isLoading = isLoadingWithdrawals;
   const isProcessing = approveWithdrawal.isPending || rejectWithdrawal.isPending;
 
+  // Status groups for stats and filter (match backend PaymentRequest enum)
+  const STATUS = {
+    PENDING: "pending",
+    APPROVED: "approved",
+    PROCESSING: "processing",
+    AWAITING_OTP: "awaiting_paystack_otp",
+    PAID: "paid",
+    SUCCESS: "success",
+    REJECTED: "rejected",
+    FAILED: "failed",
+    DEACTIVATED: "deactivated",
+  };
+  const approvedStatuses = [STATUS.APPROVED, STATUS.PROCESSING, STATUS.AWAITING_OTP];
+  const paidStatuses = [STATUS.PAID, STATUS.SUCCESS];
+  const rejectedStatuses = [STATUS.REJECTED, STATUS.FAILED];
+
   // Transform withdrawal requests to match component format
   // Handles both WithdrawalRequest (new) and PaymentRequest (existing) models
-  // Use useMemo to prevent infinite loop - only recalculate when apiWithdrawalRequests changes
+  // Normalize status to lowercase string so stats and filters match backend
   const requests = useMemo(() => {
-    return apiWithdrawalRequests.map((req) => ({
-      id: req._id || req.id,
-      seller: req.seller?.shopName || req.seller?.name || "Unknown Seller",
-      sellerId: req.seller?._id || req.seller?.id,
-      amount: req.amount || 0,
-      date: req.createdAt || req.paymentDate || req.date,
-      method: req.payoutMethod || req.paymentMethod || req.method, // Support both payoutMethod and paymentMethod
-      // If deactivated, show "deactivated" status, otherwise use the actual status
-      status: req.isActive === false ? "deactivated" : (req.status || "pending"),
-      isActive: req.isActive !== false, // Explicitly track isActive
-      paystackReference: req.paystackReference || null,
-      paystackTransferCode: req.paystackTransferCode || null,
-      transactionId: req.transactionId || null, // From PaymentRequest model
-      rejectionReason: req.rejectionReason || null,
-      paymentDetails: req.paymentDetails || {},
-      type: req.type || "withdrawal", // Will be "payment-request" for legacy requests
-    }));
+    return apiWithdrawalRequests.map((req) => {
+      const rawStatus = (req.status || "pending").toString().toLowerCase();
+      const status =
+        req.isActive === false ? STATUS.DEACTIVATED : rawStatus;
+      return {
+        id: req._id || req.id,
+        seller: req.seller?.shopName || req.seller?.name || "Unknown Seller",
+        sellerId: req.seller?._id || req.seller?.id,
+        amount: req.amount || 0,
+        date: req.createdAt || req.paymentDate || req.date,
+        method: req.payoutMethod || req.paymentMethod || req.method,
+        status,
+        isActive: req.isActive !== false,
+        paystackReference: req.paystackReference || null,
+        paystackTransferCode: req.paystackTransferCode || null,
+        transactionId: req.transactionId || null,
+        rejectionReason: req.rejectionReason || null,
+        paymentDetails: req.paymentDetails || {},
+        type: req.type || "withdrawal",
+      };
+    });
   }, [apiWithdrawalRequests]);
 
   // Use useMemo for filtering to avoid infinite loop
@@ -161,9 +182,17 @@ export default function PaymentPage() {
       );
     }
 
-    // Apply status filter
+    // Apply status filter (group approved = approved + processing + awaiting_paystack_otp; paid = paid + success; rejected = rejected + failed)
     if (statusFilter !== "all") {
-      result = result.filter((req) => req.status === statusFilter);
+      if (statusFilter === "approved") {
+        result = result.filter((req) => approvedStatuses.includes(req.status));
+      } else if (statusFilter === "paid") {
+        result = result.filter((req) => paidStatuses.includes(req.status));
+      } else if (statusFilter === "rejected") {
+        result = result.filter((req) => rejectedStatuses.includes(req.status));
+      } else {
+        result = result.filter((req) => req.status === statusFilter);
+      }
     }
 
     // Apply date filter (simplified for demo)
@@ -229,13 +258,13 @@ export default function PaymentPage() {
     setAmountFilter("all");
   };
 
-  // Calculate stats for withdrawals (exclude deactivated from pending count)
+  // Calculate stats (match backend statuses: approved = approved + processing + awaiting_paystack_otp; paid = paid + success)
   const stats = {
-    pending: requests.filter((r) => r.status === "pending" && r.isActive !== false).length,
-    deactivated: requests.filter((r) => r.status === "deactivated" || r.isActive === false).length,
-    approved: requests.filter((r) => r.status === "approved" || r.status === "processing").length,
-    paid: requests.filter((r) => r.status === "paid").length,
-    rejected: requests.filter((r) => r.status === "rejected" || r.status === "failed").length,
+    pending: requests.filter((r) => r.status === STATUS.PENDING && r.isActive !== false).length,
+    deactivated: requests.filter((r) => r.status === STATUS.DEACTIVATED || r.isActive === false).length,
+    approved: requests.filter((r) => approvedStatuses.includes(r.status)).length,
+    paid: requests.filter((r) => paidStatuses.includes(r.status)).length,
+    rejected: requests.filter((r) => rejectedStatuses.includes(r.status)).length,
     totalAmount: requests.reduce((sum, req) => sum + (req.amount || 0), 0),
   };
 
@@ -267,6 +296,16 @@ export default function PaymentPage() {
 
         <StatCard $type="paid">
           <StatIcon $type="paid">
+            <FaMoneyBillWave />
+          </StatIcon>
+          <StatContent>
+            <StatValue>{stats.paid}</StatValue>
+            <StatLabel>Paid Requests</StatLabel>
+          </StatContent>
+        </StatCard>
+
+        <StatCard $type="totalAmount">
+          <StatIcon $type="totalAmount">
             <FaMoneyBillWave />
           </StatIcon>
           <StatContent>
@@ -433,12 +472,14 @@ export default function PaymentPage() {
                 </TableCell>
                 <TableCell>
                   <ActionButtons>
-                    <ActionIcon
-                      $type="view"
-                      onClick={() => navigate(`/dashboard/payment-request/detail/${request.id}`)}
+                    <ViewDetailButton
+                      type="button"
+                      onClick={() => navigate(`/dashboard/payment-request/detail/${String(request.id)}`)}
+                      title="View request details"
                     >
-                      <FaEye title="View Details" />
-                    </ActionIcon>
+                      <FaEye />
+                      <span>View</span>
+                    </ViewDetailButton>
                   </ActionButtons>
                 </TableCell>
               </TableRow>
@@ -537,6 +578,8 @@ const StatCard = styled.div`
         ? "#3b82f6"
         : props.$type === "paid"
         ? "#10b981"
+        : props.$type === "totalAmount"
+        ? "#8b5cf6"
         : props.$type === "rejected"
         ? "#ef4444"
         : "#94a3b8"};
@@ -558,6 +601,8 @@ const StatIcon = styled.div`
       ? "#3b82f6"
       : props.$type === "paid"
       ? "#10b981"
+      : props.$type === "totalAmount"
+      ? "#8b5cf6"
       : props.$type === "rejected"
       ? "#ef4444"
       : "#94a3b8"};
@@ -568,6 +613,8 @@ const StatIcon = styled.div`
       ? "#dbeafe"
       : props.$type === "paid"
       ? "#d1fae5"
+      : props.$type === "totalAmount"
+      ? "#ede9fe"
       : props.$type === "rejected"
       ? "#fee2e2"
       : "#f1f5f9"};
@@ -768,6 +815,32 @@ const StatusBadge = styled.span`
 const ActionButtons = styled.div`
   display: flex;
   gap: 0.5rem;
+  align-items: center;
+`;
+
+const ViewDetailButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1d4ed8;
+  background-color: #dbeafe;
+  border: 1px solid #93c5fd;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+
+  &:hover {
+    background-color: #bfdbfe;
+    color: #1e40af;
+  }
+
+  svg {
+    flex-shrink: 0;
+    font-size: 1rem;
+  }
 `;
 
 const ActionIcon = styled.button`

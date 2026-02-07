@@ -696,6 +696,26 @@ const PaymentRequestDetail = () => {
               </DeactivatedWarning>
             </ActionCard>
           )}
+          {isTransferCompleted(request.status) && (
+            <ActionCard>
+              <ActionTitle>Status</ActionTitle>
+              <PaidSummary>
+                <FaCheck /> This request has been paid. You can view all details below (read-only).
+              </PaidSummary>
+              {request.processedAt && (
+                <DetailRow style={{ marginTop: '0.5rem' }}>
+                  <DetailLabel><FaCalendarAlt /> Paid at</DetailLabel>
+                  <DetailValue>{new Date(request.processedAt).toLocaleString()}</DetailValue>
+                </DetailRow>
+              )}
+              {request.transactionId && (
+                <DetailRow>
+                  <DetailLabel><FaFileAlt /> Transaction ID</DetailLabel>
+                  <DetailValue>{request.transactionId}</DetailValue>
+                </DetailRow>
+              )}
+            </ActionCard>
+          )}
           {(request.status === "processing" || request.status === "approved" || request.status === "awaiting_paystack_otp") && 
            !isTransferCompleted(request.status) && (
             <ActionCard>
@@ -1236,6 +1256,19 @@ const DeactivatedInfo = styled.p`
   margin-top: 0.75rem;
   padding-top: 0.75rem;
   border-top: 1px solid #e5e7eb;
+`;
+
+const PaidSummary = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: #d1fae5;
+  color: #065f46;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.95rem;
+  border: 1px solid #10b981;
 `;
 
 const ModalButton = styled.button`
