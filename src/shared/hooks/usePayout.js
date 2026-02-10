@@ -107,9 +107,7 @@ export const useVerifyTransferStatus = () => {
  * Verify Paystack OTP for a withdrawal (admin-only)
  */
 export const useVerifyPaystackOtp = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
+  const queryClient = useQueryClient();  return useMutation({
     mutationFn: async ({ requestId, otp }) => {
       return await adminPayoutApi.verifyPaystackOtp(requestId, otp);
     },

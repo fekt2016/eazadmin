@@ -31,7 +31,6 @@ export const PATHS = {
   REVIEWS: "reviews",
   TRACKING: "tracking/:trackingNumber",
   TRACKING_REDIRECT: "/tracking/:trackingNumber",
-  PLATFORM_SETTINGS: "platform-settings",
   DEVICE_SESSIONS: "device-sessions",
   REFUNDS: "refunds",
   REFUND_DETAIL: "refunds/:refundId",
@@ -43,4 +42,5 @@ export const PATHS = {
   NOTIFICATIONS: "notifications",
   COUPONS: "coupons",
   ADS: "ads",
+  TAX: "tax",
 };

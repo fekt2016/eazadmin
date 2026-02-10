@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import styled from 'styled-components';
 import { FaWallet, FaStore, FaFilter, FaSearch, FaDownload, FaHistory } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
 import { LoadingSpinner } from '../../shared/components/LoadingSpinner';
 import api from '../../shared/services/api';
 
 const BalanceHistoryPage = () => {
-  const [activeTab, setActiveTab] = useState('wallet'); // 'wallet' or 'revenue'
+  const [activeTab, setActiveTab] = useState('wallet'); // 'wallet' | 'revenue' | 'transactions'
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
   const [filters, setFilters] = useState({
@@ -112,8 +113,65 @@ const BalanceHistoryPage = () => {
     enabled: activeTab === 'revenue',
   });
 
-  const currentData = activeTab === 'wallet' ? walletData : revenueData;
-  const isLoading = activeTab === 'wallet' ? walletLoading : revenueLoading;
+  // Fetch seller transactions (credits/debits) for all sellers
+  const { data: transactionsData, isLoading: transactionsLoading, error: transactionsError } = useQuery({
+    queryKey: ['admin-transactions', page, limit, filters, sellerId],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+      });
+
+      // Add filters only if they have values
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value && value !== '') {
+          // For transactions, map type filter 'credit'/'debit' directly; other filters pass through
+          params.append(key, value);
+        }
+      });
+
+      // Only add sellerId if it's a valid non-empty string
+      if (sellerId && sellerId.trim() !== '') {
+        params.append('sellerId', sellerId.trim());
+      }
+
+      try {
+        const response = await api.get(`/admin/transactions?${params}`);
+        return response.data;
+      } catch (error) {
+        console.error('[BalanceHistoryPage] Transactions API Error:', {
+          url: `/admin/transactions?${params}`,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          message: error.message,
+          fullError: error,
+        });
+        if (error.response?.data) {
+          console.error('[BalanceHistoryPage] Transactions Error Body:', JSON.stringify(error.response.data, null, 2));
+        }
+        throw error;
+      }
+    },
+    enabled: activeTab === 'transactions',
+  });
+
+  let currentData;
+  let isLoading;
+  let currentError;
+  if (activeTab === 'wallet') {
+    currentData = walletData;
+    isLoading = walletLoading;
+    currentError = walletError;
+  } else if (activeTab === 'revenue') {
+    currentData = revenueData;
+    isLoading = revenueLoading;
+    currentError = revenueError;
+  } else {
+    currentData = transactionsData;
+    isLoading = transactionsLoading;
+    currentError = transactionsError;
+  }
   const history = currentData?.data?.history || [];
   const pagination = currentData?.pagination || {};
 
@@ -202,7 +260,7 @@ const BalanceHistoryPage = () => {
           <FaHistory />
           <h1>Balance History Management</h1>
         </Title>
-        <Subtitle>View and manage buyer wallet and seller revenue history</Subtitle>
+        <Subtitle>View and manage buyer wallet, seller revenue, and seller transactions</Subtitle>
       </Header>
 
       <TabsContainer>
@@ -225,6 +283,16 @@ const BalanceHistoryPage = () => {
         >
           <FaStore />
           Seller Revenue History
+        </TabButton>
+        <TabButton
+          $active={activeTab === 'transactions'}
+          onClick={() => {
+            setActiveTab('transactions');
+            setPage(1);
+          }}
+        >
+          <FaStore />
+          Seller Transactions
         </TabButton>
       </TabsContainer>
 
@@ -256,7 +324,7 @@ const BalanceHistoryPage = () => {
               />
             </FilterGroup>
           )}
-          {activeTab === 'revenue' && (
+          {(activeTab === 'revenue' || activeTab === 'transactions') && (
             <FilterGroup>
               <Label>Seller ID</Label>
               <Input
@@ -276,7 +344,7 @@ const BalanceHistoryPage = () => {
               onChange={(e) => handleFilterChange('type', e.target.value)}
             >
               <option value="">All Types</option>
-              {activeTab === 'wallet' ? (
+              {activeTab === 'wallet' && (
                 <>
                   <option value="TOPUP">Top-up</option>
                   <option value="PAYSTACK_TOPUP">Paystack Top-up</option>
@@ -284,7 +352,8 @@ const BalanceHistoryPage = () => {
                   <option value="REFUND_CREDIT">Refund Credit</option>
                   <option value="ADMIN_ADJUST">Admin Adjustment</option>
                 </>
-              ) : (
+              )}
+              {activeTab === 'revenue' && (
                 <>
                   <option value="ORDER_EARNING">Order Earning</option>
                   <option value="REFUND_DEDUCTION">Refund Deduction</option>
@@ -292,6 +361,12 @@ const BalanceHistoryPage = () => {
                   <option value="ADMIN_ADJUST">Admin Adjustment</option>
                   <option value="CORRECTION">Correction</option>
                   <option value="REVERSAL">Reversal</option>
+                </>
+              )}
+              {activeTab === 'transactions' && (
+                <>
+                  <option value="credit">Credit</option>
+                  <option value="debit">Debit</option>
                 </>
               )}
             </Select>
@@ -353,12 +428,17 @@ const BalanceHistoryPage = () => {
           <thead>
             <tr>
               <th>Date</th>
+              <th>Order #</th>
               {activeTab === 'wallet' && <th>User</th>}
-              {activeTab === 'revenue' && <th>Seller</th>}
+              {activeTab !== 'wallet' && <th>Seller</th>}
               <th>Type</th>
               <th>Amount</th>
-              <th>Balance Before</th>
-              <th>Balance After</th>
+              {activeTab !== 'transactions' && (
+                <>
+                  <th>Balance Before</th>
+                  <th>Balance After</th>
+                </>
+              )}
               <th>Description</th>
               <th>Reference</th>
             </tr>
@@ -366,7 +446,10 @@ const BalanceHistoryPage = () => {
           <tbody>
             {history.length === 0 ? (
               <tr>
-                <td colSpan={8} style={{ textAlign: 'center', padding: '2rem' }}>
+                <td
+                  colSpan={activeTab === 'transactions' ? 6 : 8}
+                  style={{ textAlign: 'center', padding: '2rem' }}
+                >
                   No history found
                 </td>
               </tr>
@@ -374,6 +457,24 @@ const BalanceHistoryPage = () => {
               history.map((item) => (
                 <tr key={item._id}>
                   <td>{formatDate(item.createdAt)}</td>
+                  <td>
+                    {(() => {
+                      const order =
+                        item.orderId ||
+                        item.sellerOrder?.order ||
+                        null;
+                      const orderId = order?._id || order?.id;
+                      const orderNumber = order?.orderNumber || orderId;
+
+                      if (!orderId || !orderNumber) {
+                        return 'N/A';
+                      }
+
+                      // Admin order detail route: /dashboard/orders/detail/:id
+                      const to = `/dashboard/orders/detail/${orderId}`;
+                      return <OrderLink to={to}>{orderNumber}</OrderLink>;
+                    })()}
+                  </td>
                   {activeTab === 'wallet' && (
                     <td>
                       <UserCell>
@@ -382,11 +483,21 @@ const BalanceHistoryPage = () => {
                       </UserCell>
                     </td>
                   )}
-                  {activeTab === 'revenue' && (
+                  {activeTab !== 'wallet' && (
                     <td>
                       <UserCell>
-                        <strong>{item.sellerId?.shopName || item.sellerId?.name || 'N/A'}</strong>
-                        <span>{item.sellerId?.email || ''}</span>
+                        <strong>
+                          {item.sellerId?.shopName ||
+                            item.sellerId?.name ||
+                            item.seller?.shopName ||
+                            item.seller?.name ||
+                            'N/A'}
+                        </strong>
+                        <span>
+                          {item.sellerId?.email ||
+                            item.seller?.email ||
+                            ''}
+                        </span>
                       </UserCell>
                     </td>
                   )}
@@ -400,10 +511,14 @@ const BalanceHistoryPage = () => {
                       {item.amount >= 0 ? '+' : '-'}{formatCurrency(item.amount)}
                     </Amount>
                   </td>
-                  <td>{formatCurrency(item.balanceBefore)}</td>
-                  <td>
-                    <strong>{formatCurrency(item.balanceAfter)}</strong>
-                  </td>
+                  {activeTab !== 'transactions' && (
+                    <>
+                      <td>{formatCurrency(item.balanceBefore)}</td>
+                      <td>
+                        <strong>{formatCurrency(item.balanceAfter)}</strong>
+                      </td>
+                    </>
+                  )}
                   <td>{item.description}</td>
                   <td>
                     <Reference>{item.reference || 'N/A'}</Reference>
@@ -695,6 +810,17 @@ const Reference = styled.code`
   background: var(--color-grey-100);
   padding: 0.2rem 0.4rem;
   border-radius: var(--border-radius-sm);
+`;
+
+const OrderLink = styled(Link)`
+  font-size: 1.2rem;
+  color: var(--color-primary-600, #2563eb);
+  text-decoration: none;
+  font-weight: 600;
+
+  &:hover {
+    text-decoration: underline;
+  }
 `;
 
 const Pagination = styled.div`

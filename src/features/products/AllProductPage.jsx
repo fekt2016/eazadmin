@@ -413,7 +413,7 @@ export default function AllProductPage() {
                   <ProductName>{product.name}</ProductName>
                 </TableCell>
                 <TableCell>
-                  <SellerInfo>{product.seller?.shopName || "N/A"}</SellerInfo>
+                  <SellerInfo>{product.seller?.shopName || product.seller?.name || "N/A"}</SellerInfo>
                 </TableCell>
                 <TableCell>
                   <PriceInfo>₵{product.price?.toFixed(2) || "0.00"}</PriceInfo>

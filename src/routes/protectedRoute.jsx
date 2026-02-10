@@ -31,8 +31,8 @@ const ProtectedRoutes = ({ children }) => {
   // Handle errors (auth query threw; 401/403 are caught in useAuth and return null → we hit !admin below)
   if (error) {
     console.error("[ProtectedRoute] REDIRECT CAUSE: auth query error", { status: error?.response?.status, pathname: typeof window !== "undefined" ? window.location.pathname : "" });
-    // #region agent log
-    if (typeof window !== "undefined") {
+    // #region agent log (dev only – do not call 127.0.0.1 in production)
+    if (import.meta.env.DEV && typeof window !== "undefined") {
       fetch("http://127.0.0.1:7242/ingest/8853a92f-8faa-4d51-b197-e8e74c838dc7", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ location: "protectedRoute.jsx:error", message: "ProtectedRoute redirect reason", data: { reason: "error", status: error?.response?.status, pathname: window.location.pathname }, timestamp: Date.now(), sessionId: "debug-session", hypothesisId: "H2" }) }).catch(() => {});
     }
     // #endregion
@@ -63,8 +63,8 @@ const ProtectedRoutes = ({ children }) => {
       return <LoadingSpinner />;
     }
     console.warn("[ProtectedRoute] REDIRECT CAUSE: no admin data after refetch. adminData:", adminData);
-    // #region agent log
-    if (typeof window !== "undefined") {
+    // #region agent log (dev only – do not call 127.0.0.1 in production)
+    if (import.meta.env.DEV && typeof window !== "undefined") {
       fetch("http://127.0.0.1:7242/ingest/8853a92f-8faa-4d51-b197-e8e74c838dc7", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ location: "protectedRoute.jsx:noAdmin", message: "ProtectedRoute redirect no admin", data: { reason: "noAdmin", pathname: window.location.pathname }, timestamp: Date.now(), sessionId: "debug-session", hypothesisId: "H4" }) }).catch(() => {});
     }
     // #endregion

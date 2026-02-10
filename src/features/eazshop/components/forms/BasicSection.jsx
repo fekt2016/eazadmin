@@ -64,6 +64,32 @@ const BasicSection = () => {
           <Input {...register("warranty")} placeholder="e.g., 1 year, 2 years, 6 months" />
           <HelperText>Warranty period offered with this product</HelperText>
         </FieldGroup>
+
+        <FieldGroup style={{ flex: 1 }}>
+          <Label>
+            Return / Refund Window (days) <Required>*</Required>
+          </Label>
+          <Input
+            type="number"
+            min={0}
+            max={365}
+            step={1}
+            {...register("returnWindowDays", {
+              required: "Please specify the refund/return window in days",
+              min: { value: 0, message: "Return window cannot be negative" },
+              max: { value: 365, message: "Return window cannot exceed 365 days" },
+              valueAsNumber: true,
+            })}
+            placeholder="e.g., 30"
+            $hasError={!!errors?.returnWindowDays}
+          />
+          {errors?.returnWindowDays && (
+            <ErrorMessage>{errors.returnWindowDays.message}</ErrorMessage>
+          )}
+          <HelperText>
+            Number of days a buyer can request a return/refund for this product.
+          </HelperText>
+        </FieldGroup>
       </FieldRow>
     </div>
   );

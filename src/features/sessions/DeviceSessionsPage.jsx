@@ -338,6 +338,7 @@ export default function DeviceSessionsPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [deviceTypeFilter, setDeviceTypeFilter] = useState("all");
   const [platformFilter, setPlatformFilter] = useState("all");
+  const [suspiciousOnly, setSuspiciousOnly] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedSession, setSelectedSession] = useState(null);
   const [showModal, setShowModal] = useState(false);
@@ -350,8 +351,9 @@ export default function DeviceSessionsPage() {
     if (statusFilter !== "all") queryParams.status = statusFilter;
     if (deviceTypeFilter !== "all") queryParams.deviceType = deviceTypeFilter;
     if (platformFilter !== "all") queryParams.platform = platformFilter;
+    if (suspiciousOnly) queryParams.suspicious = "true";
     return queryParams;
-  }, [page, limit, statusFilter, deviceTypeFilter, platformFilter]);
+  }, [page, limit, statusFilter, deviceTypeFilter, platformFilter, suspiciousOnly]);
 
   const {
     data: sessionsData,
@@ -497,13 +499,24 @@ export default function DeviceSessionsPage() {
             <div className="value">{stats.inactive}</div>
           </div>
         </StatCard>
-        <StatCard color="#e74c3c">
+        <StatCard
+          color="#e74c3c"
+          as="button"
+          type="button"
+          onClick={() => {
+            setSuspiciousOnly((prev) => !prev);
+            setPage(1);
+          }}
+          title={suspiciousOnly ? "Showing only suspicious user sessions (click to clear)" : "Click to show only sessions from users with suspicious activity (e.g. many IPs or devices)"}
+          style={{ cursor: "pointer", textAlign: "left", border: suspiciousOnly ? "2px solid #e74c3c" : undefined }}
+        >
           <div className="icon">
             <FaExclamationTriangle />
           </div>
           <div className="content">
             <div className="label">Suspicious Logins</div>
             <div className="value">{stats.suspicious}</div>
+            {suspiciousOnly && <div className="label" style={{ marginTop: "0.25rem", fontSize: "0.75rem" }}>Filter active</div>}
           </div>
         </StatCard>
         <StatCard color="#3498db">
@@ -583,6 +596,21 @@ export default function DeviceSessionsPage() {
               <option value="eazseller">EazSeller</option>
               <option value="eazadmin">EazAdmin</option>
             </select>
+          </FilterGroup>
+
+          <FilterGroup>
+            <label>Suspicious only</label>
+            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontWeight: "normal", cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={suspiciousOnly}
+                onChange={(e) => {
+                  setSuspiciousOnly(e.target.checked);
+                  setPage(1);
+                }}
+              />
+              Show only sessions from users with 4+ IPs or 6+ devices
+            </label>
           </FilterGroup>
         </FiltersPanel>
       )}

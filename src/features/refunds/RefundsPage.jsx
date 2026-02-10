@@ -161,6 +161,41 @@ export default function RefundsPage() {
     return <RefundStatusBadge status="unknown" />;
   };
 
+  const getOrderNumber = (refund) => {
+    return (
+      refund.order?.orderNumber ||
+      refund.orderNumber ||
+      (refund._id ? String(refund._id).slice(-8) : 'N/A')
+    );
+  };
+
+  const getCustomer = (refund) => {
+    const buyer = refund.buyer || refund.user;
+    return {
+      name: buyer?.name || 'N/A',
+      email: buyer?.email || 'N/A',
+    };
+  };
+
+  const getAmount = (refund) => {
+    // Prefer refund-specific amounts from RefundRequest API
+    const amount =
+      refund.totalRefundAmount ??
+      refund.refundAmount ??
+      refund.totalPrice ??
+      0;
+    return Number(amount) || 0;
+  };
+
+  const getCreatedAt = (refund) => {
+    return (
+      refund.createdAt ||
+      refund.refundRequestDate ||
+      refund.order?.createdAt ||
+      refund.orderDate
+    );
+  };
+
   return (
     <Container>
       <Header>
@@ -299,26 +334,31 @@ export default function RefundsPage() {
               paginatedRefunds.map((refund) => (
                 <TableRow key={refund._id}>
                   <TableCell>
-                    <OrderNumber>{refund.orderNumber || refund._id}</OrderNumber>
+                    <OrderNumber>{getOrderNumber(refund)}</OrderNumber>
                   </TableCell>
                   <TableCell>
+                    {(() => {
+                      const customer = getCustomer(refund);
+                      return (
                     <CustomerInfo>
                       <CustomerName>
-                        {refund.user?.name || 'N/A'}
+                            {customer.name}
                       </CustomerName>
                       <CustomerEmail>
-                        {refund.user?.email || 'N/A'}
+                            {customer.email}
                       </CustomerEmail>
                     </CustomerInfo>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell>
-                    <Amount>GH₵{(refund.totalPrice || 0).toFixed(2)}</Amount>
+                    <Amount>GH₵{getAmount(refund).toFixed(2)}</Amount>
                   </TableCell>
                   <TableCell>
                     {getStatusBadge(refund)}
                   </TableCell>
                   <TableCell>
-                    {formatDate(refund.createdAt || refund.orderDate)}
+                    {formatDate(getCreatedAt(refund))}
                   </TableCell>
                   <TableCell>
                     <ActionButton

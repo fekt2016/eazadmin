@@ -14,6 +14,11 @@ const AD_TYPES = [
   { value: "native", label: "Native Placement" },
 ];
 
+const DISCOUNT_TYPES = [
+  { value: "percentage", label: "Percentage (%)" },
+  { value: "fixed", label: "Fixed amount (e.g. GH₵)" },
+];
+
 const initialFormState = {
   title: "",
   imageUrl: "",
@@ -23,7 +28,9 @@ const initialFormState = {
   startDate: "",
   endDate: "",
   active: true,
+  discountType: "percentage",
   discountPercent: "",
+  discountFixed: "",
 };
 
 const toDateInputValue = (value) => {
@@ -111,10 +118,20 @@ const buildPayload = (state) => {
     active: Boolean(state.active),
   };
 
-  if (state.discountPercent !== "" && state.discountPercent !== null && state.discountPercent !== undefined) {
-    const value = Number(state.discountPercent);
-    if (!Number.isNaN(value)) {
-      payload.discountPercent = value;
+  payload.discountType = state.discountType === "fixed" ? "fixed" : "percentage";
+  if (state.discountType === "fixed") {
+    if (state.discountFixed !== "" && state.discountFixed !== null && state.discountFixed !== undefined) {
+      const value = Number(state.discountFixed);
+      if (!Number.isNaN(value) && value >= 0) {
+        payload.discountFixed = value;
+      }
+    }
+  } else {
+    if (state.discountPercent !== "" && state.discountPercent !== null && state.discountPercent !== undefined) {
+      const value = Number(state.discountPercent);
+      if (!Number.isNaN(value)) {
+        payload.discountPercent = value;
+      }
     }
   }
 
@@ -257,6 +274,7 @@ const AdsManagementPage = () => {
   const handleEdit = (ad) => {
     setEditingAd(ad);
     const promotionKey = extractPromotionKeyFromLink(ad.link);
+    const discountType = ad.discountType === "fixed" ? "fixed" : "percentage";
     setFormState({
       title: ad.title || "",
       imageUrl: ad.imageUrl || "",
@@ -266,9 +284,14 @@ const AdsManagementPage = () => {
       startDate: toDateInputValue(ad.startDate),
       endDate: toDateInputValue(ad.endDate),
       active: ad.active ?? true,
+      discountType,
       discountPercent:
-        typeof ad.discountPercent === "number" && !Number.isNaN(ad.discountPercent)
+        discountType === "percentage" && typeof ad.discountPercent === "number" && !Number.isNaN(ad.discountPercent)
           ? String(ad.discountPercent)
+          : "",
+      discountFixed:
+        discountType === "fixed" && typeof ad.discountFixed === "number" && !Number.isNaN(ad.discountFixed)
+          ? String(ad.discountFixed)
           : "",
     });
   };
@@ -394,22 +417,56 @@ const AdsManagementPage = () => {
               </FormField>
 
               <FormField>
-                <Label htmlFor="discountPercent">Discount (%)</Label>
-                <Input
-                  id="discountPercent"
-                  name="discountPercent"
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="1"
-                  value={formState.discountPercent}
+                <Label htmlFor="discountType">Discount type</Label>
+                <Select
+                  id="discountType"
+                  name="discountType"
+                  value={formState.discountType}
                   onChange={handleInputChange}
-                  placeholder="e.g. 10 for 10% off"
-                />
-                <HelpText>
-                  Optional percentage discount applied to products linked to this promotion.
-                </HelpText>
+                >
+                  {DISCOUNT_TYPES.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </Select>
               </FormField>
+              {formState.discountType === "percentage" ? (
+                <FormField>
+                  <Label htmlFor="discountPercent">Discount (%)</Label>
+                  <Input
+                    id="discountPercent"
+                    name="discountPercent"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={formState.discountPercent}
+                    onChange={handleInputChange}
+                    placeholder="e.g. 10 for 10% off"
+                  />
+                  <HelpText>
+                    Optional percentage discount applied to products linked to this promotion.
+                  </HelpText>
+                </FormField>
+              ) : (
+                <FormField>
+                  <Label htmlFor="discountFixed">Discount amount</Label>
+                  <Input
+                    id="discountFixed"
+                    name="discountFixed"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formState.discountFixed}
+                    onChange={handleInputChange}
+                    placeholder="e.g. 5 for GH₵5 off"
+                  />
+                  <HelpText>
+                    Optional fixed amount off (in currency) applied to products linked to this promotion.
+                  </HelpText>
+                </FormField>
+              )}
 
               <FormField>
                 <Label htmlFor="link">Destination Link</Label>
@@ -550,9 +607,13 @@ const AdsManagementPage = () => {
                       <Td>{ad.startDate ? toDateInputValue(ad.startDate) : "—"}</Td>
                       <Td>{ad.endDate ? toDateInputValue(ad.endDate) : "—"}</Td>
                       <Td>
-                        {typeof ad.discountPercent === "number" && ad.discountPercent > 0
-                          ? `${ad.discountPercent}%`
-                          : "—"}
+                        {ad.discountType === "fixed"
+                          ? (typeof ad.discountFixed === "number" && ad.discountFixed > 0
+                              ? `GH₵${Number(ad.discountFixed).toFixed(2)}`
+                              : "—")
+                          : (typeof ad.discountPercent === "number" && ad.discountPercent > 0
+                              ? `${ad.discountPercent}%`
+                              : "—")}
                       </Td>
                       <Td>
                         <LinkPreview href={ad.link} target="_blank" rel="noopener noreferrer">

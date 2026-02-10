@@ -7,7 +7,7 @@ import { LoadingSpinner } from "../../shared/components/LoadingSpinner";
 import { PATHS } from "../../routes/routhPath";
 import { toast } from "react-toastify";
 
-const EAZSHOP_SELLER_ID = "000000000000000000000001";
+const EAZSHOP_SELLER_ID = "6970b22eaba06cadfd4b8035";
 
 function getShopName(product) {
   if (product.isEazShopProduct === true) return "EazShop";

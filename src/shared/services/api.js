@@ -263,14 +263,14 @@ api.interceptors.response.use(
       status === 401 && (message.includes("Admin session required") || message.includes("admin panel"));
     const isWrongRole =
       status === 403 && message.includes("Required role: admin") && message.includes("Your role: user");
-    // Only redirect to login when the auth-check request (/admin/me) fails with 401 – not on 401 from other endpoints (e.g. GET /ads)
+    // Only redirect to login when the auth-check request (/admin/me) fails with 401 – not on 401 from other endpoints (e.g. GET /promotional-discounts)
     const isUnauthenticatedAdmin = status === 401 && isAuthCheckRequest;
     // Do not full-page redirect when the failed request is GET /admin/me – let ProtectedRoute handle it via <Navigate> so the app stays in React
     const shouldRedirect =
       isAdminSessionRequired || isWrongRole || (isUnauthenticatedAdmin && !isAuthCheckRequest);
 
-    // #region agent log
-    if (typeof window !== "undefined" && (status === 401 || status === 403)) {
+    // #region agent log (dev only – do not call 127.0.0.1 in production)
+    if (import.meta.env.DEV && typeof window !== "undefined" && (status === 401 || status === 403)) {
       fetch("http://127.0.0.1:7242/ingest/8853a92f-8faa-4d51-b197-e8e74c838dc7", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ location: "api.js:interceptor", message: "401/403 auth decision", data: { status, requestUrl, isAuthCheckRequest, pathname: window.location.pathname, willRedirect: !!shouldRedirect }, timestamp: Date.now(), sessionId: "debug-session", hypothesisId: "H3" }) }).catch(() => {});
     }
     // #endregion

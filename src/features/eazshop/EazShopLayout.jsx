@@ -6,6 +6,7 @@ import {
   FaShoppingCart,
   FaTruck,
   FaMapMarkerAlt,
+  FaHistory,
 } from "react-icons/fa";
 import { PATHS } from "../../routes/routhPath";
 
@@ -17,6 +18,7 @@ const navItems = [
   { path: "orders", label: "Orders", icon: <FaShoppingCart /> },
   { path: "shipping-fees", label: "Shipping", icon: <FaTruck /> },
   { path: "pickup-centers", label: "Pickup Centers", icon: <FaMapMarkerAlt /> },
+  { path: "transactions", label: "Transactions", icon: <FaHistory /> },
 ];
 
 export default function EazShopLayout() {
@@ -29,7 +31,7 @@ export default function EazShopLayout() {
         <Title>
           <FaAward /> EazShop
         </Title>
-        <Subtitle>Company store: products, orders, shipping & pickup</Subtitle>
+        <Subtitle>Company store: products, orders, shipping, pickup & transactions</Subtitle>
       </SectionHeader>
 
       <SubNav>

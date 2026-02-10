@@ -131,10 +131,16 @@ export default function RefundActionPanel({ refund }) {
   const approvePartialRefund = useApprovePartialRefund();
   const rejectRefund = useRejectRefund();
 
-  const isPending = refund?.refundStatus === 'pending';
-  const isApproved = refund?.refundStatus === 'approved' || refund?.refundStatus === 'completed';
-  const isRejected = refund?.refundStatus === 'rejected';
-  const requestedAmount = refund?.refundAmount || refund?.totalPrice || 0;
+  const isPending = refund?.status === 'pending' || refund?.status === 'seller_review' || refund?.status === 'admin_review';
+  const isApproved = refund?.status === 'approved' || refund?.status === 'completed';
+  const isRejected = refund?.status === 'rejected';
+  const requestedAmount = refund?.totalRefundAmount || refund?.refundAmount || refund?.totalPrice || 0;
+  
+  // Check prerequisites for admin approval
+  const sellerApproved = refund?.sellerReviewed && refund?.sellerDecision === 'approve_return';
+  const sellerRejected = refund?.sellerReviewed && refund?.sellerDecision === 'reject_return';
+  const shippingSelected = refund?.returnShippingMethod !== null && refund?.returnShippingMethod !== undefined;
+  const canApprove = sellerApproved && (requireReturn ? shippingSelected : true);
 
   const handleApproveFull = () => {
     approveRefund.mutate({
@@ -218,11 +224,37 @@ export default function RefundActionPanel({ refund }) {
         />
       </FormGroup>
 
+      {/* Prerequisites Check */}
+      {isPending && (
+        <div style={{ 
+          padding: '1rem', 
+          borderRadius: '0.6rem', 
+          marginBottom: '1.5rem',
+          background: sellerRejected ? '#fee2e2' : !sellerApproved ? '#fef3c7' : !canApprove ? '#dbeafe' : '#d1fae5',
+          border: `1px solid ${sellerRejected ? '#fecaca' : !sellerApproved ? '#fde68a' : !canApprove ? '#bfdbfe' : '#a7f3d0'}`,
+        }}>
+          <div style={{ fontSize: '1.3rem', fontWeight: 600, marginBottom: '0.5rem', color: '#374151' }}>
+            Approval Prerequisites:
+          </div>
+          <div style={{ fontSize: '1.2rem', color: '#6b7280' }}>
+            {sellerRejected ? (
+              <>❌ Seller rejected the return. Refund cannot be approved.</>
+            ) : !sellerApproved ? (
+              <>⏳ Waiting for seller to approve the return request.</>
+            ) : requireReturn && !shippingSelected ? (
+              <>⏳ Waiting for buyer to select return shipping method (drop-off or pickup).</>
+            ) : (
+              <>✅ All prerequisites met. Ready for admin approval.</>
+            )}
+          </div>
+        </div>
+      )}
+
       <ButtonGroup>
         <Button
           $variant="approve"
           onClick={handleApproveFull}
-          disabled={!isPending || approveRefund.isPending}
+          disabled={!isPending || !canApprove || approveRefund.isPending}
         >
           <FaCheckCircle />
           {approveRefund.isPending ? 'Approving...' : 'Approve Full Refund'}
@@ -231,7 +263,7 @@ export default function RefundActionPanel({ refund }) {
         <Button
           $variant="partial"
           onClick={handleApprovePartial}
-          disabled={!isPending || approvePartialRefund.isPending || finalAmount <= 0 || finalAmount >= requestedAmount}
+          disabled={!isPending || !canApprove || approvePartialRefund.isPending || finalAmount <= 0 || finalAmount >= requestedAmount}
         >
           <FaPercent />
           {approvePartialRefund.isPending ? 'Approving...' : `Approve Partial (GH₵${finalAmount.toFixed(2)})`}

@@ -111,7 +111,7 @@ const SitemapPage = () => {
       id: 'system',
       title: 'System & Settings',
       links: [
-        { label: 'Platform Settings', path: PATHS.PLATFORM_SETTINGS },
+        { label: 'Tax & VAT', path: PATHS.TAX },
         { label: 'Activity Logs', path: PATHS.ACTIVITY_LOGS },
         { label: 'Device Sessions', path: PATHS.DEVICE_SESSIONS },
       ],

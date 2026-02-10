@@ -45,13 +45,15 @@ export const getUserSessions = async (userId, params = {}) => {
 
 // Force logout a specific device
 export const forceLogoutDevice = async (deviceId) => {
-  const response = await api.delete(`/admin/sessions/logout-device/${deviceId}`);
+  const encoded = encodeURIComponent(deviceId);
+  const response = await api.delete(`/admin/sessions/logout-device/${encoded}`);
   return response.data;
 };
 
 // Force logout all sessions for a user
 export const forceLogoutUser = async (userId) => {
-  const response = await api.delete(`/admin/sessions/logout-user/${userId}`);
+  const encoded = encodeURIComponent(userId);
+  const response = await api.delete(`/admin/sessions/logout-user/${encoded}`);
   return response.data;
 };
 

@@ -1,36 +1,6 @@
-import { useMemo } from 'react';
 import styled from "styled-components";
-import { useUnreadCount } from '../hooks/notifications/useNotifications';
-import NotificationDropdown from '../components/NotificationDropdown';
 
 const Header = ({ user }) => {
-  const { data: unreadData, isLoading, error } = useUnreadCount();
-  
-  // FIX: Extract unread count from response - handle different possible response structures
-  const unreadCount = useMemo(() => {
-    if (!unreadData) return 0;
-    
-    // Backend returns: { status: 'success', data: { unreadCount: number } }
-    const count = unreadData?.data?.unreadCount ?? 
-                  unreadData?.data?.data?.unreadCount ?? 
-                  unreadData?.unreadCount ?? 
-                  0;
-    
-    // Ensure it's a valid number
-    const numCount = Number(count) || 0;
-    
-    // Debug logging (remove in production)
-    if (process.env.NODE_ENV === 'development' && !isLoading) {
-      console.log('[Admin Header] Unread count debug:', {
-        unreadData,
-        extractedCount: numCount,
-        rawData: unreadData
-      });
-    }
-    
-    return numCount;
-  }, [unreadData, isLoading]);
-
   return (
     <Container>
       <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
@@ -43,7 +13,6 @@ const Header = ({ user }) => {
         </SearchBar> */}
       </div>
       <TopbarRight>
-        <NotificationDropdown unreadCount={unreadCount} />
         {user ? (
           <UserProfile>
             <UserAvatar>

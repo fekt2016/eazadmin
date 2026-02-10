@@ -31,10 +31,10 @@ const EazShopCreateProductPage = lazy(() => import("../features/eazshop/EazShopC
 const EazShopOrdersPage = lazy(() => import("../features/eazshop/EazShopOrdersPage"));
 const EazShopShippingFeesPage = lazy(() => import("../features/eazshop/EazShopShippingFeesPage"));
 const PickupCentersPage = lazy(() => import("../features/eazshop/PickupCentersPage"));
+const EazShopTransactionsPage = lazy(() => import("../features/eazshop/EazShopTransactionsPage"));
 const ReviewsPage = lazy(() => import("../features/reviews/ReviewsPage"));
 const TrackingPage = lazy(() => import("../features/orders/TrackingPage"));
 const ActivityLogs = lazy(() => import("../pages/ActivityLogs"));
-const PlatformSettings = lazy(() => import("../pages/settings/PlatformSettings"));
 const DeviceSessionsPage = lazy(() => import("../features/sessions/DeviceSessionsPage"));
 const RefundsPage = lazy(() => import("../features/refunds/RefundsPage"));
 const RefundDetailPage = lazy(() => import("../features/refunds/pages/RefundDetailPage"));
@@ -46,6 +46,7 @@ const SitemapPage = lazy(() => import("../pages/sitemap/SitemapPage"));
 const AdminNotificationsPage = lazy(() => import("../pages/notifications/AdminNotificationsPage"));
 const AdminCouponDiscountPage = lazy(() => import("../pages/coupons/AdminCouponDiscountPage"));
 const AdsManagementPage = lazy(() => import("../pages/ads/AdsManagementPage"));
+const TaxReportPage = lazy(() => import("../features/tax/TaxReportPage"));
 
 
 const AdminCatchAll = () => {
@@ -328,6 +329,14 @@ export default function AdminRoutes() {
               </Suspense>
             }
           />
+          <Route
+            path="transactions"
+            element={
+              <Suspense fallback={<LoadingSpinner />}>
+                <EazShopTransactionsPage />
+              </Suspense>
+            }
+          />
         </Route>
         <Route
           path={PATHS.REVIEWS}
@@ -350,14 +359,6 @@ export default function AdminRoutes() {
           element={
             <Suspense fallback={<LoadingSpinner />}>
               <TrackingPage />
-            </Suspense>
-          }
-        />
-        <Route
-          path={PATHS.PLATFORM_SETTINGS}
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <PlatformSettings />
             </Suspense>
           }
         />
@@ -438,6 +439,14 @@ export default function AdminRoutes() {
           element={
             <Suspense fallback={<LoadingSpinner />}>
               <AdminCouponDiscountPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path={PATHS.TAX}
+          element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <TaxReportPage />
             </Suspense>
           }
         />

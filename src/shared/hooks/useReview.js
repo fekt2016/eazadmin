@@ -52,8 +52,8 @@ const useReview = () => {
         }
         
         try {
-          // #region agent log
-          if (typeof window !== "undefined") {
+          // #region agent log (dev only – do not call 127.0.0.1 in production)
+          if (import.meta.env.DEV && typeof window !== "undefined") {
             fetch("http://127.0.0.1:7242/ingest/8853a92f-8faa-4d51-b197-e8e74c838dc7", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ location: "useReview.js:getAllReviews:before", message: "useGetAllReviews request start", data: { hasAdmin: !!admin, pathname: window.location?.pathname }, timestamp: Date.now(), sessionId: "debug-session", hypothesisId: "H1" }) }).catch(() => {});
           }
           // #endregion
@@ -70,8 +70,8 @@ const useReview = () => {
           }
           return response;
         } catch (error) {
-          // #region agent log
-          if (typeof window !== "undefined") {
+          // #region agent log (dev only – do not call 127.0.0.1 in production)
+          if (import.meta.env.DEV && typeof window !== "undefined") {
             fetch("http://127.0.0.1:7242/ingest/8853a92f-8faa-4d51-b197-e8e74c838dc7", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ location: "useReview.js:getAllReviews:catch", message: "useGetAllReviews error", data: { status: error?.response?.status, pathname: window.location?.pathname }, timestamp: Date.now(), sessionId: "debug-session", hypothesisId: "H1" }) }).catch(() => {});
           }
           // #endregion

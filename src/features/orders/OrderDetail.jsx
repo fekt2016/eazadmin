@@ -28,7 +28,7 @@ import { orderService } from '../../shared/services/orderApi';
 import adminSellerApi from '../../shared/services/adminSellerApi';
 
 // Platform store ID – display "EazShop Store" when seller details are not available
-const EAZSHOP_STORE_ID = '000000000000000000000001';
+const EAZSHOP_STORE_ID = '6970b22eaba06cadfd4b8035';
 
 const OrderDetail = () => {
   const { id: orderId } = useParams();

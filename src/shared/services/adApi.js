@@ -17,7 +17,7 @@ const adApi = {
     const formData = new FormData();
     formData.append("image", file);
 
-    const response = await api.post("/ads/upload-image", formData, {
+    const response = await api.post("/promotional-discounts/upload-image", formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
@@ -27,7 +27,7 @@ const adApi = {
     return data.data?.imageUrl || data.imageUrl || "";
   },
   async getAds(params = {}) {
-    const response = await api.get("/ads", { params });
+    const response = await api.get("/promotional-discounts", { params });
     return {
       raw: response,
       ads: unwrapAds(response),
@@ -35,17 +35,17 @@ const adApi = {
   },
 
   async createAd(payload) {
-    const response = await api.post("/ads", payload);
+    const response = await api.post("/promotional-discounts", payload);
     return response?.data ?? response;
   },
 
   async updateAd(id, payload) {
-    const response = await api.patch(`/ads/${id}`, payload);
+    const response = await api.patch(`/promotional-discounts/${id}`, payload);
     return response?.data ?? response;
   },
 
   async deleteAd(id) {
-    const response = await api.delete(`/ads/${id}`);
+    const response = await api.delete(`/promotional-discounts/${id}`);
     return response?.data ?? response;
   },
 };

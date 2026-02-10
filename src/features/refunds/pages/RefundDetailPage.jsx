@@ -144,11 +144,30 @@ const ItemsList = styled.div`
 
 const ItemRow = styled.div`
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 1.2rem;
   padding: 1rem;
   background: #f9fafb;
   border-radius: 0.6rem;
+`;
+
+const ItemImageWrapper = styled.div`
+  width: 64px;
+  height: 64px;
+  border-radius: 0.6rem;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const ItemImage = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 `;
 
 const ItemInfo = styled.div`
@@ -171,6 +190,7 @@ const ItemPrice = styled.div`
   font-size: 1.5rem;
   font-weight: 700;
   color: #059669;
+  white-space: nowrap;
 `;
 
 const ReasonText = styled.div`
@@ -220,42 +240,111 @@ export default function RefundDetailPage() {
   const orderId = refund._id || refund.orderId;
   const order = refund.order || refund;
   const buyer = refund.user || order.user;
-  const seller = refund.seller || order.sellerOrder?.[0]?.seller;
+
+  // Try multiple sources for seller information:
+  // 1) refund.seller (preferred - set by backend)
+  // 2) first item's seller (for item-level refunds)
+  // 3) first sellerOrder's seller (legacy order-based refunds)
+  const primaryItemSeller =
+    refund.items && refund.items.length > 0
+      ? (refund.items[0].sellerId || refund.items[0].seller || null)
+      : null;
+
+  const seller =
+    refund.seller ||
+    primaryItemSeller ||
+    order.sellerOrder?.[0]?.seller;
 
   // Build timeline from refund history
   const timeline = [];
-  if (refund.refundRequestDate) {
+  if (refund.refundRequestDate || refund.createdAt) {
     timeline.push({
       type: 'requested',
       title: 'Refund Requested',
-      message: `Buyer requested refund of GH₵${(refund.refundAmount || refund.totalPrice || 0).toFixed(2)}`,
-      timestamp: refund.refundRequestDate,
-      amount: refund.refundAmount || refund.totalPrice,
+      message: `Buyer requested refund of GH₵${(refund.totalRefundAmount || refund.refundAmount || refund.totalPrice || 0).toFixed(2)}`,
+      timestamp: refund.refundRequestDate || refund.createdAt,
+      amount: refund.totalRefundAmount || refund.refundAmount || refund.totalPrice,
     });
   }
-  if (refund.refundStatus === 'approved' && refund.refundProcessedAt) {
+  
+  // Seller review step
+  if (refund.sellerReviewed) {
+    if (refund.sellerDecision === 'approve_return') {
+      timeline.push({
+        type: 'seller_approved',
+        title: 'Seller Approved Return',
+        message: `Seller approved the return on ${formatDate(refund.sellerReviewDate)}`,
+        timestamp: refund.sellerReviewDate,
+      });
+    } else if (refund.sellerDecision === 'reject_return') {
+      timeline.push({
+        type: 'seller_rejected',
+        title: 'Seller Rejected Return',
+        message: `Seller rejected the return. Reason: ${refund.sellerNote || 'Not provided'}`,
+        timestamp: refund.sellerReviewDate,
+      });
+    }
+  } else {
     timeline.push({
-      type: 'approved',
-      title: 'Refund Approved',
-      message: `Admin approved refund of GH₵${(refund.refundAmount || refund.totalPrice || 0).toFixed(2)}`,
-      timestamp: refund.refundProcessedAt,
-      amount: refund.refundAmount || refund.totalPrice,
+      type: 'seller_pending',
+      title: 'Waiting for Seller Review',
+      message: 'Seller has not yet reviewed the return request',
+      timestamp: refund.createdAt,
     });
   }
-  if (refund.refundStatus === 'rejected' && refund.refundProcessedAt) {
+
+  // Buyer shipping selection step
+  if (refund.sellerDecision === 'approve_return') {
+    if (refund.returnShippingMethod) {
+      timeline.push({
+        type: 'shipping_selected',
+        title: 'Return Shipping Method Selected',
+        message: `Buyer selected ${refund.returnShippingMethod === 'drop_off' ? 'drop-off' : 'pickup'} on ${formatDate(refund.returnShippingSelectedAt)}`,
+        timestamp: refund.returnShippingSelectedAt,
+      });
+    } else {
+      timeline.push({
+        type: 'shipping_pending',
+        title: 'Waiting for Buyer Shipping Selection',
+        message: 'Buyer needs to select return shipping method (drop-off or pickup)',
+        timestamp: refund.sellerReviewDate || refund.createdAt,
+      });
+    }
+  }
+
+  // Admin review step
+  if (refund.adminReviewed) {
+    if (refund.adminDecision === 'approve' || refund.adminDecision === 'approve_partial') {
+      timeline.push({
+        type: 'approved',
+        title: 'Refund Approved',
+        message: `Admin approved refund of GH₵${(refund.finalRefundAmount || refund.totalRefundAmount || refund.refundAmount || refund.totalPrice || 0).toFixed(2)}`,
+        timestamp: refund.adminReviewDate || refund.processedAt,
+        amount: refund.finalRefundAmount || refund.totalRefundAmount || refund.refundAmount || refund.totalPrice,
+      });
+    } else if (refund.adminDecision === 'reject') {
+      timeline.push({
+        type: 'rejected',
+        title: 'Refund Rejected',
+        message: refund.adminNote || 'Refund request was rejected',
+        timestamp: refund.adminReviewDate || refund.processedAt,
+      });
+    }
+  } else if (refund.sellerDecision === 'approve_return' && refund.returnShippingMethod) {
     timeline.push({
-      type: 'rejected',
-      title: 'Refund Rejected',
-      message: refund.refundRejectionReason || 'Refund request was rejected',
-      timestamp: refund.refundProcessedAt,
+      type: 'admin_pending',
+      title: 'Ready for Admin Review',
+      message: 'All prerequisites met. Ready for admin approval.',
+      timestamp: refund.returnShippingSelectedAt || refund.sellerReviewDate,
     });
   }
-  if (refund.refundStatus === 'completed') {
+
+  if (refund.status === 'completed') {
     timeline.push({
       type: 'completed',
       title: 'Refund Completed',
       message: 'Refund has been processed and credited to buyer wallet',
-      timestamp: refund.refundProcessedAt || new Date(),
+      timestamp: refund.processedAt || new Date(),
     });
   }
 
@@ -275,6 +364,12 @@ export default function RefundDetailPage() {
 
       <ContentGrid>
         <LeftColumn>
+          {/* Workflow Status Card */}
+          <Card style={{ marginBottom: '2rem' }}>
+            <CardTitle>Return Process Status</CardTitle>
+            <RefundTimeline timeline={timeline} />
+          </Card>
+
           {/* Order Info Card */}
           <Card>
             <CardTitle>
@@ -309,11 +404,25 @@ export default function RefundDetailPage() {
                 <ItemsList>
                   {order.orderItems.map((item, index) => (
                     <ItemRow key={index}>
+                      <ItemImageWrapper>
+                        {item.product?.imageCover ? (
+                          <ItemImage
+                            src={item.product.imageCover}
+                            alt={item.product.name || 'Product image'}
+                          />
+                        ) : (
+                          <span style={{ fontSize: '1.2rem', color: '#9ca3af' }}>No image</span>
+                        )}
+                      </ItemImageWrapper>
                       <ItemInfo>
                         <ItemName>{item.product?.name || 'Product'}</ItemName>
-                        <ItemMeta>Qty: {item.quantity} × GH₵{item.price?.toFixed(2) || '0.00'}</ItemMeta>
+                        <ItemMeta>
+                          Qty: {item.quantity} × GH₵{item.price?.toFixed(2) || '0.00'}
+                        </ItemMeta>
                       </ItemInfo>
-                      <ItemPrice>GH₵{((item.price || 0) * (item.quantity || 1)).toFixed(2)}</ItemPrice>
+                      <ItemPrice>
+                        GH₵{((item.price || 0) * (item.quantity || 1)).toFixed(2)}
+                      </ItemPrice>
                     </ItemRow>
                   ))}
                 </ItemsList>

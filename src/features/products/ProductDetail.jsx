@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import styled from "styled-components";
 import {
   FaArrowLeft,
@@ -15,9 +16,22 @@ import {
   FaExclamationTriangle,
 } from "react-icons/fa";
 import useProduct from "../../shared/hooks/useProduct";
+import adApi from "../../shared/services/adApi";
 import { LoadingSpinner } from "../../shared/components/LoadingSpinner";
 import { PATHS } from "../../routes/routhPath";
 import { toast } from "react-toastify";
+
+const getPromotionKeyFromLink = (link) => {
+  if (!link || typeof link !== "string") return "";
+  try {
+    const url = new URL(link);
+    const match = (url.pathname || "").match(/\/offers\/([^/?#]+)/i);
+    return match ? match[1].trim() : "";
+  } catch {
+    const match = String(link).match(/\/offers\/([^/?#]+)/i);
+    return match ? match[1].trim() : "";
+  }
+};
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -39,11 +53,33 @@ export default function ProductDetail() {
   }, [productData]);
 
   // Sync local promotionKey state when product loads/changes
-  useMemo(() => {
+  useEffect(() => {
     if (product) {
       setPromotionKey(product.promotionKey || "");
     }
   }, [product?.id, product?._id, product?.promotionKey]);
+
+  // Fetch admin promotions for dropdown (add product to promotion)
+  const { data: promosData } = useQuery({
+    queryKey: ["admin-ads"],
+    queryFn: async () => {
+      const { ads } = await adApi.getAds();
+      return ads || [];
+    },
+  });
+  const promotionOptions = useMemo(() => {
+    const ads = promosData ?? [];
+    return ads
+      .filter((ad) => ad.link)
+      .map((ad) => ({
+        key: getPromotionKeyFromLink(ad.link),
+        title: ad.title || "Promotion",
+        discountType: ad.discountType === "fixed" ? "fixed" : "percentage",
+        discountPercent: typeof ad.discountPercent === "number" ? ad.discountPercent : 0,
+        discountFixed: typeof ad.discountFixed === "number" ? ad.discountFixed : 0,
+      }))
+      .filter((p) => p.key);
+  }, [promosData]);
 
   // Extract images
   const images = useMemo(() => {
@@ -236,13 +272,29 @@ export default function ProductDetail() {
                 </InfoValue>
               </InfoItem>
               <InfoItem>
-                <InfoLabel>Promotion Key</InfoLabel>
+                <InfoLabel>Admin promotion</InfoLabel>
                 <PromoRow>
+                  <PromoSelect
+                    value={promotionKey}
+                    onChange={(e) => setPromotionKey(e.target.value)}
+                  >
+                    <option value="">None</option>
+                    {promotionOptions.map((p) => (
+                      <option key={p.key} value={p.key}>
+                        {p.title}
+                        {p.discountType === "fixed" && p.discountFixed > 0
+                          ? ` (GH₵${Number(p.discountFixed).toFixed(2)} off)`
+                          : p.discountPercent > 0
+                            ? ` (${p.discountPercent}% off)`
+                            : ""}
+                      </option>
+                    ))}
+                  </PromoSelect>
                   <PromoInput
                     type="text"
                     value={promotionKey}
                     onChange={(e) => setPromotionKey(e.target.value)}
-                    placeholder="e.g. back-to-school"
+                    placeholder="Or type key e.g. back-to-school"
                   />
                   <PromoSaveButton
                     type="button"
@@ -253,8 +305,7 @@ export default function ProductDetail() {
                   </PromoSaveButton>
                 </PromoRow>
                 <PromoHelp>
-                  Links this product to offers like{" "}
-                  <code>/offers/{promotionKey || "<promotionKey>"}</code>.
+                  Add this product to a platform promotion. Sellers can also add their products to promotions from the seller app.
                 </PromoHelp>
               </InfoItem>
             </InfoGrid>
@@ -628,10 +679,26 @@ const PromoRow = styled.div`
   display: flex;
   gap: 0.75rem;
   align-items: center;
+  flex-wrap: wrap;
 
   @media (max-width: 640px) {
     flex-direction: column;
     align-items: stretch;
+  }
+`;
+
+const PromoSelect = styled.select`
+  min-width: 12rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 0.6rem 0.85rem;
+  font-size: 0.95rem;
+  background: #fff;
+  cursor: pointer;
+
+  &:focus {
+    border-color: #4f46e5;
+    outline: none;
   }
 `;
 

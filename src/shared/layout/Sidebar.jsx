@@ -18,21 +18,18 @@ import {
   FaUndo,
   FaWallet,
   FaHeadset,
-  FaBell,
   FaTicketAlt,
   FaBullhorn,
+  FaFileInvoiceDollar,
 } from "react-icons/fa";
 import useAuth from '../hooks/useAuth';
 import Logo from '../components/Logo';
-import { useUnreadCount } from '../hooks/notifications/useNotifications';
 
 // All dashboard child routes: use absolute path so nav works from any nested route
 const DASHBOARD_BASE = "/dashboard";
 
 export default function Sidebar({ role }) {
   const { logout } = useAuth();
-  const { data: unreadData } = useUnreadCount();
-  const unreadCount = unreadData?.data?.unreadCount || 0;
 
   // Combine role-specific menu with common menu (absolute paths under /dashboard)
   const menuItems = [
@@ -83,6 +80,11 @@ export default function Sidebar({ role }) {
       icon: <FaWallet />,
     },
     {
+      path: `${DASHBOARD_BASE}/tax`,
+      label: "Tax & VAT",
+      icon: <FaFileInvoiceDollar />,
+    },
+    {
       path: `${DASHBOARD_BASE}/support`,
       label: "Support",
       icon: <FaHeadset />,
@@ -106,17 +108,6 @@ export default function Sidebar({ role }) {
       path: `${DASHBOARD_BASE}/distance-overview`,
       label: "Distance Overview",
       icon: <FaMapMarkerAlt />,
-    },
-    {
-      path: `${DASHBOARD_BASE}/platform-settings`,
-      label: "Platform Settings",
-      icon: <FaCog />,
-    },
-    {
-      path: `${DASHBOARD_BASE}/notifications`,
-      label: "Notifications",
-      icon: <FaBell />,
-      badge: unreadCount > 0 ? unreadCount : null,
     },
     {
       path: `${DASHBOARD_BASE}/coupons`,
