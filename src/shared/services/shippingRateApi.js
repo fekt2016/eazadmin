@@ -54,5 +54,11 @@ export const shippingRateService = {
     });
     return response.data;
   },
+
+  // Get international shipping matrix (read-only)
+  getInternationalMatrix: async () => {
+    const response = await api.get('/admin/international-shipping/matrix');
+    return response.data;
+  },
 };
 

@@ -254,6 +254,98 @@ export const useAddTrackingUpdate = () => {
 };
 
 /**
+ * Hook for admin to hard-delete an order.
+ * Backend will:
+ *  - backup the order
+ *  - deduct revenue if it was previously added
+ * For safety, we only expose this in the admin app and
+ * the UI will restrict it to unpaid orders.
+ */
+export const useDeleteOrder = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (orderId) => {
+      if (!orderId) throw new Error("Order ID is required");
+      return await orderService.deleteOrder(orderId);
+    },
+    onSuccess: (_data, orderId) => {
+      // Optimistically remove the deleted order from the cached list
+      queryClient.setQueryData(["orders"], (oldData) => {
+        if (!oldData) return oldData;
+
+        const body = oldData.data ?? oldData;
+        const list =
+          body?.data?.results ??
+          body?.data?.data ??
+          body?.results ??
+          body?.data ??
+          [];
+
+        if (!Array.isArray(list)) return oldData;
+
+        const filtered = list.filter((o) => {
+          const id = o._id ?? o.id;
+          return id?.toString?.() !== orderId?.toString?.();
+        });
+
+        // Preserve original envelope shape while swapping the list
+        if (body?.data?.results) {
+          return {
+            ...oldData,
+            data: {
+              ...body,
+              data: {
+                ...body.data,
+                results: filtered,
+              },
+            },
+          };
+        }
+
+        if (body?.data?.data && Array.isArray(body.data.data)) {
+          return {
+            ...oldData,
+            data: {
+              ...body,
+              data: {
+                ...body.data,
+                data: filtered,
+              },
+            },
+          };
+        }
+
+        if (body?.results && Array.isArray(body.results)) {
+          return {
+            ...oldData,
+            data: {
+              ...body,
+              results: filtered,
+            },
+          };
+        }
+
+        // Fallback: if orders are directly in data or root
+        if (Array.isArray(body)) {
+          return {
+            ...oldData,
+            data: filtered,
+          };
+        }
+
+        return oldData;
+      });
+
+      // Also invalidate to refetch from server and refresh stats
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["order", orderId] });
+      queryClient.invalidateQueries({ queryKey: ["orderStats"] });
+    },
+  });
+};
+
+/**
  * Hook to confirm payment for bank transfer or cash on delivery orders
  * @returns {Object} Mutation object with mutate function and state
  */

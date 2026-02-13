@@ -247,12 +247,40 @@ export default function ProductDetail() {
               </InfoItem>
               <InfoItem>
                 <InfoLabel>SKU</InfoLabel>
-                <InfoValue>{product.defaultSku || product.sku || "N/A"}</InfoValue>
+                <InfoValue>{product.defaultSku || product.sku || variants?.[0]?.sku || "N/A"}</InfoValue>
               </InfoItem>
               <InfoItem>
                 <InfoLabel>Price</InfoLabel>
                 <InfoValue>GH₵{product.price?.toFixed(2) || "0.00"}</InfoValue>
               </InfoItem>
+              <InfoItem>
+                <InfoLabel>Pre-Order</InfoLabel>
+                {product.isPreOrder ? (
+                  <PreOrderBadge>
+                    <FaExclamationTriangle /> Pre-Order
+                  </PreOrderBadge>
+                ) : (
+                  <InfoValue>No</InfoValue>
+                )}
+              </InfoItem>
+              {product.isPreOrder && product.preOrderAvailableDate && (
+                <InfoItem>
+                  <InfoLabel>Expected Availability</InfoLabel>
+                  <InfoValue>
+                    {new Date(product.preOrderAvailableDate).toLocaleDateString("en-GB", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </InfoValue>
+                </InfoItem>
+              )}
+              {product.isPreOrder && product.preOrderNote && (
+                <InfoItem>
+                  <InfoLabel>Pre-Order Note</InfoLabel>
+                  <InfoValue>{product.preOrderNote}</InfoValue>
+                </InfoItem>
+              )}
               {product.compareAtPrice && (
                 <InfoItem>
                   <InfoLabel>Compare At Price</InfoLabel>
@@ -321,12 +349,6 @@ export default function ProductDetail() {
                 <InfoItem>
                   <InfoLabel>Shop Name</InfoLabel>
                   <InfoValue>{product.seller.shopName || "N/A"}</InfoValue>
-                </InfoItem>
-                <InfoItem>
-                  <InfoLabel>Seller ID</InfoLabel>
-                  <InfoValue>
-                    {product.seller.id || product.seller._id || "N/A"}
-                  </InfoValue>
                 </InfoItem>
               </InfoGrid>
             </InfoCard>
@@ -445,6 +467,53 @@ export default function ProductDetail() {
                   );
                 })}
               </VariantsContainer>
+            </InfoCard>
+          )}
+
+          {/* Variant Details Table — shows SKU, price, stock per variant */}
+          {variants.length > 0 && (
+            <InfoCard>
+              <CardTitle>
+                <FaBox /> Variant Details
+              </CardTitle>
+              <VariantTableWrapper>
+                <VariantTable>
+                  <thead>
+                    <tr>
+                      <Th>Variant</Th>
+                      <Th>SKU</Th>
+                      <Th>Price</Th>
+                      <Th>Stock</Th>
+                      <Th>Status</Th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {variants.map((v, idx) => {
+                      const variantLabel = v.name ||
+                        (v.attributes || []).map((a) => a.value).join(" / ") ||
+                        `Variant ${idx + 1}`;
+                      const isOutOfStock = (v.stock || 0) === 0;
+                      return (
+                        <Tr key={v._id || v.sku || idx} $isOutOfStock={isOutOfStock}>
+                          <Td>{variantLabel}</Td>
+                          <TdMono>{v.sku || "—"}</TdMono>
+                          <Td>GH₵{(v.price || 0).toFixed(2)}</Td>
+                          <Td>
+                            <StockValue $inStock={!isOutOfStock}>
+                              {v.stock || 0}
+                            </StockValue>
+                          </Td>
+                          <Td>
+                            <StatusBadge status={v.status || "active"}>
+                              {v.status || "active"}
+                            </StatusBadge>
+                          </Td>
+                        </Tr>
+                      );
+                    })}
+                  </tbody>
+                </VariantTable>
+              </VariantTableWrapper>
             </InfoCard>
           )}
 
@@ -1009,6 +1078,74 @@ const RadioInput = styled.input`
     outline: 3px solid #667eea;
     outline-offset: 2px;
   }
+`;
+
+const PreOrderBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fde68a;
+
+  svg {
+    font-size: 0.8rem;
+  }
+`;
+
+const VariantTableWrapper = styled.div`
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+`;
+
+const VariantTable = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+`;
+
+const Th = styled.th`
+  text-align: left;
+  padding: 0.85rem 1rem;
+  background: #f8fafc;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+`;
+
+const Tr = styled.tr`
+  background: ${(props) => (props.$isOutOfStock ? "#fef2f2" : "white")};
+  transition: background 0.15s;
+
+  &:not(:last-child) {
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  &:hover {
+    background: ${(props) => (props.$isOutOfStock ? "#fee2e2" : "#f8fafc")};
+  }
+`;
+
+const Td = styled.td`
+  padding: 0.75rem 1rem;
+  color: #1e293b;
+  white-space: nowrap;
+`;
+
+const TdMono = styled(Td)`
+  font-family: "SF Mono", "Fira Code", "Fira Mono", Menlo, monospace;
+  font-size: 0.85rem;
+  color: #475569;
+  letter-spacing: 0.3px;
 `;
 
 const ErrorState = styled.div`

@@ -389,6 +389,7 @@ export default function AllProductPage() {
             </SortableHeader>
             <HeaderCell>CATEGORY</HeaderCell>
             <HeaderCell>STATUS</HeaderCell>
+            <HeaderCell>PRE-ORDER</HeaderCell>
             <HeaderCell>MODERATION</HeaderCell>
             <HeaderCell>ACTIONS</HeaderCell>
           </HeaderRow>
@@ -397,7 +398,7 @@ export default function AllProductPage() {
         <TableBody>
           {currentProducts.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={9} style={{ textAlign: 'center', padding: '2rem' }}>
+              <TableCell colSpan={10} style={{ textAlign: 'center', padding: '2rem' }}>
                 No products found. {products.length === 0 ? 'No products loaded from API.' : `Filtered from ${products.length} total products.`}
               </TableCell>
             </TableRow>
@@ -436,6 +437,15 @@ export default function AllProductPage() {
                   <StatusPill status={product.status}>
                     {product.status.replace("-", " ")}
                   </StatusPill>
+                </TableCell>
+                <TableCell>
+                  {product.isPreOrder ? (
+                    <PreOrderBadge>
+                      {product.preOrderOriginCountry ? `Pre-Order (${product.preOrderOriginCountry})` : 'Pre-Order'}
+                    </PreOrderBadge>
+                  ) : (
+                    <span style={{ color: '#94a3b8' }}>Regular</span>
+                  )}
                 </TableCell>
                 <TableCell>
                   <ModerationPill status={product.moderationStatus || "pending"}>
@@ -1073,4 +1083,14 @@ const CategoryInfo = styled.div`
   font-weight: 500;
   color: #1e293b;
   text-transform: capitalize;
+`;
+
+const PreOrderBadge = styled.span`
+  display: inline-block;
+  padding: 0.4rem 0.8rem;
+  border-radius: 12px;
+  font-weight: 500;
+  font-size: 0.85rem;
+  background: #dbeafe;
+  color: #1e40af;
 `;

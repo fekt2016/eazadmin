@@ -125,4 +125,12 @@ export const orderService = {
     const response = await api.post("/order/backfill-seller-credits", options);
     return response.data;
   },
+  deleteOrder: async (orderId) => {
+    if (!orderId) {
+      throw new Error("Order ID is required");
+    }
+    // Use admin-scoped endpoint so admin auth & audit logic apply
+    const response = await api.delete(`/admin/orders/${orderId}`);
+    return response.data;
+  },
 };

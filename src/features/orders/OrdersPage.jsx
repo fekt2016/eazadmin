@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import { useGetAllOrders, useGetOrderStats } from '../../shared/hooks/useOrder';
+import { useGetAllOrders, useGetOrderStats, useDeleteOrder } from '../../shared/hooks/useOrder';
 import { Link, useNavigate } from "react-router-dom";
 import { formatDate } from '../../shared/utils/helpers';
 import { useState, useEffect } from "react";
@@ -25,6 +25,7 @@ export default function OrdersPage() {
   const [dateFilter, setDateFilter] = useState("all");
 
   const { data: ordersData, isLoading, error, refetch } = useGetAllOrders();
+  const deleteOrderMutation = useDeleteOrder();
   const { data: statsData } = useGetOrderStats();
 
   // Refetch data when parameters change
@@ -93,6 +94,47 @@ export default function OrdersPage() {
 
   const handleStatusChange = (order) => {
     console.log("Selected order for status change:", order);
+    // Navigate to the dedicated status page so admin can use
+    // the full status flow (including international statuses)
+    const orderId = order._id ?? order.id;
+    if (orderId) {
+      navigate(`/dashboard/orders/status/${orderId.toString()}`);
+    }
+  };
+
+  const isOrderUnpaid = (order) => {
+    const raw = (order.paymentStatus || '').toString().toLowerCase();
+    return raw !== 'paid' && raw !== 'completed';
+  };
+
+  const handleDeleteOrder = async (order) => {
+    const orderId = order._id ?? order.id;
+    const orderNumber = order.orderNumber ?? orderId;
+
+    if (!orderId) return;
+
+    if (!isOrderUnpaid(order)) {
+      alert('Only unpaid orders can be deleted. For paid orders, use cancellation or refund instead.');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `This will permanently delete order ${orderNumber} from the database (a backup is kept internally).\n\nAre you sure you want to continue?`,
+    );
+    if (!confirmed) return;
+
+    try {
+      await deleteOrderMutation.mutateAsync(orderId.toString());
+      await refetch();
+      alert(`Order ${orderNumber} deleted successfully.`);
+    } catch (err) {
+      console.error('Failed to delete order:', err);
+      alert(
+        err?.response?.data?.message ||
+          err?.message ||
+          'Failed to delete order. Please try again.',
+      );
+    }
   };
 
   const calculateTotalQuantity = (order) => {
@@ -345,6 +387,25 @@ export default function OrdersPage() {
                       onClick={() => handleStatusChange(order)}
                     >
                       <FaEdit />
+                    </ActionIcon>
+                    <ActionIcon
+                      $color="#e74c3c"
+                      as="button"
+                      type="button"
+                      title={
+                        isOrderUnpaid(order)
+                          ? 'Delete unpaid order'
+                          : 'Only unpaid orders can be deleted'
+                      }
+                      onClick={() => handleDeleteOrder(order)}
+                      disabled={!isOrderUnpaid(order) || deleteOrderMutation.isPending}
+                      style={
+                        !isOrderUnpaid(order)
+                          ? { opacity: 0.4, cursor: 'not-allowed' }
+                          : undefined
+                      }
+                    >
+                      <FaTimesCircle />
                     </ActionIcon>
                   </ActionButtons>
                 </TableCell>

@@ -41,24 +41,86 @@ const AdminOrderStatusPage = () => {
 
   useEffect(() => {
     if (!order) return;
-    const rawPs = (order.paymentStatus ?? orderData?.data?.data?.data?.paymentStatus ?? orderData?.data?.data?.paymentStatus ?? '').toString().toLowerCase();
-    const isPaid = rawPs === 'paid' || rawPs === 'completed';
-    const raw = (order.currentStatus ?? order.status ?? order.orderStatus ?? 'pending_payment').toString().toLowerCase();
+    const rawPs = (
+      order.paymentStatus ??
+      orderData?.data?.data?.data?.paymentStatus ??
+      orderData?.data?.data?.paymentStatus ??
+      ''
+    )
+      .toString()
+      .toLowerCase();
+    const isPaidLocal = rawPs === 'paid' || rawPs === 'completed';
+    const raw = (
+      order.currentStatus ??
+      order.status ??
+      order.orderStatus ??
+      'pending_payment'
+    )
+      .toString()
+      .toLowerCase();
     const isPending = raw === 'pending' || raw === 'pending_payment';
-    setStatus(isPaid && isPending ? 'confirmed' : (order.currentStatus ?? order.status ?? order.orderStatus ?? 'pending_payment'));
+    setStatus(
+      isPaidLocal && isPending
+        ? 'confirmed'
+        : order.currentStatus ?? order.status ?? order.orderStatus ?? 'pending_payment',
+    );
   }, [order, orderData]);
 
-  const statusOptions = [
+  const allStatusOptions = [
     { value: 'pending_payment', label: 'Pending Payment', icon: FaCreditCard },
+    { value: 'payment_completed', label: 'Payment Completed', icon: FaCheckCircle },
     { value: 'processing', label: 'Processing', icon: FaSpinner },
     { value: 'confirmed', label: 'Confirmed', icon: FaCheckCircle },
     { value: 'preparing', label: 'Preparing', icon: FaBox },
     { value: 'ready_for_dispatch', label: 'Ready for Dispatch', icon: FaTruck },
+    // International pre-order specific statuses
+    { value: 'supplier_confirmed', label: 'Supplier Confirmed (Intl)', icon: FaBox },
+    { value: 'awaiting_dispatch', label: 'Awaiting Intl Dispatch', icon: FaBox },
+    { value: 'international_shipped', label: 'International Shipped', icon: FaTruck },
+    { value: 'customs_clearance', label: 'Customs Clearance', icon: FaTruck },
+    { value: 'arrived_destination', label: 'Arrived Destination', icon: FaTruck },
+    { value: 'local_dispatch', label: 'Local Dispatch', icon: FaTruck },
+    // Shared final statuses
     { value: 'out_for_delivery', label: 'Out for Delivery', icon: FaTruck },
     { value: 'delivered', label: 'Delivered', icon: FaCheckCircle },
     { value: 'cancelled', label: 'Cancelled', icon: FaTimesCircle },
     { value: 'refunded', label: 'Refunded', icon: FaUndo },
   ];
+
+  const INTERNATIONAL_ONLY_STATUS_VALUES = new Set([
+    'supplier_confirmed',
+    'awaiting_dispatch',
+    'international_shipped',
+    'customs_clearance',
+    'arrived_destination',
+    'local_dispatch',
+  ]);
+
+  const rawPaymentStatus = (
+    order?.paymentStatus ??
+    orderData?.data?.data?.data?.paymentStatus ??
+    orderData?.data?.data?.paymentStatus ??
+    ''
+  )
+    .toString()
+    .toLowerCase();
+  const isPaid =
+    rawPaymentStatus === 'paid' || rawPaymentStatus === 'completed';
+
+  const isInternationalPreorder =
+    order?.orderType === 'preorder_international';
+
+  // Restrict international-only statuses to international pre-orders
+  const baseStatusOptions = isInternationalPreorder
+    ? allStatusOptions
+    : allStatusOptions.filter(
+        (opt) => !INTERNATIONAL_ONLY_STATUS_VALUES.has(opt.value),
+      );
+
+  // For unpaid orders, only allow cancellation (no progression)
+  const selectableStatusOptions = isPaid
+    ? baseStatusOptions
+    : baseStatusOptions.filter((opt) => opt.value === 'cancelled');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -67,6 +129,13 @@ const AdminOrderStatusPage = () => {
       alert('Please select a status');
       return;
     }
+
+     // Guard on the client as well: do not allow updating unpaid orders
+     // except to cancel them.
+     if (!isPaid && status !== 'cancelled') {
+       alert('Cannot update status while payment is pending. You may only cancel unpaid orders.');
+       return;
+     }
 
     // Create optimistic tracking entry for instant UI update
     const newTrackingEntry = {
@@ -141,22 +210,20 @@ const AdminOrderStatusPage = () => {
   }
 
   const trackingHistory = order.trackingHistory || [];
-  
-  // Payment status: read from order or nested API response (data.data.data)
-  const rawPaymentStatus = (
-    order.paymentStatus ??
-    orderData?.data?.data?.data?.paymentStatus ??
-    orderData?.data?.data?.paymentStatus ??
-    orderData?.data?.paymentStatus ??
-    ''
-  ).toString().toLowerCase();
-  const isPaid = rawPaymentStatus === 'paid' || rawPaymentStatus === 'completed';
 
   // Current status: if buyer has paid but backend still says pending_payment, show Confirmed so it matches payment
   const rawCurrentStatus = (order.currentStatus ?? order.status ?? order.orderStatus ?? 'pending_payment').toString().toLowerCase();
   const isPendingStatus = rawCurrentStatus === 'pending' || rawCurrentStatus === 'pending_payment';
-  const displayStatusValue = isPaid && isPendingStatus ? 'confirmed' : (order.currentStatus || order.status || order.orderStatus || 'pending_payment');
-  const currentStatusOption = statusOptions.find((opt) => opt.value === displayStatusValue);
+  const displayStatusValue =
+    isPaid && isPendingStatus
+      ? 'confirmed'
+      : (order.currentStatus || order.status || order.orderStatus || 'pending_payment');
+
+  // Use the full status catalog to resolve the human‑readable label
+  // for the current status (even if it is not selectable anymore).
+  const currentStatusOption = allStatusOptions.find(
+    (opt) => opt.value === displayStatusValue,
+  );
   const currentStatusLabel = currentStatusOption?.label ?? 'Unknown';
 
   // Add optimistic entry if it exists (for instant UI update)
@@ -206,14 +273,21 @@ const AdminOrderStatusPage = () => {
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
                 required
+                disabled={!isPaid && selectableStatusOptions.length === 0}
               >
                 <option value="">Select status...</option>
-                {statusOptions.map((option) => (
+                {selectableStatusOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
                 ))}
               </Select>
+              {!isPaid && (
+                <PaymentNoteSpan>
+                  Payment is still pending. You can only cancel unpaid orders; other
+                  status updates are disabled until payment is completed.
+                </PaymentNoteSpan>
+              )}
             </FormGroup>
 
             <FormGroup>
@@ -238,7 +312,13 @@ const AdminOrderStatusPage = () => {
               />
             </FormGroup>
 
-            <SubmitButton type="submit" disabled={updateStatusMutation.isPending}>
+            <SubmitButton
+              type="submit"
+              disabled={
+                updateStatusMutation.isPending ||
+                (!isPaid && status !== 'cancelled')
+              }
+            >
               {updateStatusMutation.isPending ? (
                 <>
                   <LoadingSpinner />
@@ -269,7 +349,9 @@ const AdminOrderStatusPage = () => {
               </EmptyHistory>
             ) : (
               sortedHistory.map((entry, index) => {
-                const statusOption = statusOptions.find((opt) => opt.value === entry.status);
+                const statusOption = allStatusOptions.find(
+                  (opt) => opt.value === entry.status,
+                );
                 const Icon = statusOption?.icon || FaSpinner;
                 const isLast = index === sortedHistory.length - 1;
 

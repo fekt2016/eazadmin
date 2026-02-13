@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import styled from 'styled-components';
 import {
   FaPlus,
@@ -18,8 +18,11 @@ import {
   useToggleShippingZoneActive,
 } from '../../shared/hooks/useShippingZones';
 import { LoadingSpinner } from '../../shared/components/LoadingSpinner';
+import { shippingRateService } from '../../shared/services/shippingRateApi';
+import InternationalShippingManagementPage from './InternationalShippingManagementPage';
 
 const ShippingRatesPage = () => {
+  const [activeTab, setActiveTab] = useState('local'); // 'local' | 'international' | 'international-management'
   const [filters, setFilters] = useState({
     isActive: '',
   });
@@ -39,6 +42,46 @@ const ShippingRatesPage = () => {
   });
 
   const { data: shippingZonesData, isLoading, error, refetch } = useGetShippingZones(filters);
+  const [internationalMatrix, setInternationalMatrix] = useState([]);
+  const [isLoadingInternational, setIsLoadingInternational] = useState(false);
+  const [internationalError, setInternationalError] = useState(null);
+
+  useEffect(() => {
+    if (activeTab !== 'international') return;
+    let cancelled = false;
+
+    const fetchMatrix = async () => {
+      try {
+        setIsLoadingInternational(true);
+        setInternationalError(null);
+        const response = await shippingRateService.getInternationalMatrix();
+        const bands =
+          response?.data?.bands ||
+          response?.bands ||
+          response?.data ||
+          [];
+        if (!cancelled) {
+          setInternationalMatrix(bands);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setInternationalError(
+            err?.response?.data?.message ||
+              'Failed to load international shipping bands',
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingInternational(false);
+        }
+      }
+    };
+
+    fetchMatrix();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab]);
   
   // Extract shipping zones from response - handle different response structures
   const shippingZones = useMemo(() => {
@@ -195,7 +238,7 @@ const ShippingRatesPage = () => {
     }));
   };
 
-  if (isLoading) {
+  if (isLoading && activeTab === 'local') {
     return (
       <PageContainer>
         <LoadingSpinner />
@@ -207,15 +250,37 @@ const ShippingRatesPage = () => {
     <PageContainer>
       <PageHeader>
         <HeaderTitle>
-          <h1>Shipping Zone Management</h1>
-          <p>Manage shipping zones by distance ranges and pricing {shippingZones.length > 0 && `(${shippingZones.length} zones)`}</p>
+          <h1>Shipping Charges</h1>
+          <p>Manage local zones, view international charges, and configure international shipping (China/USA → Ghana).</p>
         </HeaderTitle>
-        <AddButton onClick={() => handleOpenModal()}>
-          <FaPlus />
-          Add New Shipping Zone
-        </AddButton>
       </PageHeader>
 
+      <TabsContainer>
+        <TabButton
+          type="button"
+          $active={activeTab === 'local'}
+          onClick={() => setActiveTab('local')}
+        >
+          Local Shipping Zones
+        </TabButton>
+        <TabButton
+          type="button"
+          $active={activeTab === 'international'}
+          onClick={() => setActiveTab('international')}
+        >
+          International Shipping Charges
+        </TabButton>
+        <TabButton
+          type="button"
+          $active={activeTab === 'international-management'}
+          onClick={() => setActiveTab('international-management')}
+        >
+          International Shipping Management
+        </TabButton>
+      </TabsContainer>
+
+      {activeTab === 'local' && (
+        <>
       <FiltersSection>
         <SearchBox>
           <FaSearch />
@@ -324,6 +389,73 @@ const ShippingRatesPage = () => {
           </tbody>
         </Table>
       </TableContainer>
+        </>
+      )}
+
+      {activeTab === 'international' && (
+        <InternationalSection>
+          {isLoadingInternational ? (
+            <Centered>
+              <LoadingSpinner />
+            </Centered>
+          ) : internationalError ? (
+            <ErrorBox>
+              <FaExclamationTriangle />
+              <span>{internationalError}</span>
+            </ErrorBox>
+          ) : (
+            <>
+              <PageSubHeader>
+                <SubHeaderTitle>
+                  <span>International Shipping Charges</span>
+                  <small>
+                    Read-only view of base international freight charges used
+                    for pre-order shipments from China and USA.
+                  </small>
+                </SubHeaderTitle>
+              </PageSubHeader>
+
+              <TableContainer>
+                <Table>
+                  <thead>
+                    <tr>
+                      <th>Country</th>
+                      <th>Weight Range (kg)</th>
+                      <th>Base International Shipping (GH₵)</th>
+                      <th>Base Customs Duty Rate</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {internationalMatrix.length === 0 ? (
+                      <tr>
+                        <td colSpan="4" style={{ textAlign: 'center', padding: '2rem' }}>
+                          <FaExclamationTriangle style={{ marginRight: '0.5rem' }} />
+                          No international shipping bands configured.
+                        </td>
+                      </tr>
+                    ) : (
+                      internationalMatrix.map((band, idx) => (
+                        <tr key={`${band.country}-${band.minWeightKg}-${band.maxWeightKg}-${idx}`}>
+                          <td>{band.country}</td>
+                          <td>
+                            {band.minWeightKg} - {band.maxWeightKg} kg
+                          </td>
+                          <td>GH₵{Number(band.shippingCost || 0).toFixed(2)}</td>
+                          <td>{(Number(band.baseCustomsRate || 0) * 100).toFixed(1)}%</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </Table>
+              </TableContainer>
+            </>
+          )}
+        </InternationalSection>
+      )}
+
+      {activeTab === 'international-management' && (
+        <InternationalShippingManagementPage embedded />
+      )}
 
       {/* Modal */}
       {isModalOpen && (
@@ -554,6 +686,32 @@ const HeaderTitle = styled.div`
   }
 `;
 
+const TabsContainer = styled.div`
+  display: inline-flex;
+  border-radius: 999px;
+  border: 1px solid #e0e0e0;
+  padding: 0.15rem;
+  background: #f9fafb;
+  margin-bottom: 1.5rem;
+`;
+
+const TabButton = styled.button`
+  border: none;
+  background: ${(props) => (props.$active ? '#ffffff' : 'transparent')};
+  color: ${(props) => (props.$active ? '#111827' : '#6b7280')};
+  padding: 0.45rem 1.1rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+
+  &:hover {
+    background: #ffffff;
+    color: #111827;
+  }
+`;
+
 const AddButton = styled.button`
   display: flex;
   align-items: center;
@@ -635,6 +793,28 @@ const TableContainer = styled.div`
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 `;
 
+const PageSubHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin: 1.5rem 0 1rem;
+  gap: 1rem;
+`;
+
+const SubHeaderTitle = styled.div`
+  span {
+    display: block;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 0.25rem;
+  }
+
+  small {
+    color: #6b7280;
+    font-size: 0.85rem;
+  }
+`;
+
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
@@ -686,6 +866,33 @@ const StatusBadge = styled.span`
   font-weight: 500;
   background: ${(props) => (props.active ? '#d4edda' : '#f8d7da')};
   color: ${(props) => (props.active ? '#155724' : '#721c24')};
+`;
+
+const InternationalSection = styled.div`
+  margin-top: 1rem;
+`;
+
+const Centered = styled.div`
+  padding: 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+`;
+
+const ErrorBox = styled.div`
+  margin-top: 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: 8px;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+  display: inline-flex;
+  gap: 0.5rem;
+  align-items: center;
+
+  svg {
+    flex-shrink: 0;
+  }
 `;
 
 const ActionButtons = styled.div`

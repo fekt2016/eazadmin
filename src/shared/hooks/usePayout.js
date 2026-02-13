@@ -128,15 +128,11 @@ export const useVerifyPaystackOtp = () => {
       toast.error(message);
     },
   });
-};
-
-/**
+};/**
  * Resend Paystack OTP for a withdrawal
  */
 export const useResendPaystackOtp = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
+  const queryClient = useQueryClient();  return useMutation({
     mutationFn: async (requestId) => {
       return await adminPayoutApi.resendPaystackOtp(requestId);
     },
