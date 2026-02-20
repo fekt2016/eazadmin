@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import styled, { keyframes } from "styled-components";
 import { FaEnvelope, FaLock, FaEye, FaEyeSlash } from "react-icons/fa";
 import { toast } from "react-toastify";
@@ -14,7 +14,7 @@ export default function AdminLogin() {
   const navigate = useNavigate();
   const { login } = useAuth();
   const emailInputRef = useRef(null);
-  
+
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -46,7 +46,7 @@ export default function AdminLogin() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!formData.email || !formData.password) {
       setShake(true);
       setTimeout(() => setShake(false), 500);
@@ -83,7 +83,7 @@ export default function AdminLogin() {
       }
 
       toast.success("Login successful! Redirecting...");
-      
+
       // Small delay for better UX
       setTimeout(() => {
         navigate("/dashboard");
@@ -91,7 +91,7 @@ export default function AdminLogin() {
     } catch (error) {
       setShake(true);
       setTimeout(() => setShake(false), 500);
-      
+
       const errorMessage =
         error.response?.data?.message ||
         error.message ||
@@ -189,6 +189,11 @@ export default function AdminLogin() {
               "Sign in"
             )}
           </LoginButton>
+
+          <RegisterLink>
+            Need an admin account?{" "}
+            <Link to="/register">Create one here</Link>
+          </RegisterLink>
         </Form>
       </LoginCard>
 
@@ -411,6 +416,21 @@ const ForgotPasswordLink = styled.a`
   &:hover {
     color: #1d4ed8;
     text-decoration: underline;
+  }
+`;
+
+const RegisterLink = styled.p`
+  text-align: center;
+  font-size: 0.9rem;
+  color: #64748b;
+  margin-top: 0.25rem;
+
+  a {
+    color: #2563eb;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+    &:hover { color: #1d4ed8; text-decoration: underline; }
   }
 `;
 

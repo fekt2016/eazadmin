@@ -29,7 +29,7 @@ export default function EazShopLayout() {
     <Container>
       <SectionHeader>
         <Title>
-          <FaAward /> EazShop
+          <FaAward /> Saiisai Store
         </Title>
         <Subtitle>Company store: products, orders, shipping, pickup & transactions</Subtitle>
       </SectionHeader>

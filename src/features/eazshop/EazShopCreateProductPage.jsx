@@ -99,7 +99,7 @@ export default function EazShopCreateProductPage() {
       formData.append("condition", data.variants?.[0]?.condition || "new");
 
       await createMutation.mutateAsync(formData);
-      toast.success("EazShop product created");
+      toast.success("Saiisai product created");
       navigate(`${basePath}/products`);
     } catch (err) {
       const msg = err?.response?.data?.message || err?.message || "Failed to create product";
@@ -111,9 +111,9 @@ export default function EazShopCreateProductPage() {
     <PageContainer>
       <HeaderContainer>
         <BackButton type="button" onClick={() => navigate(`${basePath}/products`)}>
-          <FaArrowLeft /> Back to EazShop products
+          <FaArrowLeft /> Back to Saiisai products
         </BackButton>
-        <PageTitle>Add EazShop product</PageTitle>
+        <PageTitle>Add Saiisai product</PageTitle>
         <HeaderDescription>
           Use the same form as the seller: basic info, category, variants, images, and specifications.
         </HeaderDescription>

@@ -6,6 +6,7 @@ import ProtectedRoute from "../routes/protectedRoute";
 
 const ProductDetail = lazy(() => import("../features/products/ProductDetail"));
 const AdminLogin = lazy(() => import("../pages/auth/AdminLogin"));
+const AdminRegister = lazy(() => import("../pages/auth/AdminRegister"));
 const ForgotPasswordPage = lazy(() => import("../features/auth/ForgotPasswordPage"));
 const ResetPasswordPage = lazy(() => import("../features/auth/ResetPasswordPage"));
 const Dashboard = lazy(() => import("../features/Dashboard"));
@@ -66,13 +67,18 @@ const AdminCatchAll = () => {
 
 export default function AdminRoutes() {
 
-  
+
   return (
     <Routes>
       {/* Admin login route - both / and /login so /login does not 404 */}
       <Route path={PATHS.LOGIN} element={<AdminLogin />} />
       <Route path="/login" element={<AdminLogin />} />
-      
+      <Route path="/register" element={
+        <Suspense fallback={<LoadingSpinner />}>
+          <AdminRegister />
+        </Suspense>
+      } />
+
       {/* Password reset routes */}
       <Route path="/forgot-password" element={
         <Suspense fallback={<LoadingSpinner />}>
@@ -84,17 +90,17 @@ export default function AdminRoutes() {
           <ResetPasswordPage />
         </Suspense>
       } />
-      
+
       {/* Tracking detail page - accessible at /tracking/:trackingNumber */}
-      <Route 
-        path={PATHS.TRACKING_REDIRECT} 
+      <Route
+        path={PATHS.TRACKING_REDIRECT}
         element={
           <ProtectedRoute>
             <Suspense fallback={<LoadingSpinner />}>
               <TrackingPage />
             </Suspense>
           </ProtectedRoute>
-        } 
+        }
       />
       <Route
         path={PATHS.DASHBOARD}

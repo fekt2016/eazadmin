@@ -179,7 +179,7 @@ export default function PickupCentersPage() {
       <Header>
         <TitleContainer>
           <Title>Pickup Centers</Title>
-          <Subtitle>Manage EazShop pickup centers</Subtitle>
+          <Subtitle>Manage Saiisai pickup centers</Subtitle>
         </TitleContainer>
         <AddButton onClick={() => handleOpenModal()}>
           <FaPlus />
@@ -408,8 +408,8 @@ export default function PickupCentersPage() {
                   {createMutation.isPending || updateMutation.isPending
                     ? "Saving..."
                     : editingCenter
-                    ? "Update"
-                    : "Create"}
+                      ? "Update"
+                      : "Create"}
                 </SubmitButton>
               </ButtonGroup>
             </Form>

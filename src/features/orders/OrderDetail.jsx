@@ -48,11 +48,11 @@ const OrderDetail = () => {
   // Exclude EazShop store ID so we don't fetch it (display "EazShop Store" instead).
   const sellerIdsToFetch = order?.sellers?.length
     ? [...new Set(
-        order.sellers
-          .filter((s) => s.sellerId && String(s.sellerId) !== EAZSHOP_STORE_ID)
-          .map((s) => String(s.sellerId))
-      )]
-    : [];  
+      order.sellers
+        .filter((s) => s.sellerId && String(s.sellerId) !== EAZSHOP_STORE_ID)
+        .map((s) => String(s.sellerId))
+    )]
+    : [];
 
   const sellerQueries = useQueries({
     queries: sellerIdsToFetch.map((sellerId) => ({
@@ -78,10 +78,10 @@ const OrderDetail = () => {
 
   const sellerById = sellerIdsToFetch.length
     ? sellerIdsToFetch.reduce((acc, id, i) => {
-        const result = sellerQueries[i]?.data;
-        if (result) acc[id] = result;
-        return acc;
-      }, {})
+      const result = sellerQueries[i]?.data;
+      if (result) acc[id] = result;
+      return acc;
+    }, {})
     : {};
 
   // SEO - Dynamic page title based on order
@@ -262,9 +262,9 @@ const OrderDetail = () => {
           const sellerObj = isPopulatedSeller ? rawSellerRef : null;
           const sellerIdFromOrder =
             so.sellerId != null ? so.sellerId
-            : sellerObj?.id ?? sellerObj?._id
-            ?? (rawSellerRef != null ? (typeof rawSellerRef === "string" ? rawSellerRef : rawSellerRef.id ?? rawSellerRef.toString?.()) : null)
-            ?? null;
+              : sellerObj?.id ?? sellerObj?._id
+              ?? (rawSellerRef != null ? (typeof rawSellerRef === "string" ? rawSellerRef : rawSellerRef.id ?? rawSellerRef.toString?.()) : null)
+              ?? null;
           const sellerId = sellerIdFromOrder != null ? String(sellerIdFromOrder) : null;
           const sellerEmail = sellerObj?.email ?? "—";
           return {
@@ -414,10 +414,10 @@ const OrderDetail = () => {
           ? 'Bank transfer payment confirmed successfully!'
           : 'Cash on delivery payment confirmed successfully!'
       );
-      
+
       // Refetch order data to update UI
       await refetchOrder();
-      
+
       // Invalidate related queries
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['order', orderId] });
@@ -540,7 +540,7 @@ const OrderDetail = () => {
                 {order.isPaid && (
                   <PaymentDate>Paid on {order.paidAtFormatted ?? order.date}</PaymentDate>
                 )}
-                
+
                 {/* Payment Confirmation Button */}
                 {(() => {
                   const orderform = orderData?.data?.data?.data || orderData?.data?.data;
@@ -548,28 +548,28 @@ const OrderDetail = () => {
                   const currentPaymentStatus = rawPs; // keep raw for button logic
                   const currentPaymentMethod = order?.rawPaymentMethod || orderform?.paymentMethod;
                   const currentStatus = orderform?.currentStatus || orderform?.orderStatus || orderform?.status || 'pending';
-                  
+
                   // Show button only if payment is truly pending (not paid or completed)
                   const paymentIsPending = currentPaymentStatus !== 'paid' && currentPaymentStatus !== 'completed';
                   const isDelivered = currentStatus === 'delivered' || currentStatus === 'delievered'; // Note: typo in backend enum
-                  
-                  const shouldShowButton = 
+
+                  const shouldShowButton =
                     paymentIsPending &&
                     (currentPaymentMethod === 'bank_transfer' || currentPaymentMethod === 'payment_on_delivery') &&
                     isDelivered;
-                  
+
                   if (!shouldShowButton) {
                     return null;
                   }
-                  
+
                   const buttonText = currentPaymentMethod === 'bank_transfer'
                     ? 'Confirm Bank Payment'
                     : 'Mark Cash Received';
-                  
+
                   const buttonIcon = currentPaymentMethod === 'bank_transfer'
                     ? <FaMoneyBillWave />
                     : <FaCheckCircle />;
-                  
+
                   return (
                     <ConfirmPaymentButton
                       onClick={handleConfirmPayment}
@@ -647,8 +647,8 @@ const OrderDetail = () => {
               const fetched = sellerIdStr ? sellerById[sellerIdStr] : null;
               const queryIndex = sellerIdStr ? sellerIdsToFetch.indexOf(sellerIdStr) : -1;
               const isLoadingSeller = queryIndex >= 0 && sellerQueries[queryIndex]?.isLoading;
-              const name = isEazShopStore ? "EazShop Store" : (fetched?.name ?? seller.name ?? "—");
-              const shopName = isEazShopStore ? "EazShop Store" : (fetched?.shopName ?? seller.shopName ?? "—");
+              const name = isEazShopStore ? "Saiisai Store" : (fetched?.name ?? seller.name ?? "—");
+              const shopName = isEazShopStore ? "Saiisai Store" : (fetched?.shopName ?? seller.shopName ?? "—");
               const email = isEazShopStore ? "Platform store" : (fetched?.email ?? seller.email ?? "—");
               const isInactive = fetched && (fetched.active === false || fetched.status !== "active");
               const fetchFailed = sellerIdStr && !isEazShopStore && !fetched && !isLoadingSeller;
@@ -906,23 +906,23 @@ const StatusBadge = styled.span`
     props.status === "processing"
       ? "#fef9c3"
       : props.status === "shipped"
-      ? "#dbeafe"
-      : props.status === "delivered"
-      ? "#dcfce7"
-      : props.status === "cancelled"
-      ? "#fee2e2"
-      : "#e0f2fe"};
+        ? "#dbeafe"
+        : props.status === "delivered"
+          ? "#dcfce7"
+          : props.status === "cancelled"
+            ? "#fee2e2"
+            : "#e0f2fe"};
 
   color: ${(props) =>
     props.status === "processing"
       ? "#ca8a04"
       : props.status === "shipped"
-      ? "#2563eb"
-      : props.status === "delivered"
-      ? "#16a34a"
-      : props.status === "cancelled"
-      ? "#dc2626"
-      : "#0ea5e9"};
+        ? "#2563eb"
+        : props.status === "delivered"
+          ? "#16a34a"
+          : props.status === "cancelled"
+            ? "#dc2626"
+            : "#0ea5e9"};
 `;
 
 const DeliveryInfo = styled.div`
@@ -1137,14 +1137,14 @@ const PaymentStatus = styled.div`
     props.status === "paid" || props.status === "completed"
       ? "#dcfce7"
       : props.status === "failed"
-      ? "#fee2e2"
-      : "#e0f2fe"};
+        ? "#fee2e2"
+        : "#e0f2fe"};
   color: ${(props) =>
     props.status === "paid" || props.status === "completed"
       ? "#166534"
       : props.status === "failed"
-      ? "#b91c1c"
-      : "#075985"};
+        ? "#b91c1c"
+        : "#075985"};
 `;
 
 const PaymentDate = styled.p`

@@ -46,7 +46,7 @@ export default function Sidebar({ role }) {
     },
     {
       path: `${DASHBOARD_BASE}/eazshop`,
-      label: "EazShop",
+      label: "Saiisai Store",
       icon: <FaAward />,
     },
     {

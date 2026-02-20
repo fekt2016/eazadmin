@@ -6,11 +6,11 @@ import { Link } from "react-router-dom";
  * Saiisai Logo Component
  * Can be used as a standalone logo or as a link to home
  */
-const Logo = ({ 
+const Logo = ({
   variant = "default", // "default" | "compact" | "icon"
   to = null, // If provided, wraps logo in Link
   className = "",
-  ...props 
+  ...props
 }) => {
   const logoContent = (
     <LogoContainer className={className} $variant={variant} {...props}>
@@ -22,6 +22,12 @@ const Logo = ({
           style={{ width: "100%", height: "100%", objectFit: "contain" }}
         />
       </LogoIcon>
+      {variant !== "icon" && (
+        <LogoText>
+          <LogoTextPrimary $variant={variant}>Sai</LogoTextPrimary>
+          <LogoTextSecondary $variant={variant}>isai</LogoTextSecondary>
+        </LogoText>
+      )}
     </LogoContainer>
   );
 
@@ -54,15 +60,16 @@ const LogoLink = styled(Link)`
 `;
 
 const LogoIcon = styled.div`
+  /* Make the logo more prominent in the buyer app header */
   width: ${(props) => {
     if (props.$variant === "compact") return "32px";
     if (props.$variant === "icon") return "40px";
-    return "40px";
+    return "36px";
   }};
   height: ${(props) => {
     if (props.$variant === "compact") return "32px";
     if (props.$variant === "icon") return "40px";
-    return "40px";
+    return "36px";
   }};
   color: #ffc400;
   flex-shrink: 0;
@@ -85,8 +92,8 @@ const LogoText = styled.div`
 
 const LogoTextPrimary = styled.span`
   font-size: ${(props) => {
-    if (props.$variant === "compact") return "1.25rem";
-    return "1.5rem";
+    if (props.$variant === "compact") return "0.85rem";
+    return "1rem";
   }};
   font-weight: 700;
   color: #1e293b;
@@ -95,8 +102,8 @@ const LogoTextPrimary = styled.span`
 
 const LogoTextSecondary = styled.span`
   font-size: ${(props) => {
-    if (props.$variant === "compact") return "1.25rem";
-    return "1.5rem";
+    if (props.$variant === "compact") return "0.85rem";
+    return "1rem";
   }};
   font-weight: 700;
   color: #ffc400;

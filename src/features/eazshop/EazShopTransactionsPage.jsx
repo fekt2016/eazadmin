@@ -76,7 +76,7 @@ export default function EazShopTransactionsPage() {
     return (
       <PageContainer>
         <ErrorBox>
-          <h3>Failed to load EazShop transactions</h3>
+          <h3>Failed to load Saiisai transactions</h3>
           <p>{error.message || "Please try again later."}</p>
         </ErrorBox>
       </PageContainer>
@@ -88,10 +88,10 @@ export default function EazShopTransactionsPage() {
       <Header>
         <Title>
           <FaHistory />
-          <h2>EazShop Transactions</h2>
+          <h2>Saiisai Transactions</h2>
         </Title>
         <Subtitle>
-          All revenue transactions for the EazShop company store (credits and debits).
+          All revenue transactions for the Saiisai company store (credits and debits).
         </Subtitle>
       </Header>
 
@@ -131,7 +131,7 @@ export default function EazShopTransactionsPage() {
             {history.length === 0 ? (
               <tr>
                 <td colSpan={7} style={{ textAlign: "center", padding: "2rem" }}>
-                  No EazShop transactions found
+                  No Saiisai transactions found
                 </td>
               </tr>
             ) : (

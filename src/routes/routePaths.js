@@ -108,67 +108,67 @@ export const ROUTE_CONFIG = {
   [PATHS.USER_DETAIL]: {
     title: "User Details - Admin | Saiisai",
     description: "View and manage user account details",
-    keywords: "user details, admin, EazShop",
+    keywords: "user details, admin, Saiisai",
   },
 
   [PATHS.SELLERS]: {
     title: "Sellers Management - Admin | Saiisai",
     description: "Manage seller accounts",
-    keywords: "sellers, admin, EazShop",
+    keywords: "sellers, admin, Saiisai",
   },
 
   [PATHS.SELLER_DETAIL]: {
     title: "Seller Details - Admin | Saiisai",
     description: "View and manage seller account details",
-    keywords: "seller details, admin, EazShop",
+    keywords: "seller details, admin, Saiisai",
   },
 
   [PATHS.SELLER_VERIFICATION]: {
     title: "Seller Verification - Admin | Saiisai",
     description: "Review and verify seller accounts",
-    keywords: "seller verification, admin, EazShop",
+    keywords: "seller verification, admin, Saiisai",
   },
 
   [PATHS.PRODUCTS]: {
     title: "Products Management - Admin | Saiisai",
     description: "Moderate and manage products",
-    keywords: "products, moderation, admin, EazShop",
+    keywords: "products, moderation, admin, Saiisai",
   },
 
   [PATHS.PRODUCT_MODERATION]: {
     title: "Product Moderation - Admin | Saiisai",
     description: "Review and moderate product listings",
-    keywords: "product moderation, admin, EazShop",
+    keywords: "product moderation, admin, Saiisai",
   },
 
   [PATHS.ORDERS]: {
     title: "Orders Management - Admin | Saiisai",
     description: "Manage platform orders",
-    keywords: "orders, admin, EazShop",
+    keywords: "orders, admin, Saiisai",
   },
 
   [PATHS.ORDER_DETAIL]: {
     title: "Order Details - Admin | Saiisai",
     description: "View detailed order information",
-    keywords: "order details, admin, EazShop",
+    keywords: "order details, admin, Saiisai",
   },
 
   [PATHS.TRANSACTIONS]: {
     title: "Transactions - Admin | Saiisai",
     description: "View and manage transactions",
-    keywords: "transactions, admin, EazShop",
+    keywords: "transactions, admin, Saiisai",
   },
 
   [PATHS.PAYOUTS]: {
     title: "Payouts - Admin | Saiisai",
     description: "Manage seller payouts",
-    keywords: "payouts, admin, EazShop",
+    keywords: "payouts, admin, Saiisai",
   },
 
   [PATHS.REFUNDS]: {
     title: "Refunds - Admin | Saiisai",
     description: "Manage refund requests and processing",
-    keywords: "refunds, admin, EazShop",
+    keywords: "refunds, admin, Saiisai",
   },
 
   [PATHS.CATEGORIES]: {
@@ -178,15 +178,15 @@ export const ROUTE_CONFIG = {
   },
 
   [PATHS.EAZSHOP_STORE]: {
-    title: "EazShop - Admin | Saiisai",
-    description: "Manage EazShop (company store)",
-    keywords: "eazshop, company store, admin, Saiisai",
+    title: "Saiisai Store - Admin | Saiisai",
+    description: "Manage Saiisai (company store)",
+    keywords: "saiisai, company store, admin, Saiisai",
   },
 
   [PATHS.EAZSHOP_PRODUCTS]: {
-    title: "EazShop Products - Admin | Saiisai",
-    description: "Manage EazShop products",
-    keywords: "eazshop products, admin, Saiisai",
+    title: "Saiisai Products - Admin | Saiisai",
+    description: "Manage Saiisai products",
+    keywords: "saiisai products, admin, Saiisai",
   },
 
   [PATHS.COUPONS]: {
@@ -257,7 +257,7 @@ export const NAVIGATION_MENU = {
   ],
 
   eazshop: [
-    { path: PATHS.EAZSHOP_STORE, label: "EazShop" },
+    { path: PATHS.EAZSHOP_STORE, label: "Saiisai Store" },
     { path: PATHS.EAZSHOP_PRODUCTS, label: "Products" },
     { path: PATHS.EAZSHOP_ORDERS, label: "Orders" },
     { path: PATHS.EAZSHOP_SHIPPING, label: "Shipping" },

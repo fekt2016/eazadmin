@@ -10,9 +10,9 @@ import { toast } from "react-toastify";
 const EAZSHOP_SELLER_ID = "6970b22eaba06cadfd4b8035";
 
 function getShopName(product) {
-  if (product.isEazShopProduct === true) return "EazShop";
+  if (product.isEazShopProduct === true) return "Saiisai";
   const sellerId = product.seller?._id?.toString?.() ?? product.seller?.toString?.() ?? "";
-  if (sellerId === EAZSHOP_SELLER_ID) return "EazShop";
+  if (sellerId === EAZSHOP_SELLER_ID) return "Saiisai";
   if (product.seller && typeof product.seller === "object") {
     return product.seller.shopName || product.seller.name || "—";
   }
@@ -117,14 +117,14 @@ export default function EazShopProductsPage() {
     return (
       <ErrorContainer>
         <ErrorTitle>Error Loading Products</ErrorTitle>
-        <ErrorMessage>{error.message || 'Failed to load EazShop products'}</ErrorMessage>
+        <ErrorMessage>{error.message || 'Failed to load Saiisai products'}</ErrorMessage>
         <ErrorDetails>
           Please check the browser console for more details.
         </ErrorDetails>
       </ErrorContainer>
     );
   }
-  
+
   // Debug: Log when we have data but no products
   if (data && products.length === 0) {
     console.warn('⚠️ [EazShopProductsPage] Data exists but no products extracted:', {
@@ -140,13 +140,13 @@ export default function EazShopProductsPage() {
     <DashboardContainer>
       <Header>
         <TitleContainer>
-          <Title>EazShop Products</Title>
-          <Subtitle>Manage EazShop (company store) products. Use “Add product” to create new items.</Subtitle>
+          <Title>Saiisai Products</Title>
+          <Subtitle>Manage Saiisai (company store) products. Use “Add product” to create new items.</Subtitle>
         </TitleContainer>
         <HeaderActions>
           <AddProductButton
             onClick={() => navigate(`/dashboard/${PATHS.EAZSHOP_PRODUCTS_NEW}`)}
-            title="Create a new EazShop product"
+            title="Create a new Saiisai product"
           >
             <FiPlus /> Add product
           </AddProductButton>
@@ -253,7 +253,7 @@ export default function EazShopProductsPage() {
                   >
                     <FiEye />
                   </ActionButton>
-                  <ActionButton 
+                  <ActionButton
                     title="Edit"
                     onClick={() =>
                       navigate(
@@ -277,14 +277,14 @@ export default function EazShopProductsPage() {
         <NoResultsContainer>
           <NoResultsIcon>📦</NoResultsIcon>
           <NoResultsTitle>
-            {products.length === 0 
-              ? "No EazShop Products Found" 
+            {products.length === 0
+              ? "No Saiisai Products Found"
               : "No Products Match Your Filters"}
           </NoResultsTitle>
           <NoResultsMessage>
-            {products.length === 0 
-              ? "You haven't created any EazShop products yet. Create your first EazShop product to get started!" 
-              : `Try adjusting your search or filter. You have ${products.length} total EazShop products.`}
+            {products.length === 0
+              ? "You haven't created any Saiisai products yet. Create your first Saiisai product to get started!"
+              : `Try adjusting your search or filter. You have ${products.length} total Saiisai products.`}
           </NoResultsMessage>
           {products.length === 0 && (
             <NoResultsAction>
@@ -556,14 +556,14 @@ const StatusPill = styled.span`
     status === "active"
       ? "#dcfce7"
       : status === "inactive"
-      ? "#f1f5f9"
-      : "#fee2e2"};
+        ? "#f1f5f9"
+        : "#fee2e2"};
   color: ${({ status }) =>
     status === "active"
       ? "#166534"
       : status === "inactive"
-      ? "#475569"
-      : "#b91c1c"};
+        ? "#475569"
+        : "#b91c1c"};
 `;
 
 const ActionButtons = styled.div`

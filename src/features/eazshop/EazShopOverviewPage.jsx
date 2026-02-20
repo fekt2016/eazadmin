@@ -16,13 +16,13 @@ const cards = [
   {
     to: `${basePath}/products`,
     label: "Products",
-    description: "Manage EazShop products, add new items, mark seller products.",
+    description: "Manage Saiisai products, add new items, mark seller products.",
     icon: <FaBoxes />,
   },
   {
     to: `${basePath}/orders`,
     label: "Orders",
-    description: "View and manage EazShop orders.",
+    description: "View and manage Saiisai orders.",
     icon: <FaShoppingCart />,
   },
   {
@@ -45,7 +45,7 @@ export default function EazShopOverviewPage() {
       <Intro>
         <FaAward size={32} />
         <p>
-          EazShop is the company store. Here you can manage products (including
+          Saiisai Store is the company store. Here you can manage products (including
           adding seller products you approve), view orders, set shipping fees,
           and manage pickup centers.
         </p>

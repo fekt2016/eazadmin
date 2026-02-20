@@ -29,7 +29,7 @@ export const categoryService = {
       categoryData instanceof FormData
         ? { headers: { "Content-Type": "multipart/form-data" } }
         : {};
-    const response = await api.put(`/categories/${id}`, categoryData, config);
+    const response = await api.patch(`/categories/${id}`, categoryData, config);
     return response.data;
   },
   deleteCategory: async (id) => {

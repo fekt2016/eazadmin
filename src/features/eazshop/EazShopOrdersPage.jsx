@@ -49,7 +49,7 @@ export default function EazShopOrdersPage() {
     return (
       <ErrorContainer>
         <FaExclamationCircle size={48} color="#e74c3c" />
-        <h3>Failed to load EazShop orders</h3>
+        <h3>Failed to load Saiisai orders</h3>
         <p>{error.message || "Please try again later."}</p>
       </ErrorContainer>
     );
@@ -59,9 +59,9 @@ export default function EazShopOrdersPage() {
     <Container>
       <Header>
         <Title>
-          <FaShoppingCart /> EazShop Orders
+          <FaShoppingCart /> Saiisai Orders
         </Title>
-        <Description>Orders for the company store (EazShop)</Description>
+        <Description>Orders for the company store (Saiisai)</Description>
       </Header>
 
       <TableWrapper>
@@ -112,7 +112,7 @@ export default function EazShopOrdersPage() {
                 <Td colSpan={6}>
                   <EmptyState>
                     <FaShoppingCart size={40} />
-                    <p>No EazShop orders yet.</p>
+                    <p>No Saiisai orders yet.</p>
                   </EmptyState>
                 </Td>
               </tr>
