@@ -116,13 +116,13 @@ const CategoryTree = function ({
       const hasChildren = subCount > 0;
       const subcategories = getImmediateSubcategories(category._id);
       const isActive = activeTab === category._id;
-      
+
       // Fetch products for this category
       const { data: productsData, isLoading: isLoadingProducts } = useGetProductsByCategory(
         category._id,
         { limit: 5, page: 1 }
       );
-      
+
       const products = productsData?.data?.products || productsData?.products || [];
       const totalProducts = productsData?.data?.totalCount || productsData?.totalCount || products.length;
 
@@ -194,11 +194,18 @@ const CategoryTree = function ({
                 </MetaItem>
 
                 <MetaItem>
+                  <MetaLabel>Shipping Contribution:</MetaLabel>
+                  <MetaValue>
+                    Drop: GHS {category.shippingContribution?.dropship || 0} | Exp: GHS {category.shippingContribution?.express || 0}
+                  </MetaValue>
+                </MetaItem>
+
+                <MetaItem>
                   <MetaLabel>Created:</MetaLabel>
                   <MetaValue>{category.createdAt}</MetaValue>
                 </MetaItem>
               </CategoryMeta>
-              
+
               {/* Products Section */}
               {!isLoadingProducts && products.length > 0 && (
                 <ProductsSection>
@@ -419,6 +426,12 @@ const CategoryTree = function ({
                               <MetaLabel>Parent:</MetaLabel>
                               <MetaValue>
                                 {getParentName(sub._id, categories)}
+                              </MetaValue>
+                            </MetaItem>
+                            <MetaItem>
+                              <MetaLabel>Shipping Contribution:</MetaLabel>
+                              <MetaValue>
+                                Drop: GHS {sub.shippingContribution?.dropship || 0} | Exp: GHS {sub.shippingContribution?.express || 0}
                               </MetaValue>
                             </MetaItem>
                             <MetaItem>

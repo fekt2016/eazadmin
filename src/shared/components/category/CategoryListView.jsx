@@ -24,13 +24,13 @@ const CategoryCardComponent = ({
   const hasChildren = subCount > 0;
   const subcategories = getImmediateSubcategories(category._id);
   const isExpanded = expandedCategories[category._id];
-  
+
   // Fetch products for this category - hooks can be used here since it's a separate component
   const { data: productsData, isLoading: isLoadingProducts } = useGetProductsByCategory(
     category._id,
     { limit: 10, page: 1 }
   );
-  
+
   const products = productsData?.data?.products || productsData?.products || [];
   const totalProducts = productsData?.data?.totalCount || productsData?.totalCount || products.length;
 
@@ -102,8 +102,15 @@ const CategoryCardComponent = ({
           <MetaValue>
             {category.parentId
               ? categories.find((c) => c._id === category.parentId)
-                  ?.name || "None"
+                ?.name || "None"
               : "None"}
+          </MetaValue>
+        </MetaItem>
+
+        <MetaItem>
+          <MetaLabel>Shipping Contribution:</MetaLabel>
+          <MetaValue>
+            Dropship: GHS {category.shippingContribution?.dropship || 0} | Express: GHS {category.shippingContribution?.express || 0}
           </MetaValue>
         </MetaItem>
 

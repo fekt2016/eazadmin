@@ -14,7 +14,6 @@ import {
   FaStar,
   FaHistory,
   FaCog,
-  FaDesktop,
   FaUndo,
   FaWallet,
   FaHeadset,
@@ -46,7 +45,7 @@ export default function Sidebar({ role }) {
     },
     {
       path: `${DASHBOARD_BASE}/eazshop`,
-      label: "Saiisai Store",
+      label: "EazShop",
       icon: <FaAward />,
     },
     {
@@ -93,11 +92,6 @@ export default function Sidebar({ role }) {
       path: `${DASHBOARD_BASE}/activity-logs`,
       label: "Activity Logs",
       icon: <FaHistory />,
-    },
-    {
-      path: `${DASHBOARD_BASE}/device-sessions`,
-      label: "Device Sessions",
-      icon: <FaDesktop />,
     },
     {
       path: `${DASHBOARD_BASE}/shipping-rates`,

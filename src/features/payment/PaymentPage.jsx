@@ -5,7 +5,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
-import { useGetWithdrawalRequests, useApproveWithdrawalRequest, useRejectWithdrawalRequest } from "../../shared/hooks/usePayout";
+import { useGetWithdrawalRequests, useApproveWithdrawalRequest, useRejectWithdrawalRequest, useVerifyTransferStatus } from "../../shared/hooks/usePayout";
 import { PATHS } from "../../routes/routhPath";
 import { toast } from "react-toastify";
 // import {  FaFilter, FaFileExport, FaSync, FaCheck, ,, FaMoneyBillWave, ,, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
@@ -95,7 +95,7 @@ export default function PaymentPage() {
     data: withdrawalData,
     isLoading: isLoadingWithdrawals,
     refetch: refetchWithdrawals,
-  } = useGetWithdrawalRequests({ 
+  } = useGetWithdrawalRequests({
     limit: 10000, // Very high limit to get all requests
     page: 1,
     // No status or seller filter - get all withdrawal requests from all sellers
@@ -109,6 +109,7 @@ export default function PaymentPage() {
 
   const approveWithdrawal = useApproveWithdrawalRequest();
   const rejectWithdrawal = useRejectWithdrawalRequest();
+  const verifyTransfer = useVerifyTransferStatus();
 
   // Refetch withdrawals on mount
   // Removed useEffect that was causing infinite loop - React Query handles refetching automatically
@@ -123,7 +124,7 @@ export default function PaymentPage() {
 
   // Use withdrawal requests only
   const isLoading = isLoadingWithdrawals;
-  const isProcessing = approveWithdrawal.isPending || rejectWithdrawal.isPending;
+  const isProcessing = approveWithdrawal.isPending || rejectWithdrawal.isPending || verifyTransfer.isPending;
 
   // Status groups for stats and filter (match backend PaymentRequest enum)
   const STATUS = {
@@ -243,7 +244,7 @@ export default function PaymentPage() {
         }
       } else if (action === "verify") {
         toast.info("Verifying transfer status...");
-        // TODO: Add verify transfer status mutation
+        verifyTransfer.mutate(id);
       }
     } catch (error) {
       console.error("Error processing withdrawal request:", error);
@@ -431,7 +432,7 @@ export default function PaymentPage() {
                 // Format payment details for display
                 const formatPaymentDetails = (paymentMethod, paymentDetails) => {
                   if (!paymentDetails) return "N/A";
-                  
+
                   if (paymentMethod === "bank") {
                     if (paymentDetails.accountNumber) {
                       return `${paymentDetails.accountName || "N/A"} - ${paymentDetails.accountNumber}${paymentDetails.bankName ? ` (${paymentDetails.bankName})` : ""}`;
@@ -441,7 +442,7 @@ export default function PaymentPage() {
                       return `${paymentDetails.phone}${paymentDetails.network ? ` (${paymentDetails.network})` : ""}`;
                     }
                   }
-                  
+
                   return "N/A";
                 };
 
@@ -463,26 +464,58 @@ export default function PaymentPage() {
                         </div>
                       </div>
                     </TableCell>
-                <TableCell>
-                  <StatusBadge $status={request.status}>
-                    {request.status === 'deactivated' 
-                      ? 'Deactivated' 
-                      : request.status.charAt(0).toUpperCase() + request.status.slice(1)}
-                  </StatusBadge>
-                </TableCell>
-                <TableCell>
-                  <ActionButtons>
-                    <ViewDetailButton
-                      type="button"
-                      onClick={() => navigate(`/dashboard/payment-request/detail/${String(request.id)}`)}
-                      title="View request details"
-                    >
-                      <FaEye />
-                      <span>View</span>
-                    </ViewDetailButton>
-                  </ActionButtons>
-                </TableCell>
-              </TableRow>
+                    <TableCell>
+                      <StatusBadge $status={request.status}>
+                        {request.status === 'deactivated'
+                          ? 'Deactivated'
+                          : request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                      </StatusBadge>
+                    </TableCell>
+                    <TableCell>
+                      <ActionButtons>
+                        <ViewDetailButton
+                          type="button"
+                          onClick={() => navigate(`/dashboard/payment-request/detail/${String(request.id)}`)}
+                          title="View request details"
+                        >
+                          <FaEye />
+                          <span>View</span>
+                        </ViewDetailButton>
+
+                        {request.status === STATUS.PENDING && (
+                          <>
+                            <ApproveButton
+                              onClick={(e) => { e.stopPropagation(); handleAction(request.id, "approve"); }}
+                              disabled={isProcessing}
+                              title="Approve and initiate transfer"
+                            >
+                              <FaCheck />
+                              <span>Approve</span>
+                            </ApproveButton>
+                            <RejectButton
+                              onClick={(e) => { e.stopPropagation(); handleAction(request.id, "reject"); }}
+                              disabled={isProcessing}
+                              title="Reject request"
+                            >
+                              <FaTimes />
+                              <span>Reject</span>
+                            </RejectButton>
+                          </>
+                        )}
+
+                        {(request.status === STATUS.PROCESSING || request.status === STATUS.AWAITING_OTP) && (
+                          <VerifyButton
+                            onClick={(e) => { e.stopPropagation(); handleAction(request.id, "verify"); }}
+                            disabled={isProcessing}
+                            title="Check Paystack transfer status"
+                          >
+                            <FaSync />
+                            <span>Verify</span>
+                          </VerifyButton>
+                        )}
+                      </ActionButtons>
+                    </TableCell>
+                  </TableRow>
                 );
               })
             )}
@@ -572,17 +605,17 @@ const StatCard = styled.div`
   align-items: center;
   border-left: 4px solid
     ${(props) =>
-      props.$type === "pending"
-        ? "#f59e0b"
-        : props.$type === "approved"
+    props.$type === "pending"
+      ? "#f59e0b"
+      : props.$type === "approved"
         ? "#3b82f6"
         : props.$type === "paid"
-        ? "#10b981"
-        : props.$type === "totalAmount"
-        ? "#8b5cf6"
-        : props.$type === "rejected"
-        ? "#ef4444"
-        : "#94a3b8"};
+          ? "#10b981"
+          : props.$type === "totalAmount"
+            ? "#8b5cf6"
+            : props.$type === "rejected"
+              ? "#ef4444"
+              : "#94a3b8"};
 `;
 
 const StatIcon = styled.div`
@@ -598,26 +631,26 @@ const StatIcon = styled.div`
     props.$type === "pending"
       ? "#f59e0b"
       : props.$type === "approved"
-      ? "#3b82f6"
-      : props.$type === "paid"
-      ? "#10b981"
-      : props.$type === "totalAmount"
-      ? "#8b5cf6"
-      : props.$type === "rejected"
-      ? "#ef4444"
-      : "#94a3b8"};
+        ? "#3b82f6"
+        : props.$type === "paid"
+          ? "#10b981"
+          : props.$type === "totalAmount"
+            ? "#8b5cf6"
+            : props.$type === "rejected"
+              ? "#ef4444"
+              : "#94a3b8"};
   background-color: ${(props) =>
     props.$type === "pending"
       ? "#fef3c7"
       : props.$type === "approved"
-      ? "#dbeafe"
-      : props.$type === "paid"
-      ? "#d1fae5"
-      : props.$type === "totalAmount"
-      ? "#ede9fe"
-      : props.$type === "rejected"
-      ? "#fee2e2"
-      : "#f1f5f9"};
+        ? "#dbeafe"
+        : props.$type === "paid"
+          ? "#d1fae5"
+          : props.$type === "totalAmount"
+            ? "#ede9fe"
+            : props.$type === "rejected"
+              ? "#fee2e2"
+              : "#f1f5f9"};
 `;
 
 const StatContent = styled.div`
@@ -789,27 +822,27 @@ const StatusBadge = styled.span`
     props.$status === "pending"
       ? "#fef3c7"
       : props.$status === "approved"
-      ? "#dbeafe"
-      : props.$status === "paid"
-      ? "#d1fae5"
-      : props.$status === "rejected"
-      ? "#fee2e2"
-      : props.$status === "deactivated"
-      ? "#f3f4f6"
-      : "#f1f5f9"};
+        ? "#dbeafe"
+        : props.$status === "paid"
+          ? "#d1fae5"
+          : props.$status === "rejected"
+            ? "#fee2e2"
+            : props.$status === "deactivated"
+              ? "#f3f4f6"
+              : "#f1f5f9"};
 
   color: ${(props) =>
     props.$status === "pending"
       ? "#b45309"
       : props.$status === "approved"
-      ? "#1d4ed8"
-      : props.$status === "paid"
-      ? "#047857"
-      : props.$status === "rejected"
-      ? "#b91c1c"
-      : props.$status === "deactivated"
-      ? "#6b7280"
-      : "#64748b"};
+        ? "#1d4ed8"
+        : props.$status === "paid"
+          ? "#047857"
+          : props.$status === "rejected"
+            ? "#b91c1c"
+            : props.$status === "deactivated"
+              ? "#6b7280"
+              : "#64748b"};
 `;
 
 const ActionButtons = styled.div`
@@ -843,6 +876,39 @@ const ViewDetailButton = styled.button`
   }
 `;
 
+const ApproveButton = styled(ViewDetailButton)`
+  color: #047857;
+  background-color: #d1fae5;
+  border-color: #6ee7b7;
+
+  &:hover {
+    background-color: #a7f3d0;
+    color: #065f46;
+  }
+`;
+
+const RejectButton = styled(ViewDetailButton)`
+  color: #b91c1c;
+  background-color: #fee2e2;
+  border-color: #fca5a5;
+
+  &:hover {
+    background-color: #fecaca;
+    color: #991b1b;
+  }
+`;
+
+const VerifyButton = styled(ViewDetailButton)`
+  color: #7c3aed;
+  background-color: #f5f3ff;
+  border-color: #ddd6fe;
+
+  &:hover {
+    background-color: #ede9fe;
+    color: #6d28d9;
+  }
+`;
+
 const ActionIcon = styled.button`
   width: 2rem;
   height: 2rem;
@@ -856,43 +922,43 @@ const ActionIcon = styled.button`
     props.$type === "approve"
       ? "#d1fae5"
       : props.$type === "reject"
-      ? "#fee2e2"
-      : props.$type === "pay"
-      ? "#dbeafe"
-      : props.$type === "download"
-      ? "#ede9fe"
-      : props.$type === "delete"
-      ? "#fee2e2"
-      : "#f1f5f9"};
+        ? "#fee2e2"
+        : props.$type === "pay"
+          ? "#dbeafe"
+          : props.$type === "download"
+            ? "#ede9fe"
+            : props.$type === "delete"
+              ? "#fee2e2"
+              : "#f1f5f9"};
 
   color: ${(props) =>
     props.$type === "approve"
       ? "#047857"
       : props.$type === "reject"
-      ? "#b91c1c"
-      : props.$type === "pay"
-      ? "#1d4ed8"
-      : props.$type === "download"
-      ? "#7e22ce"
-      : props.$type === "delete"
-      ? "#b91c1c"
-      : "#334155"};
+        ? "#b91c1c"
+        : props.$type === "pay"
+          ? "#1d4ed8"
+          : props.$type === "download"
+            ? "#7e22ce"
+            : props.$type === "delete"
+              ? "#b91c1c"
+              : "#334155"};
 
   border: none;
 
   &:hover {
     background-color: ${(props) =>
-      props.$type === "approve"
-        ? "#a7f3d0"
-        : props.$type === "reject"
+    props.$type === "approve"
+      ? "#a7f3d0"
+      : props.$type === "reject"
         ? "#fecaca"
         : props.$type === "pay"
-        ? "#bfdbfe"
-        : props.$type === "download"
-        ? "#ddd6fe"
-        : props.$type === "delete"
-        ? "#fecaca"
-        : "#e2e8f0"};
+          ? "#bfdbfe"
+          : props.$type === "download"
+            ? "#ddd6fe"
+            : props.$type === "delete"
+              ? "#fecaca"
+              : "#e2e8f0"};
   }
 `;
 

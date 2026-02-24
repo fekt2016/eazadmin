@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import styled from 'styled-components';
-import { 
-  useGetNeighborhoods, 
+import {
+  useGetNeighborhoods,
   useGetNeighborhoodStatistics,
   useRefreshCoordinates,
   useRecalculateNeighborhood,
@@ -11,7 +11,7 @@ import { FaMapMarkerAlt, FaCheckCircle, FaTimesCircle, FaSearch, FaSort, FaPlus,
 import NeighborhoodModal from './NeighborhoodModal';
 import ButtonSpinner from '../../shared/components/ButtonSpinner';
 
-const DistanceOverviewPage = () => {
+const DistanceOverviewPage = ({ embedded = false }) => {
   const [selectedZone, setSelectedZone] = useState('all');
   const [selectedCity, setSelectedCity] = useState('all');
   const [sortBy, setSortBy] = useState('distanceFromHQ');
@@ -120,7 +120,7 @@ const DistanceOverviewPage = () => {
   };
 
   return (
-    <Container>
+    <Container $embedded={embedded}>
       <Header>
         <HeaderContent>
           <div>
@@ -379,7 +379,7 @@ const DistanceOverviewPage = () => {
           {pagination.totalPages > 1 && (
             <PaginationContainer>
               <PaginationInfo>
-                Showing page {pagination.currentPage} of {pagination.totalPages} 
+                Showing page {pagination.currentPage} of {pagination.totalPages}
                 ({pagination.totalRecords} total neighborhoods)
               </PaginationInfo>
               <PaginationButtons>
@@ -395,7 +395,7 @@ const DistanceOverviewPage = () => {
                 >
                   Previous
                 </PaginationButton>
-                
+
                 {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
                   let pageNum;
                   if (pagination.totalPages <= 5) {
@@ -407,7 +407,7 @@ const DistanceOverviewPage = () => {
                   } else {
                     pageNum = pagination.currentPage - 2 + i;
                   }
-                  
+
                   return (
                     <PaginationButton
                       key={pageNum}
@@ -419,7 +419,7 @@ const DistanceOverviewPage = () => {
                     </PaginationButton>
                   );
                 })}
-                
+
                 <PaginationButton
                   onClick={() => handlePageChange(pagination.currentPage + 1)}
                   disabled={!pagination.hasNextPage || isLoading}
@@ -452,8 +452,8 @@ export default DistanceOverviewPage;
 
 // Styled Components
 const Container = styled.div`
-  padding: 2rem;
-  max-width: 1600px;
+  padding: ${(props) => (props.$embedded ? '0' : '2rem')};
+  max-width: ${(props) => (props.$embedded ? '100%' : '1600px')};
   margin: 0 auto;
 `;
 
@@ -833,12 +833,12 @@ const ActionButton = styled.button`
     transform: translateY(-1px);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     background: ${(props) => {
-      if (props.$primary) return '#bbdefb';
-      if (props.$secondary) return '#e1bee7';
-      if (props.$edit) return '#ffeaa7';
-      if (props.$danger) return '#f8bbd0';
-      return '#e0e0e0';
-    }};
+    if (props.$primary) return '#bbdefb';
+    if (props.$secondary) return '#e1bee7';
+    if (props.$edit) return '#ffeaa7';
+    if (props.$danger) return '#f8bbd0';
+    return '#e0e0e0';
+  }};
   }
 
   &:disabled {
@@ -859,14 +859,14 @@ const StatusBadge = styled.span`
     props.$success
       ? 'var(--color-green-100)'
       : props.$error
-      ? 'var(--color-red-100)'
-      : 'var(--color-grey-100)'};
+        ? 'var(--color-red-100)'
+        : 'var(--color-grey-100)'};
   color: ${(props) =>
     props.$success
       ? 'var(--color-green-700)'
       : props.$error
-      ? 'var(--color-red-700)'
-      : 'var(--color-grey-700)'};
+        ? 'var(--color-red-700)'
+        : 'var(--color-grey-700)'};
 `;
 
 const PaginationContainer = styled.div`
@@ -897,9 +897,9 @@ const PaginationButton = styled.button`
   padding: 0.5rem 1rem;
   border: 1px solid var(--color-grey-300);
   border-radius: var(--border-radius-sm);
-  background: ${(props) => 
+  background: ${(props) =>
     props.$active ? 'var(--color-primary)' : 'white'};
-  color: ${(props) => 
+  color: ${(props) =>
     props.$active ? 'white' : 'var(--color-grey-700)'};
   font-size: 0.9rem;
   font-weight: ${(props) => props.$active ? '600' : '500'};
@@ -908,8 +908,8 @@ const PaginationButton = styled.button`
   min-width: 40px;
 
   &:hover:not(:disabled) {
-    background: ${(props) => 
-      props.$active ? 'var(--color-primary-600)' : 'var(--color-grey-100)'};
+    background: ${(props) =>
+    props.$active ? 'var(--color-primary-600)' : 'var(--color-grey-100)'};
     transform: translateY(-1px);
   }
 

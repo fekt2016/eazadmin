@@ -14,14 +14,41 @@ import {
   FaBroom,
 } from "react-icons/fa";
 import useActivityLogs from "../shared/hooks/useActivityLogs";
-import { formatDate } from "../shared/utils/helpers";
 import { toast } from "react-toastify";
 import { LoadingSpinner } from "../shared/components/LoadingSpinner";
+import DeviceSessionsPage from "../features/sessions/DeviceSessionsPage";
 
 const Container = styled.div`
   padding: 2rem;
   max-width: 1600px;
   margin: 0 auto;
+`;
+
+const TabsContainer = styled.div`
+  display: inline-flex;
+  border-radius: 999px;
+  border: 1px solid #e0e0e0;
+  padding: 0.15rem;
+  background: #f9fafb;
+  margin-bottom: 1.5rem;
+`;
+
+const TabButton = styled.button`
+  border: none;
+  background: ${(props) => (props.$active ? '#fff' : 'transparent')};
+  color: ${(props) => (props.$active ? '#1a1a1a' : '#666')};
+  padding: 0.6rem 1.25rem;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  font-weight: ${(props) => (props.$active ? '500' : '400')};
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: ${(props) =>
+    props.$active ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'};
+
+  &:hover {
+    color: #1a1a1a;
+  }
 `;
 
 const Header = styled.div`
@@ -350,6 +377,7 @@ const LoadingContainer = styled.div`
 `;
 
 export default function ActivityLogs() {
+  const [activeTab, setActiveTab] = useState('activity-logs'); // 'activity-logs' | 'device-sessions'
   const [page, setPage] = useState(1);
   const [limit] = useState(50);
   const [search, setSearch] = useState("");
@@ -447,265 +475,292 @@ export default function ActivityLogs() {
     <Container>
       <Header>
         <TitleSection>
-          <h1>Activity Logs</h1>
-          <p>Monitor all user activities across the platform</p>
+          <h1>Activity & Sessions</h1>
+          <p>Monitor all user activities and device sessions across the platform</p>
         </TitleSection>
-        <div style={{ display: "flex", gap: "0.5rem" }}>
-          <ActionButton
-            onClick={() => cleanupOldLogs(90)}
-            style={{ background: "#95a5a6" }}
-          >
-            <FaBroom /> Cleanup (90 days)
-          </ActionButton>
-          <ActionButton onClick={handleDeleteAll} disabled={isDeletingAll}>
-            <FaTrash /> Clear All Logs
-          </ActionButton>
-        </div>
+        {activeTab === 'activity-logs' && (
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <ActionButton
+              onClick={() => cleanupOldLogs(90)}
+              style={{ background: "#95a5a6" }}
+            >
+              <FaBroom /> Cleanup (90 days)
+            </ActionButton>
+            <ActionButton onClick={handleDeleteAll} disabled={isDeletingAll}>
+              <FaTrash /> Clear All Logs
+            </ActionButton>
+          </div>
+        )}
       </Header>
 
-      <ControlsSection>
-        <SearchBar>
-          <FaSearch style={{ color: "#8D99AE" }} />
-          <input
-            type="text"
-            placeholder="Search by action, description, or user..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-          />
-        </SearchBar>
-        <FilterButton onClick={() => setShowFilters(!showFilters)}>
-          <FaFilter /> {showFilters ? "Hide" : "Show"} Filters
-        </FilterButton>
-      </ControlsSection>
+      <TabsContainer>
+        <TabButton
+          type="button"
+          $active={activeTab === 'activity-logs'}
+          onClick={() => setActiveTab('activity-logs')}
+        >
+          Activity Logs
+        </TabButton>
+        <TabButton
+          type="button"
+          $active={activeTab === 'device-sessions'}
+          onClick={() => setActiveTab('device-sessions')}
+        >
+          Device Sessions
+        </TabButton>
+      </TabsContainer>
 
-      {showFilters && (
-        <FiltersPanel>
-          <FilterGroup>
-            <label>Role</label>
-            <select
-              value={roleFilter}
-              onChange={(e) => {
-                setRoleFilter(e.target.value);
-                setPage(1);
-              }}
-            >
-              <option value="all">All Roles</option>
-              <option value="buyer">Buyer</option>
-              <option value="seller">Seller</option>
-              <option value="admin">Admin</option>
-            </select>
-          </FilterGroup>
+      {activeTab === 'activity-logs' && (
+        <>
+          <ControlsSection>
+            <SearchBar>
+              <FaSearch style={{ color: "#8D99AE" }} />
+              <input
+                type="text"
+                placeholder="Search by action, description, or user..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+              />
+            </SearchBar>
+            <FilterButton onClick={() => setShowFilters(!showFilters)}>
+              <FaFilter /> {showFilters ? "Hide" : "Show"} Filters
+            </FilterButton>
+          </ControlsSection>
 
-          <FilterGroup>
-            <label>Platform</label>
-            <select
-              value={platformFilter}
-              onChange={(e) => {
-                setPlatformFilter(e.target.value);
-                setPage(1);
-              }}
-            >
-              <option value="all">All Platforms</option>
-              <option value="eazmain">EazMain</option>
-              <option value="eazseller">EazSeller</option>
-              <option value="eazadmin">EazAdmin</option>
-            </select>
-          </FilterGroup>
-
-          <FilterGroup>
-            <label>Start Date</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => {
-                setStartDate(e.target.value);
-                setPage(1);
-              }}
-            />
-          </FilterGroup>
-
-          <FilterGroup>
-            <label>End Date</label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => {
-                setEndDate(e.target.value);
-                setPage(1);
-              }}
-            />
-          </FilterGroup>
-        </FiltersPanel>
-      )}
-
-      <TableContainer>
-        <Table>
-          <TableHeader>
-            <tr>
-              <TableHeaderCell>User</TableHeaderCell>
-              <TableHeaderCell>Role</TableHeaderCell>
-              <TableHeaderCell>Action</TableHeaderCell>
-              <TableHeaderCell>Description</TableHeaderCell>
-              <TableHeaderCell>Platform</TableHeaderCell>
-              <TableHeaderCell>IP Address</TableHeaderCell>
-              <TableHeaderCell>Timestamp</TableHeaderCell>
-              <TableHeaderCell>Actions</TableHeaderCell>
-            </tr>
-          </TableHeader>
-          <TableBody>
-            {logs.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} style={{ textAlign: "center", padding: "3rem" }}>
-                  No activity logs found
-                </TableCell>
-              </TableRow>
-            ) : (
-              logs.map((log) => (
-                <TableRow key={log._id}>
-                  <TableCell>
-                    {log.userId?.name || log.userId?.email || "Unknown"}
-                  </TableCell>
-                  <TableCell>
-                    <RoleBadge role={log.role}>{log.role}</RoleBadge>
-                  </TableCell>
-                  <TableCell>
-                    <strong>{log.action}</strong>
-                  </TableCell>
-                  <TableCell style={{ maxWidth: "300px" }}>
-                    {log.description}
-                  </TableCell>
-                  <TableCell>
-                    <PlatformBadge>{log.platform}</PlatformBadge>
-                  </TableCell>
-                  <TableCell>{log.ipAddress || "N/A"}</TableCell>
-                  <TableCell>{formatDate(log.timestamp)}</TableCell>
-                  <ActionButtonCell>
-                    <IconButton onClick={() => handleViewDetails(log)}>
-                      <FaEye />
-                    </IconButton>
-                    <IconButton
-                      className="delete"
-                      onClick={() => handleDelete(log._id)}
-                      disabled={isDeleting}
-                    >
-                      <FaTrash />
-                    </IconButton>
-                  </ActionButtonCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      {totalPages > 1 && (
-        <Pagination>
-          <PaginationInfo>
-            Showing {(page - 1) * limit + 1} to {Math.min(page * limit, total)} of {total}{" "}
-            logs
-          </PaginationInfo>
-          <PaginationControls>
-            <PageButton
-              onClick={() => handlePageChange(page - 1)}
-              disabled={page === 1}
-            >
-              <FaAngleLeft />
-            </PageButton>
-            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-              let pageNum;
-              if (totalPages <= 5) {
-                pageNum = i + 1;
-              } else if (page <= 3) {
-                pageNum = i + 1;
-              } else if (page >= totalPages - 2) {
-                pageNum = totalPages - 4 + i;
-              } else {
-                pageNum = page - 2 + i;
-              }
-              return (
-                <PageButton
-                  key={pageNum}
-                  onClick={() => handlePageChange(pageNum)}
-                  className={page === pageNum ? "active" : ""}
-                >
-                  {pageNum}
-                </PageButton>
-              );
-            })}
-            <PageButton
-              onClick={() => handlePageChange(page + 1)}
-              disabled={page === totalPages}
-            >
-              <FaAngleRight />
-            </PageButton>
-          </PaginationControls>
-        </Pagination>
-      )}
-
-      {showModal && selectedLog && (
-        <Modal onClick={handleCloseModal}>
-          <ModalContent onClick={(e) => e.stopPropagation()}>
-            <ModalHeader>
-              <h2>Activity Log Details</h2>
-              <IconButton onClick={handleCloseModal}>
-                <FaTimes />
-              </IconButton>
-            </ModalHeader>
-            <ModalBody>
-              <div className="detail-row">
-                <label>User</label>
-                <div className="value">
-                  {selectedLog.userId?.name || selectedLog.userId?.email || "Unknown"}
-                </div>
-              </div>
-              <div className="detail-row">
+          {showFilters && (
+            <FiltersPanel>
+              <FilterGroup>
                 <label>Role</label>
-                <div className="value">
-                  <RoleBadge role={selectedLog.role}>{selectedLog.role}</RoleBadge>
-                </div>
-              </div>
-              <div className="detail-row">
-                <label>Action</label>
-                <div className="value">{selectedLog.action}</div>
-              </div>
-              <div className="detail-row">
-                <label>Description</label>
-                <div className="value">{selectedLog.description}</div>
-              </div>
-              <div className="detail-row">
+                <select
+                  value={roleFilter}
+                  onChange={(e) => {
+                    setRoleFilter(e.target.value);
+                    setPage(1);
+                  }}
+                >
+                  <option value="all">All Roles</option>
+                  <option value="buyer">Buyer</option>
+                  <option value="seller">Seller</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </FilterGroup>
+
+              <FilterGroup>
                 <label>Platform</label>
-                <div className="value">
-                  <PlatformBadge>{selectedLog.platform}</PlatformBadge>
-                </div>
-              </div>
-              <div className="detail-row">
-                <label>IP Address</label>
-                <div className="value">{selectedLog.ipAddress || "N/A"}</div>
-              </div>
-              <div className="detail-row">
-                <label>User Agent</label>
-                <div className="value">{selectedLog.userAgent || "N/A"}</div>
-              </div>
-              <div className="detail-row">
-                <label>Timestamp</label>
-                <div className="value">{formatDate(selectedLog.timestamp)}</div>
-              </div>
-              {selectedLog.metadata && Object.keys(selectedLog.metadata).length > 0 && (
-                <div className="detail-row">
-                  <label>Metadata</label>
-                  <div className="value">
-                    <pre style={{ fontSize: "0.85rem", whiteSpace: "pre-wrap" }}>
-                      {JSON.stringify(selectedLog.metadata, null, 2)}
-                    </pre>
+                <select
+                  value={platformFilter}
+                  onChange={(e) => {
+                    setPlatformFilter(e.target.value);
+                    setPage(1);
+                  }}
+                >
+                  <option value="all">All Platforms</option>
+                  <option value="eazmain">EazMain</option>
+                  <option value="eazseller">EazSeller</option>
+                  <option value="eazadmin">EazAdmin</option>
+                </select>
+              </FilterGroup>
+
+              <FilterGroup>
+                <label>Start Date</label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => {
+                    setStartDate(e.target.value);
+                    setPage(1);
+                  }}
+                />
+              </FilterGroup>
+
+              <FilterGroup>
+                <label>End Date</label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => {
+                    setEndDate(e.target.value);
+                    setPage(1);
+                  }}
+                />
+              </FilterGroup>
+            </FiltersPanel>
+          )}
+
+          <TableContainer>
+            <Table>
+              <TableHeader>
+                <tr>
+                  <TableHeaderCell>User</TableHeaderCell>
+                  <TableHeaderCell>Role</TableHeaderCell>
+                  <TableHeaderCell>Action</TableHeaderCell>
+                  <TableHeaderCell>Description</TableHeaderCell>
+                  <TableHeaderCell>Platform</TableHeaderCell>
+                  <TableHeaderCell>IP Address</TableHeaderCell>
+                  <TableHeaderCell>Timestamp</TableHeaderCell>
+                  <TableHeaderCell>Actions</TableHeaderCell>
+                </tr>
+              </TableHeader>
+              <TableBody>
+                {logs.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} style={{ textAlign: "center", padding: "3rem" }}>
+                      No activity logs found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  logs.map((log) => (
+                    <TableRow key={log._id}>
+                      <TableCell>
+                        {log.userId?.name || log.userId?.email || "Unknown"}
+                      </TableCell>
+                      <TableCell>
+                        <RoleBadge role={log.role}>{log.role}</RoleBadge>
+                      </TableCell>
+                      <TableCell>
+                        <strong>{log.action}</strong>
+                      </TableCell>
+                      <TableCell style={{ maxWidth: "300px" }}>
+                        {log.description}
+                      </TableCell>
+                      <TableCell>
+                        <PlatformBadge>{log.platform}</PlatformBadge>
+                      </TableCell>
+                      <TableCell>{log.ipAddress || "N/A"}</TableCell>
+                      <TableCell>{formatDate(log.timestamp)}</TableCell>
+                      <ActionButtonCell>
+                        <IconButton onClick={() => handleViewDetails(log)}>
+                          <FaEye />
+                        </IconButton>
+                        <IconButton
+                          className="delete"
+                          onClick={() => handleDelete(log._id)}
+                          disabled={isDeleting}
+                        >
+                          <FaTrash />
+                        </IconButton>
+                      </ActionButtonCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          {totalPages > 1 && (
+            <Pagination>
+              <PaginationInfo>
+                Showing {(page - 1) * limit + 1} to {Math.min(page * limit, total)} of {total}{" "}
+                logs
+              </PaginationInfo>
+              <PaginationControls>
+                <PageButton
+                  onClick={() => handlePageChange(page - 1)}
+                  disabled={page === 1}
+                >
+                  <FaAngleLeft />
+                </PageButton>
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (page <= 3) {
+                    pageNum = i + 1;
+                  } else if (page >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = page - 2 + i;
+                  }
+                  return (
+                    <PageButton
+                      key={pageNum}
+                      onClick={() => handlePageChange(pageNum)}
+                      className={page === pageNum ? "active" : ""}
+                    >
+                      {pageNum}
+                    </PageButton>
+                  );
+                })}
+                <PageButton
+                  onClick={() => handlePageChange(page + 1)}
+                  disabled={page === totalPages}
+                >
+                  <FaAngleRight />
+                </PageButton>
+              </PaginationControls>
+            </Pagination>
+          )}
+
+          {showModal && selectedLog && (
+            <Modal onClick={handleCloseModal}>
+              <ModalContent onClick={(e) => e.stopPropagation()}>
+                <ModalHeader>
+                  <h2>Activity Log Details</h2>
+                  <IconButton onClick={handleCloseModal}>
+                    <FaTimes />
+                  </IconButton>
+                </ModalHeader>
+                <ModalBody>
+                  <div className="detail-row">
+                    <label>User</label>
+                    <div className="value">
+                      {selectedLog.userId?.name || selectedLog.userId?.email || "Unknown"}
+                    </div>
                   </div>
-                </div>
-              )}
-            </ModalBody>
-          </ModalContent>
-        </Modal>
+                  <div className="detail-row">
+                    <label>Role</label>
+                    <div className="value">
+                      <RoleBadge role={selectedLog.role}>{selectedLog.role}</RoleBadge>
+                    </div>
+                  </div>
+                  <div className="detail-row">
+                    <label>Action</label>
+                    <div className="value">{selectedLog.action}</div>
+                  </div>
+                  <div className="detail-row">
+                    <label>Description</label>
+                    <div className="value">{selectedLog.description}</div>
+                  </div>
+                  <div className="detail-row">
+                    <label>Platform</label>
+                    <div className="value">
+                      <PlatformBadge>{selectedLog.platform}</PlatformBadge>
+                    </div>
+                  </div>
+                  <div className="detail-row">
+                    <label>IP Address</label>
+                    <div className="value">{selectedLog.ipAddress || "N/A"}</div>
+                  </div>
+                  <div className="detail-row">
+                    <label>User Agent</label>
+                    <div className="value">{selectedLog.userAgent || "N/A"}</div>
+                  </div>
+                  <div className="detail-row">
+                    <label>Timestamp</label>
+                    <div className="value">{formatDate(selectedLog.timestamp)}</div>
+                  </div>
+                  {selectedLog.metadata && Object.keys(selectedLog.metadata).length > 0 && (
+                    <div className="detail-row">
+                      <label>Metadata</label>
+                      <div className="value">
+                        <pre style={{ fontSize: "0.85rem", whiteSpace: "pre-wrap" }}>
+                          {JSON.stringify(selectedLog.metadata, null, 2)}
+                        </pre>
+                      </div>
+                    </div>
+                  )}
+                </ModalBody>
+              </ModalContent>
+            </Modal>
+          )}
+        </>
+      )}
+
+      {activeTab === 'device-sessions' && (
+        <DeviceSessionsPage embedded />
       )}
     </Container>
   );

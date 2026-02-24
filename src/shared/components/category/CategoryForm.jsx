@@ -159,11 +159,11 @@ export default function CategoryForm({
                   .filter((cat) => {
                     // Only show categories without a parent (top-level categories)
                     // Handle both object and string/null parentCategory
-                    const hasParent = cat.parentCategory !== null && 
-                                     cat.parentCategory !== undefined && 
-                                     cat.parentCategory !== '' &&
-                                     !(typeof cat.parentCategory === 'object' && 
-                                       Object.keys(cat.parentCategory || {}).length === 0);
+                    const hasParent = cat.parentCategory !== null &&
+                      cat.parentCategory !== undefined &&
+                      cat.parentCategory !== '' &&
+                      !(typeof cat.parentCategory === 'object' &&
+                        Object.keys(cat.parentCategory || {}).length === 0);
                     return !hasParent;
                   })
                   .filter(
@@ -179,15 +179,57 @@ export default function CategoryForm({
               {process.env.NODE_ENV === 'development' && (
                 <div style={{ fontSize: '0.85rem', color: '#666', marginTop: '0.5rem' }}>
                   Showing {categories.filter(cat => {
-                    const hasParent = cat.parentCategory !== null && 
-                                     cat.parentCategory !== undefined && 
-                                     cat.parentCategory !== '' &&
-                                     !(typeof cat.parentCategory === 'object' && 
-                                       Object.keys(cat.parentCategory || {}).length === 0);
+                    const hasParent = cat.parentCategory !== null &&
+                      cat.parentCategory !== undefined &&
+                      cat.parentCategory !== '' &&
+                      !(typeof cat.parentCategory === 'object' &&
+                        Object.keys(cat.parentCategory || {}).length === 0);
                     return !hasParent;
                   }).length} of {categories.length} categories (top-level only)
                 </div>
               )}
+            </FormGroup>
+
+            <FormGroup style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div>
+                <FormLabel>Drop Shipping Contribution (GHS)</FormLabel>
+                <FormInput
+                  type="number"
+                  name="shippingContribution.dropship"
+                  value={formData.shippingContribution?.dropship || 0}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value) || 0;
+                    setFormData(prev => ({
+                      ...prev,
+                      shippingContribution: { ...prev.shippingContribution, dropship: val }
+                    }));
+                  }}
+                  step="1"
+                  min="0"
+                  placeholder="e.g. 15"
+                />
+              </div>
+              <div>
+                <FormLabel>Jumia Express Contribution (GHS)</FormLabel>
+                <FormInput
+                  type="number"
+                  name="shippingContribution.express"
+                  value={formData.shippingContribution?.express || 0}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value) || 0;
+                    setFormData(prev => ({
+                      ...prev,
+                      shippingContribution: { ...prev.shippingContribution, express: val }
+                    }));
+                  }}
+                  step="1"
+                  min="0"
+                  placeholder="e.g. 10"
+                />
+              </div>
+              <div style={{ gridColumn: '1 / -1', fontSize: '0.75rem', color: '#666', marginTop: '-0.5rem' }}>
+                Enter the flat amount in GHS that the seller contributes to shipping for items in this category.
+              </div>
             </FormGroup>
 
             <FormGroup>
@@ -253,7 +295,7 @@ export default function CategoryForm({
                     type="text"
                     placeholder={
                       attributeInputs.type === "enum" ||
-                      attributeInputs.type === "color"
+                        attributeInputs.type === "color"
                         ? "Comma-separated values (e.g., Red, Blue, Green)"
                         : "Default value"
                     }
@@ -379,7 +421,7 @@ export default function CategoryForm({
               <SecondaryButton type="button" onClick={cancelForm}>
                 Cancel
               </SecondaryButton>
-              <PrimaryButton 
+              <PrimaryButton
                 type="submit"
                 disabled={createCategory?.isPending || updateCategory?.isPending || createCategory?.isLoading || updateCategory?.isLoading}
               >
@@ -526,18 +568,18 @@ const AttributeTypeBadge = styled.span`
     $type === "color"
       ? "#dbeafe"
       : $type === "enum"
-      ? "#ede9fe"
-      : $type === "boolean"
-      ? "#dcfce7"
-      : "#e5e7eb"};
+        ? "#ede9fe"
+        : $type === "boolean"
+          ? "#dcfce7"
+          : "#e5e7eb"};
   color: ${({ $type }) =>
     $type === "color"
       ? "#3b82f6"
       : $type === "enum"
-      ? "#8b5cf6"
-      : $type === "boolean"
-      ? "#10b981"
-      : "#4b5563"};
+        ? "#8b5cf6"
+        : $type === "boolean"
+          ? "#10b981"
+          : "#4b5563"};
   padding: 0.25rem 0.8rem;
   border-radius: 20px;
   font-size: 0.8rem;
@@ -702,7 +744,7 @@ const StatusOption = styled.div`
   &:hover {
     border-color: ${(props) => (props.$active ? "#219653" : "#3498db")};
     background-color: ${(props) =>
-      props.$active ? "rgba(33, 150, 83, 0.15)" : "#f8f9fa"};
+    props.$active ? "rgba(33, 150, 83, 0.15)" : "#f8f9fa"};
   }
 `;
 

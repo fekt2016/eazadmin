@@ -98,6 +98,15 @@ export default function ProductDetail() {
     return product?.variants || [];
   }, [product]);
 
+  // Total stock: use API value or sum from variants (backend may send totalStock; fallback for consistency)
+  const totalStock = useMemo(() => {
+    if (product?.totalStock != null && typeof product.totalStock === 'number') {
+      return product.totalStock;
+    }
+    if (!variants.length) return 0;
+    return variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
+  }, [product?.totalStock, variants]);
+
   // Check if product is pending approval
   const isPendingApproval = useMemo(() => {
     return product?.moderationStatus === 'pending' || product?.moderationStatus === 'PENDING';
@@ -133,8 +142,8 @@ export default function ProductDetail() {
         onError: (error) => {
           toast.error(
             error?.response?.data?.message ||
-              error?.message ||
-              "Failed to update promotion key."
+            error?.message ||
+            "Failed to update promotion key."
           );
         },
       }
@@ -191,7 +200,7 @@ export default function ProductDetail() {
         </HeaderLeft>
         <HeaderActions>
           {isPendingApproval && (
-            <ApproveButton 
+            <ApproveButton
               onClick={handleApproveProduct}
               disabled={approveMutation.isPending}
             >
@@ -289,8 +298,8 @@ export default function ProductDetail() {
               )}
               <InfoItem>
                 <InfoLabel>Total Stock</InfoLabel>
-                <StockValue $inStock={(product.totalStock || 0) > 0}>
-                  {product.totalStock || 0} units
+                <StockValue $inStock={totalStock > 0}>
+                  {totalStock} units
                 </StockValue>
               </InfoItem>
               <InfoItem>
@@ -299,6 +308,44 @@ export default function ProductDetail() {
                   {product.parentCategory?.name || product.category?.name || "Uncategorized"}
                 </InfoValue>
               </InfoItem>
+              {(product.moderationStatus === 'approved' || product.moderationStatus === 'rejected') && (
+                <>
+                  <InfoItem>
+                    <InfoLabel>Moderation</InfoLabel>
+                    <StatusBadge status={product.moderationStatus === 'approved' ? 'active' : 'inactive'}>
+                      {product.moderationStatus === 'approved' ? 'Approved' : 'Rejected'}
+                    </StatusBadge>
+                  </InfoItem>
+                  {product.moderatedBy && (
+                    <InfoItem>
+                      <InfoLabel>{product.moderationStatus === 'approved' ? 'Approved by' : 'Rejected by'}</InfoLabel>
+                      <InfoValue>
+                        {product.moderatedBy.name || product.moderatedBy.email || 'Admin'}
+                      </InfoValue>
+                    </InfoItem>
+                  )}
+                  {product.moderatedAt && (
+                    <InfoItem>
+                      <InfoLabel>Moderation date</InfoLabel>
+                      <InfoValue>
+                        {new Date(product.moderatedAt).toLocaleString('en-GB', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </InfoValue>
+                    </InfoItem>
+                  )}
+                </>
+              )}
+              {product.moderationStatus === 'pending' && (
+                <InfoItem>
+                  <InfoLabel>Moderation</InfoLabel>
+                  <StatusBadge status="pending">Pending</StatusBadge>
+                </InfoItem>
+              )}
               <InfoItem>
                 <InfoLabel>Admin promotion</InfoLabel>
                 <PromoRow>
@@ -378,7 +425,7 @@ export default function ProductDetail() {
                         <VariantName>{attribute}</VariantName>
                         <VariantHelp>Select one option</VariantHelp>
                       </VariantHeader>
-                      
+
                       <VariantOptionsContainer>
                         {values.map((value) => {
                           const variantStock = variants.find((variant) => {
@@ -401,7 +448,7 @@ export default function ProductDetail() {
                                 value={value}
                                 disabled={isOutOfStock}
                               />
-                              <VariantLabel 
+                              <VariantLabel
                                 htmlFor={radioId}
                                 $isColor={isColorValue}
                                 $colorValue={isColorValue ? value : null}
@@ -454,7 +501,7 @@ export default function ProductDetail() {
                                     </StockIndicator>
                                   </TextVariantContent>
                                 )}
-                                
+
                                 <SelectionIndicator>
                                   <SelectionDot />
                                 </SelectionIndicator>
@@ -681,7 +728,8 @@ const MainImageContainer = styled.div`
 const MainImage = styled.img`
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  background-color: #f8fafc;
 `;
 
 const ThumbnailGrid = styled.div`
@@ -697,7 +745,8 @@ const Thumbnail = styled.img`
   cursor: pointer;
   border: 3px solid ${(props) => (props.$active ? "#667eea" : "transparent")};
   transition: all 0.2s;
-  object-fit: cover;
+  object-fit: contain;
+  background-color: #f8fafc;
 
   &:hover {
     border-color: #667eea;

@@ -243,6 +243,7 @@ const ProductForm = ({ initialData, onSubmit, isSubmitting, mode = "add", onForm
     // Validate each variant's required fields
     const variantFields = [];
     currentVariants.forEach((_, index) => {
+      variantFields.push(`variants.${index}.name`);
       variantFields.push(`variants.${index}.price`);
       variantFields.push(`variants.${index}.stock`);
       variantFields.push(`variants.${index}.condition`);

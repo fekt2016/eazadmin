@@ -29,19 +29,19 @@ const BalanceHistoryPage = () => {
         page: page.toString(),
         limit: limit.toString(),
       });
-      
+
       // Add filters only if they have values
       Object.entries(filters).forEach(([key, value]) => {
         if (value && value !== '') {
           params.append(key, value);
         }
       });
-      
+
       // Only add userId if it's a valid non-empty string
       if (userId && userId.trim() !== '') {
         params.append('userId', userId.trim());
       }
-      
+
       try {
         const response = await api.get(`/admin/wallet-history?${params}`);
         return response.data;
@@ -55,12 +55,12 @@ const BalanceHistoryPage = () => {
           message: error.message,
           fullError: error,
         });
-        
+
         // Log response body if available
         if (error.response?.data) {
           console.error('[BalanceHistoryPage] Error Response Body:', JSON.stringify(error.response.data, null, 2));
         }
-        
+
         throw error;
       }
     },
@@ -75,19 +75,19 @@ const BalanceHistoryPage = () => {
         page: page.toString(),
         limit: limit.toString(),
       });
-      
+
       // Add filters only if they have values
       Object.entries(filters).forEach(([key, value]) => {
         if (value && value !== '') {
           params.append(key, value);
         }
       });
-      
+
       // Only add sellerId if it's a valid non-empty string
       if (sellerId && sellerId.trim() !== '') {
         params.append('sellerId', sellerId.trim());
       }
-      
+
       try {
         const response = await api.get(`/admin/revenue-history?${params}`);
         return response.data;
@@ -101,12 +101,12 @@ const BalanceHistoryPage = () => {
           message: error.message,
           fullError: error,
         });
-        
+
         // Log response body if available
         if (error.response?.data) {
           console.error('[BalanceHistoryPage] Error Response Body:', JSON.stringify(error.response.data, null, 2));
         }
-        
+
         throw error;
       }
     },
@@ -221,7 +221,6 @@ const BalanceHistoryPage = () => {
       ORDER_EARNING: '#10b981',
       REFUND_DEDUCTION: '#ef4444',
       PAYOUT: '#6366f1',
-      ADMIN_ADJUST: '#f59e0b',
       CORRECTION: '#8b5cf6',
       REVERSAL: '#ef4444',
     };

@@ -26,8 +26,8 @@ import { toast } from "react-toastify";
 import { LoadingSpinner } from "../../shared/components/LoadingSpinner";
 
 const Container = styled.div`
-  padding: 2rem;
-  max-width: 1600px;
+  padding: ${(props) => (props.$embedded ? '0' : '2rem')};
+  max-width: ${(props) => (props.$embedded ? '100%' : '1600px')};
   margin: 0 auto;
 `;
 
@@ -331,7 +331,7 @@ const getDeviceIcon = (deviceType) => {
   }
 };
 
-export default function DeviceSessionsPage() {
+export default function DeviceSessionsPage({ embedded = false }) {
   const [page, setPage] = useState(1);
   const [limit] = useState(50);
   const [search, setSearch] = useState("");
@@ -446,7 +446,7 @@ export default function DeviceSessionsPage() {
 
   if (error) {
     return (
-      <Container>
+      <Container $embedded={embedded}>
         <div style={{ padding: '2rem', textAlign: 'center' }}>
           <h2 style={{ color: '#e74c3c' }}>Error Loading Device Sessions</h2>
           <p style={{ color: '#7f8c8d' }}>
@@ -472,13 +472,15 @@ export default function DeviceSessionsPage() {
   }
 
   return (
-    <Container>
-      <Header>
-        <TitleSection>
-          <h1>Device Sessions</h1>
-          <p>Manage and monitor all device sessions across the platform</p>
-        </TitleSection>
-      </Header>
+    <Container $embedded={embedded}>
+      {!embedded && (
+        <Header>
+          <TitleSection>
+            <h1>Device Sessions</h1>
+            <p>Manage and monitor all device sessions across the platform</p>
+          </TitleSection>
+        </Header>
+      )}
 
       <StatsGrid>
         <StatCard color="#2ecc71">

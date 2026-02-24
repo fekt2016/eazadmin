@@ -43,12 +43,12 @@ export const PATHS = {
   CATEGORY_CREATE: "/categories/new",
   BRANDS: "/brands",
 
-  // EazShop Store
-  EAZSHOP_STORE: "/eazshop",
-  EAZSHOP_PRODUCTS: "/eazshop/products",
-  EAZSHOP_ORDERS: "/eazshop/orders",
-  EAZSHOP_SHIPPING: "/eazshop/shipping",
-  EAZSHOP_PICKUP_CENTERS: "/eazshop/pickup-centers",
+  // Official Store
+  OFFICIAL_STORE: "/official-store",
+  OFFICIAL_STORE_PRODUCTS: "/official-store/products",
+  OFFICIAL_STORE_ORDERS: "/official-store/orders",
+  OFFICIAL_STORE_SHIPPING: "/official-store/shipping",
+  OFFICIAL_STORE_PICKUP_CENTERS: "/official-store/pickup-centers",
 
   // Coupons & Promotions
   COUPONS: "/coupons",
@@ -177,15 +177,15 @@ export const ROUTE_CONFIG = {
     keywords: "categories, admin, Saiisai",
   },
 
-  [PATHS.EAZSHOP_STORE]: {
-    title: "Saiisai Store - Admin | Saiisai",
+  [PATHS.OFFICIAL_STORE]: {
+    title: "Official Store - Admin | Saiisai",
     description: "Manage Saiisai (company store)",
     keywords: "saiisai, company store, admin, Saiisai",
   },
 
-  [PATHS.EAZSHOP_PRODUCTS]: {
-    title: "Saiisai Products - Admin | Saiisai",
-    description: "Manage Saiisai products",
+  [PATHS.OFFICIAL_STORE_PRODUCTS]: {
+    title: "Official Store Products - Admin | Saiisai",
+    description: "Manage Official Store products",
     keywords: "saiisai products, admin, Saiisai",
   },
 
@@ -256,12 +256,12 @@ export const NAVIGATION_MENU = {
     { path: PATHS.PROMOTIONS, label: "Promotions" },
   ],
 
-  eazshop: [
-    { path: PATHS.EAZSHOP_STORE, label: "Saiisai Store" },
-    { path: PATHS.EAZSHOP_PRODUCTS, label: "Products" },
-    { path: PATHS.EAZSHOP_ORDERS, label: "Orders" },
-    { path: PATHS.EAZSHOP_SHIPPING, label: "Shipping" },
-    { path: PATHS.EAZSHOP_PICKUP_CENTERS, label: "Pickup Centers" },
+  officialStore: [
+    { path: PATHS.OFFICIAL_STORE, label: "Official Store" },
+    { path: PATHS.OFFICIAL_STORE_PRODUCTS, label: "Products" },
+    { path: PATHS.OFFICIAL_STORE_ORDERS, label: "Orders" },
+    { path: PATHS.OFFICIAL_STORE_SHIPPING, label: "Shipping" },
+    { path: PATHS.OFFICIAL_STORE_PICKUP_CENTERS, label: "Pickup Centers" },
   ],
 
   analytics: [

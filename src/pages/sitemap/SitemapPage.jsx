@@ -33,10 +33,10 @@ const SitemapPage = () => {
 
   // SEO
   useDynamicPageTitle({
-    title: 'Sitemap | EazAdmin',
+    title: 'Sitemap | Saiisai Admin',
     description: 'Explore all pages and resources in the admin portal.',
-    keywords: 'sitemap, admin portal, navigation, EazAdmin',
-    defaultTitle: 'Sitemap | EazAdmin',
+    keywords: 'sitemap, admin portal, navigation, Saiisai Admin',
+    defaultTitle: 'Sitemap | Saiisai Admin',
     defaultDescription: 'Explore all pages and resources in the admin portal.',
   });
 
@@ -69,7 +69,7 @@ const SitemapPage = () => {
         { label: 'Category Details', path: PATHS.CATEGORYDETAIL },
         { label: 'Discount Products', path: PATHS.DISCOUNTPRODUCT },
         { label: 'Advertisements', path: PATHS.ADS },
-        { label: 'Saiisai Products', path: PATHS.EAZSHOP_PRODUCTS },
+        { label: 'Official Store Products', path: PATHS.OFFICIAL_STORE_PRODUCTS },
         { label: 'Reviews', path: PATHS.REVIEWS },
       ],
     },
@@ -102,9 +102,8 @@ const SitemapPage = () => {
       title: 'Shipping & Logistics',
       links: [
         { label: 'Shipping Rates', path: PATHS.SHIPPING_RATES },
-        { label: 'Distance Overview', path: PATHS.DISTANCE_OVERVIEW },
-        { label: 'Saiisai Shipping Fees', path: PATHS.EAZSHOP_SHIPPING_FEES },
-        { label: 'Pickup Centers', path: PATHS.EAZSHOP_PICKUP_CENTERS },
+        { label: 'Official Store Shipping Fees', path: PATHS.OFFICIAL_STORE_SHIPPING },
+        { label: 'Pickup Centers', path: PATHS.OFFICIAL_STORE_PICKUP_CENTERS },
       ],
     },
     {
@@ -112,8 +111,7 @@ const SitemapPage = () => {
       title: 'System & Settings',
       links: [
         { label: 'Tax & VAT', path: PATHS.TAX },
-        { label: 'Activity Logs', path: PATHS.ACTIVITY_LOGS },
-        { label: 'Device Sessions', path: PATHS.DEVICE_SESSIONS },
+        { label: 'Activity', path: PATHS.ACTIVITY_LOGS },
       ],
     },
     {
@@ -129,7 +127,7 @@ const SitemapPage = () => {
       title: 'External Resources',
       links: [
         { label: 'SaiisaiWeb (Buyer App)', path: 'https://saiisai.com', external: true },
-        { label: 'EazSeller Portal', path: 'https://seller.saiisai.com', external: true },
+        { label: 'Saiisai Seller Portal', path: 'https://seller.saiisai.com', external: true },
         { label: 'Saiisai Website', path: 'https://saiisai.com', external: true },
       ],
     },
