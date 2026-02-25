@@ -1,19 +1,31 @@
-import { useState } from "react";
-// import { useLogin } from '../../shared/hooks/useAuth';
-// import { PropagateLoader } from "react-spinners";
-
+import { useEffect, useState } from "react";
 import useAuth from '../../shared/hooks/useAuth';
 import { useNavigate } from "react-router-dom";
-
-// import { useNavigate } from "react-router-dom";
 export default function AdminLogin() {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [state, setState] = useState({
-    email: "fekt34@icloud.com",
-    password: "12345678",
+    email: "",
+    password: "",
   });
+  const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  // Load remembered admin email (if any)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem("adminRememberMe");
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed?.email) {
+        setState((prev) => ({ ...prev, email: parsed.email }));
+        setRememberMe(true);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   const submitHandler = async (e) => {
     e.preventDefault();
@@ -27,6 +39,14 @@ export default function AdminLogin() {
     // Only store non-sensitive role preference
     if (typeof window !== "undefined") {
       localStorage.setItem("current_role", "admin");
+      if (rememberMe) {
+        window.localStorage.setItem(
+          "adminRememberMe",
+          JSON.stringify({ email: state.email.trim().toLowerCase() })
+        );
+      } else {
+        window.localStorage.removeItem("adminRememberMe");
+      }
     }
 
     navigate("/dashboard");
@@ -77,6 +97,16 @@ export default function AdminLogin() {
               >
                 {showPassword ? "Hide" : "Show"}
               </button>
+            </div>
+            <div style={{ marginTop: "0.5rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <label style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", fontSize: "0.9rem" }}>
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                />
+                <span>Remember me</span>
+              </label>
             </div>
           </div>
 
