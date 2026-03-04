@@ -17,7 +17,7 @@ import {
 } from 'react-icons/fa';
 import { useNotifications, useMarkAsRead, useDeleteNotification } from '../hooks/notifications/useNotifications';
 import { PATHS } from '../../routes/routePaths';
-import { ConfirmationModal } from './modal/ConfirmationModal';
+import { ConfirmationModal } from './Modal/ConfirmationModal';
 
 const NotificationDropdown = ({ unreadCount }) => {
   const [isOpen, setIsOpen] = useState(false);

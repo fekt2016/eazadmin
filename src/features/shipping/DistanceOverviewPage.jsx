@@ -10,7 +10,7 @@ import {
 import { FaMapMarkerAlt, FaCheckCircle, FaTimesCircle, FaSearch, FaSort, FaPlus, FaEdit, FaSyncAlt, FaCalculator, FaPowerOff } from 'react-icons/fa';
 import NeighborhoodModal from './NeighborhoodModal';
 import ButtonSpinner from '../../shared/components/ButtonSpinner';
-import { ConfirmationModal } from '../../shared/components/modal/ConfirmationModal';
+import { ConfirmationModal } from '../../shared/components/Modal/ConfirmationModal';
 import { toast } from 'react-toastify';
 
 const DistanceOverviewPage = ({ embedded = false }) => {

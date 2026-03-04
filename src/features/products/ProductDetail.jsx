@@ -20,7 +20,7 @@ import adApi from "../../shared/services/adApi";
 import { LoadingSpinner } from "../../shared/components/LoadingSpinner";
 import { PATHS } from "../../routes/routePath";
 import { toast } from "react-toastify";
-import { ConfirmationModal } from "../../shared/components/modal/ConfirmationModal";
+import { ConfirmationModal } from "../../shared/components/Modal/ConfirmationModal";
 
 const getPromotionKeyFromLink = (link) => {
   if (!link || typeof link !== "string") return "";

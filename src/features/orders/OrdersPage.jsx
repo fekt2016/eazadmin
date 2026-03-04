@@ -15,7 +15,7 @@ import {
   FaAngleLeft,
   FaAngleRight,
 } from "react-icons/fa";
-import { ConfirmationModal } from '../../shared/components/modal/ConfirmationModal';
+import { ConfirmationModal } from '../../shared/components/Modal/ConfirmationModal';
 import { toast } from 'react-toastify';
 
 export default function OrdersPage() {

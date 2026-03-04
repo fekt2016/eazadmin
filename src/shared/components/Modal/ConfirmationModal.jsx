@@ -1,4 +1,4 @@
-// src/shared/components/modal/ConfirmationModal.jsx
+// src/shared/components/Modal/ConfirmationModal.jsx
 import styled from "styled-components";
 
 export const ConfirmationModal = ({

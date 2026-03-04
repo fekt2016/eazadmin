@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { LoadingSpinner } from "../../shared/components/LoadingSpinner";
 import useReview from "../../shared/hooks/useReview";
 import { toast } from "react-toastify";
-import { ConfirmationModal } from "../../shared/components/modal/ConfirmationModal";
+import { ConfirmationModal } from "../../shared/components/Modal/ConfirmationModal";
 
 export default function ReviewsPage() {
   const {

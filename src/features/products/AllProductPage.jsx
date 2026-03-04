@@ -9,7 +9,7 @@ import { LoadingSpinner } from "../../shared/components/LoadingSpinner";
 import { PATHS } from "../../routes/routePath";
 import { toast } from "react-toastify";
 import { FaAward } from "react-icons/fa";
-import { ConfirmationModal } from "../../shared/components/modal/ConfirmationModal";
+import { ConfirmationModal } from "../../shared/components/Modal/ConfirmationModal";
 
 // Helper function to calculate total stock from variants
 const calculateTotalStock = (product) => {

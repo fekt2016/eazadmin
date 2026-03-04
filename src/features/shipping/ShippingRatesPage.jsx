@@ -23,7 +23,7 @@ import { shippingRateService } from '../../shared/services/shippingRateApi';
 import InternationalShippingManagementPage from './InternationalShippingManagementPage';
 import ShippingRateSettingsPage from './ShippingRateSettingsPage';
 import ShippingDashboardPage from './ShippingDashboardPage';
-import { ConfirmationModal } from '../../shared/components/modal/ConfirmationModal';
+import { ConfirmationModal } from '../../shared/components/Modal/ConfirmationModal';
 import { toast } from 'react-toastify';
 
 const ShippingRatesPage = () => {

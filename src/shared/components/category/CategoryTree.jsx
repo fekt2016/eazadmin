@@ -6,7 +6,7 @@ import { useGetSubCategoryCount } from '../../hooks/useGetSubCategoryCount';
 import { FixedSizeList as List } from "react-window";
 import useProduct from '../../hooks/useProduct';
 import { LoadingSpinner } from '../LoadingSpinner';
-import { ConfirmationModal } from '../modal/ConfirmationModal';
+import { ConfirmationModal } from '../Modal/ConfirmationModal';
 
 const CategoryTree = function ({
   categories,

@@ -7,7 +7,7 @@ import { useGetUserById } from '../../shared/hooks/useUserDetail';
 import { PATHS } from '../../routes/routePath';
 import { LoadingSpinner } from '../../shared/components/LoadingSpinner';
 import adminSellerApi from '../../shared/services/adminSellerApi';
-import { ConfirmationModal } from '../../shared/components/modal/ConfirmationModal';
+import { ConfirmationModal } from '../../shared/components/Modal/ConfirmationModal';
 
 const UserDetail = () => {
   const { id: userId } = useParams();

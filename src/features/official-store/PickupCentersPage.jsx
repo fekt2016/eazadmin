@@ -16,7 +16,7 @@ import { LoadingSpinner } from "../../shared/components/LoadingSpinner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../shared/services/api";
 import { toast } from "react-toastify";
-import { ConfirmationModal } from "../../shared/components/modal/ConfirmationModal";
+import { ConfirmationModal } from "../../shared/components/Modal/ConfirmationModal";
 
 export default function PickupCentersPage({ embedded = false }) {
   const queryClient = useQueryClient();

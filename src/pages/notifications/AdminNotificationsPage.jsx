@@ -20,7 +20,7 @@ import { useNotifications, useUnreadCount, useMarkAsRead, useMarkAllAsRead, useD
 import { LoadingSpinner } from '../../shared/components/LoadingSpinner';
 import Button from '../../shared/components/Button';
 import { PATHS } from '../../routes/routePaths';
-import { ConfirmationModal } from '../../shared/components/modal/ConfirmationModal';
+import { ConfirmationModal } from '../../shared/components/Modal/ConfirmationModal';
 
 const Container = styled.div`
   padding: 2rem;

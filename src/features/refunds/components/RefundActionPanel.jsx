@@ -2,7 +2,7 @@ import { useState } from 'react';
 import styled from 'styled-components';
 import { FaCheckCircle, FaTimesCircle, FaPercent } from 'react-icons/fa';
 import { useApproveRefund, useApprovePartialRefund, useRejectRefund } from '../hooks/useAdminRefunds';
-import { ConfirmationModal } from '../../../shared/components/modal/ConfirmationModal';
+import { ConfirmationModal } from '../../../shared/components/Modal/ConfirmationModal';
 import { toast } from 'react-toastify';
 
 const ActionPanelContainer = styled.div`

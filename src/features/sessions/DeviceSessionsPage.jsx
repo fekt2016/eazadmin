@@ -24,7 +24,7 @@ import {
 import { formatDate } from "../../shared/utils/helpers";
 import { toast } from "react-toastify";
 import { LoadingSpinner } from "../../shared/components/LoadingSpinner";
-import { ConfirmationModal } from "../../shared/components/modal/ConfirmationModal";
+import { ConfirmationModal } from "../../shared/components/Modal/ConfirmationModal";
 
 const Container = styled.div`
   padding: ${(props) => (props.$embedded ? '0' : '2rem')};

@@ -10,7 +10,7 @@ import CategoryListView from '../../shared/components/category/CategoryListView'
 import EmptyState from '../../shared/components/category/EmptyState';
 import useProduct from '../../shared/hooks/useProduct';
 import { LoadingSpinner, LoadingContainer } from '../../shared/components/LoadingSpinner';
-import { ConfirmationModal } from '../../shared/components/modal/ConfirmationModal';
+import { ConfirmationModal } from '../../shared/components/Modal/ConfirmationModal';
 import { normalizeApiResponse } from "../../shared/utils/apiUtils";
 
 export default function CategoryPage() {

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import { useGetShippingCharges, useGetShippingChargesSummary, useSettleShippingCharge } from '../../hooks/useShipping';
 import { formatDate } from '../../shared/utils/helpers';
-import { ConfirmationModal } from '../../shared/components/modal/ConfirmationModal';
+import { ConfirmationModal } from '../../shared/components/Modal/ConfirmationModal';
 import { FaTruck, FaMoneyBillWave, FaPercentage, FaCheckCircle, FaExclamationCircle, FaAngleLeft, FaAngleRight } from 'react-icons/fa';
 import Button from '../../components/ui/Button';
 

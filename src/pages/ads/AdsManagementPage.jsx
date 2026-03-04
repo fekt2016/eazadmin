@@ -6,7 +6,7 @@ import { toast } from "react-toastify";
 import Button from "../../shared/components/Button";
 import LoadingSpinner from "../../shared/components/LoadingSpinner";
 import adApi from "../../shared/services/adApi";
-import { ConfirmationModal } from "../../shared/components/modal/ConfirmationModal";
+import { ConfirmationModal } from "../../shared/components/Modal/ConfirmationModal";
 
 const AD_TYPES = [
   { value: "banner", label: "Homepage Banner" },

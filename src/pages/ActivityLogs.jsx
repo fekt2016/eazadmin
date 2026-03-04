@@ -17,7 +17,7 @@ import useActivityLogs from "../shared/hooks/useActivityLogs";
 import { toast } from "react-toastify";
 import { LoadingSpinner } from "../shared/components/LoadingSpinner";
 import DeviceSessionsPage from "../features/sessions/DeviceSessionsPage";
-import { ConfirmationModal } from "../shared/components/modal/ConfirmationModal";
+import { ConfirmationModal } from "../shared/components/Modal/ConfirmationModal";
 
 const Container = styled.div`
   padding: 2rem;

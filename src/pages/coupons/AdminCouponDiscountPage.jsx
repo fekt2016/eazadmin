@@ -18,7 +18,7 @@ import { useGetAllDiscounts, useDeleteDiscount } from '../../shared/hooks/useAdm
 import { LoadingSpinner } from '../../shared/components/LoadingSpinner';
 import Button from '../../shared/components/Button';
 import { formatDate } from '../../shared/utils/helpers';
-import { ConfirmationModal } from '../../shared/components/modal/ConfirmationModal';
+import { ConfirmationModal } from '../../shared/components/Modal/ConfirmationModal';
 
 const statusOptions = [
   { id: "all", label: "All" },
