@@ -1,6 +1,6 @@
 import { Route, Routes, Navigate } from "react-router-dom";
 import { lazy, Suspense } from "react";
-import { PATHS } from "./routhPath";
+import { PATHS } from "./routePath";
 import { LoadingSpinner } from '../shared/components/LoadingSpinner';
 import ProtectedRoute from "../routes/protectedRoute";
 
@@ -22,16 +22,18 @@ const SellerBalancesPage = lazy(() => import("../features/sellers/SellerBalances
 const UsersActivityPage = lazy(() => import("../features/users/UsersActivityPage"));
 const OrderDetail = lazy(() => import("../features/orders/OrderDetail"));
 const ShippingRatesPage = lazy(() => import("../features/shipping/ShippingRatesPage"));
+const ShippingDashboardPage = lazy(() => import("../features/shipping/ShippingDashboardPage"));
+const ShippingRateSettingsPage = lazy(() => import("../features/shipping/ShippingRateSettingsPage"));
 const AdminOrderStatusPage = lazy(() => import("../features/orders/AdminOrderStatusPage"));
 const DistanceOverviewPage = lazy(() => import("../features/shipping/DistanceOverviewPage"));
-const EazShopLayout = lazy(() => import("../features/eazshop/EazShopLayout"));
-const EazShopOverviewPage = lazy(() => import("../features/eazshop/EazShopOverviewPage"));
-const EazShopProductsPage = lazy(() => import("../features/eazshop/EazShopProductsPage"));
-const EazShopCreateProductPage = lazy(() => import("../features/eazshop/EazShopCreateProductPage"));
-const EazShopOrdersPage = lazy(() => import("../features/eazshop/EazShopOrdersPage"));
-const EazShopShippingFeesPage = lazy(() => import("../features/eazshop/EazShopShippingFeesPage"));
-const PickupCentersPage = lazy(() => import("../features/eazshop/PickupCentersPage"));
-const EazShopTransactionsPage = lazy(() => import("../features/eazshop/EazShopTransactionsPage"));
+const EazShopLayout = lazy(() => import("../features/official-store/OfficialStoreLayout"));
+const EazShopOverviewPage = lazy(() => import("../features/official-store/OfficialStoreOverviewPage"));
+const EazShopProductsPage = lazy(() => import("../features/official-store/OfficialStoreProductsPage"));
+const EazShopCreateProductPage = lazy(() => import("../features/official-store/OfficialStoreCreateProductPage"));
+const EazShopOrdersPage = lazy(() => import("../features/official-store/OfficialStoreOrdersPage"));
+const EazShopShippingFeesPage = lazy(() => import("../features/official-store/OfficialStoreShippingFeesPage"));
+const PickupCentersPage = lazy(() => import("../features/official-store/PickupCentersPage"));
+const EazShopTransactionsPage = lazy(() => import("../features/official-store/OfficialStoreTransactionsPage"));
 const ReviewsPage = lazy(() => import("../features/reviews/ReviewsPage"));
 const TrackingPage = lazy(() => import("../features/orders/TrackingPage"));
 const ActivityLogs = lazy(() => import("../pages/ActivityLogs"));
@@ -63,15 +65,36 @@ const AdminCatchAll = () => {
   );
 };
 
+const AccountPendingPage = () => (
+  <div style={{ padding: '50px', textAlign: 'center' }}>
+    <h1>Account Pending</h1>
+    <p>Your admin account is currently pending approval.</p>
+  </div>
+);
+
+const AccountInactivePage = () => (
+  <div style={{ padding: '50px', textAlign: 'center' }}>
+    <h1>Account Inactive</h1>
+    <p>Your admin account has been deactivated. Please contact an administrator.</p>
+  </div>
+);
+
+const UnauthorizedPage = () => (
+  <div style={{ padding: '50px', textAlign: 'center' }}>
+    <h1>Unauthorized</h1>
+    <p>You do not have permission to access this page.</p>
+  </div>
+);
+
 export default function AdminRoutes() {
 
-  
+
   return (
     <Routes>
       {/* Admin login route - both / and /login so /login does not 404 */}
       <Route path={PATHS.LOGIN} element={<AdminLogin />} />
       <Route path="/login" element={<AdminLogin />} />
-      
+
       {/* Password reset routes */}
       <Route path="/forgot-password" element={
         <Suspense fallback={<LoadingSpinner />}>
@@ -83,17 +106,22 @@ export default function AdminRoutes() {
           <ResetPasswordPage />
         </Suspense>
       } />
-      
+
+      {/* ProtectedRoute status pages */}
+      <Route path="/account-pending" element={<AccountPendingPage />} />
+      <Route path="/account-inactive" element={<AccountInactivePage />} />
+      <Route path="/unauthorized" element={<UnauthorizedPage />} />
+
       {/* Tracking detail page - accessible at /tracking/:trackingNumber */}
-      <Route 
-        path={PATHS.TRACKING_REDIRECT} 
+      <Route
+        path={PATHS.TRACKING_REDIRECT}
         element={
           <ProtectedRoute>
             <Suspense fallback={<LoadingSpinner />}>
               <TrackingPage />
             </Suspense>
           </ProtectedRoute>
-        } 
+        }
       />
       <Route
         path={PATHS.DASHBOARD}
@@ -273,7 +301,7 @@ export default function AdminRoutes() {
         />
         {/* EazShop: single section for products, orders, shipping, pickup */}
         <Route
-          path={PATHS.EAZSHOP}
+          path={PATHS.OFFICIAL_STORE}
           element={
             <Suspense fallback={<LoadingSpinner />}>
               <EazShopLayout />

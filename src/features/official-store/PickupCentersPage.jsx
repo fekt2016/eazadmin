@@ -16,6 +16,7 @@ import { LoadingSpinner } from "../../shared/components/LoadingSpinner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../shared/services/api";
 import { toast } from "react-toastify";
+import { ConfirmationModal } from "../../shared/components/modal/ConfirmationModal";
 
 export default function PickupCentersPage({ embedded = false }) {
   const queryClient = useQueryClient();
@@ -25,6 +26,7 @@ export default function PickupCentersPage({ embedded = false }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCenter, setEditingCenter] = useState(null);
+  const [centerToDelete, setCenterToDelete] = useState(null);
 
   const { data: pickupCentersData, isLoading, error } = useGetPickupCenters(
     cityFilter || undefined
@@ -166,8 +168,13 @@ export default function PickupCentersPage({ embedded = false }) {
   };
 
   const handleDelete = (id) => {
-    if (window.confirm("Are you sure you want to deactivate this pickup center?")) {
-      deleteMutation.mutate(id);
+    setCenterToDelete(id);
+  };
+
+  const confirmDelete = () => {
+    if (centerToDelete) {
+      deleteMutation.mutate(centerToDelete);
+      setCenterToDelete(null);
     }
   };
 
@@ -416,6 +423,16 @@ export default function PickupCentersPage({ embedded = false }) {
           </ModalContent>
         </ModalOverlay>
       )}
+
+      <ConfirmationModal
+        isOpen={!!centerToDelete}
+        onClose={() => setCenterToDelete(null)}
+        onConfirm={confirmDelete}
+        title="Deactivate Pickup Center"
+        message="Are you sure you want to deactivate this pickup center?"
+        confirmText="Deactivate"
+        confirmColor="#dc2626"
+      />
     </DashboardContainer>
   );
 }

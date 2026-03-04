@@ -5,7 +5,7 @@ import { toast } from "react-toastify";
 import { useOfficialStore } from "../../shared/hooks/useOfficialStore";
 import { generateSKU } from "../../shared/utils/helpers";
 import ProductForm from "./components/forms/ProductForm";
-import { PATHS } from "../../routes/routhPath";
+import { PATHS } from "../../routes/routePath";
 
 const DASHBOARD_BASE = "/dashboard";
 const basePath = `${DASHBOARD_BASE}/${PATHS.OFFICIAL_STORE}`;

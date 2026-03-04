@@ -4,15 +4,16 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import styled from "styled-components";
 import { FaArrowLeft, FaUser, FaEnvelope, FaPhone, FaStore, FaCalendarAlt, FaClock, FaShieldAlt, FaCheckCircle, FaTimesCircle, FaFileAlt, FaIdCard, FaCheck, FaImage, FaTimes, FaEye } from "react-icons/fa";
 import { useGetUserById } from '../../shared/hooks/useUserDetail';
-import { PATHS } from '../../routes/routhPath';
+import { PATHS } from '../../routes/routePath';
 import { LoadingSpinner } from '../../shared/components/LoadingSpinner';
 import adminSellerApi from '../../shared/services/adminSellerApi';
+import { ConfirmationModal } from '../../shared/components/modal/ConfirmationModal';
 
 const UserDetail = () => {
   const { id: userId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   // Determine which page to navigate back to based on the current route
   // Use absolute path to avoid relative path issues when navigating from nested routes
   const getBackPath = () => {
@@ -66,7 +67,7 @@ const UserDetail = () => {
 
   // Update document status mutation
   const updateDocumentStatus = useMutation({
-    mutationFn: ({ sellerId, documentType, status }) => 
+    mutationFn: ({ sellerId, documentType, status }) =>
       adminSellerApi.updateDocumentStatus(sellerId, documentType, status),
     onSuccess: (data) => {
       setSuccessMessage(data?.data?.message || "Document status updated successfully!");
@@ -85,6 +86,7 @@ const UserDetail = () => {
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [showApproveModal, setShowApproveModal] = useState(false);
 
   // Helper function to get document URL and status (handles both old string format and new object format)
   const getDocumentInfo = (document) => {
@@ -127,7 +129,7 @@ const UserDetail = () => {
 
   if (error) {
     let errorMessage = "Error loading user details. Please try again.";
-    
+
     if (error.message?.includes("Invalid user ID format")) {
       errorMessage = error.message;
     } else if (error.response?.status === 404) {
@@ -141,7 +143,7 @@ const UserDetail = () => {
     } else {
       errorMessage = error.response?.data?.message || error.message || errorMessage;
     }
-    
+
     return (
       <Container>
         <Header>
@@ -184,24 +186,29 @@ const UserDetail = () => {
   };
 
   const businessCertStatus = getDocumentStatus(selectedUser.verificationDocuments?.businessCert);
+  const businessCertFormAStatus = getDocumentStatus(selectedUser.verificationDocuments?.businessCertFormA);
   const idProofStatus = getDocumentStatus(selectedUser.verificationDocuments?.idProof);
   const addresProofStatus = getDocumentStatus(selectedUser.verificationDocuments?.addresProof);
-  
-  const allDocumentsVerified = 
+
+  const allDocumentsVerified =
     businessCertStatus === 'verified' &&
+    businessCertFormAStatus === 'verified' &&
     idProofStatus === 'verified' &&
     addresProofStatus === 'verified';
 
-  const allDocumentsUploaded = 
-    (selectedUser.verificationDocuments?.businessCert && 
-     (typeof selectedUser.verificationDocuments.businessCert === 'string' || 
-      selectedUser.verificationDocuments.businessCert.url)) &&
-    (selectedUser.verificationDocuments?.idProof && 
-     (typeof selectedUser.verificationDocuments.idProof === 'string' || 
-      selectedUser.verificationDocuments.idProof.url)) &&
-    (selectedUser.verificationDocuments?.addresProof && 
-     (typeof selectedUser.verificationDocuments.addresProof === 'string' || 
-      selectedUser.verificationDocuments.addresProof.url));
+  const allDocumentsUploaded =
+    (selectedUser.verificationDocuments?.businessCert &&
+      (typeof selectedUser.verificationDocuments.businessCert === 'string' ||
+        selectedUser.verificationDocuments.businessCert.url)) &&
+    (selectedUser.verificationDocuments?.businessCertFormA &&
+      (typeof selectedUser.verificationDocuments.businessCertFormA === 'string' ||
+        selectedUser.verificationDocuments.businessCertFormA.url)) &&
+    (selectedUser.verificationDocuments?.idProof &&
+      (typeof selectedUser.verificationDocuments.idProof === 'string' ||
+        selectedUser.verificationDocuments.idProof.url)) &&
+    (selectedUser.verificationDocuments?.addresProof &&
+      (typeof selectedUser.verificationDocuments.addresProof === 'string' ||
+        selectedUser.verificationDocuments.addresProof.url));
 
   const hasAllRequiredDetails = isSeller && selectedUser.requiredSetup && (
     selectedUser.requiredSetup.hasAddedBusinessInfo &&
@@ -211,24 +218,28 @@ const UserDetail = () => {
   );
 
   // Check if seller is fully verified (email verified + all documents verified)
-  const isFullyVerified = isSeller && 
+  const isFullyVerified = isSeller &&
     selectedUser.verification?.emailVerified &&
     allDocumentsVerified &&
     allDocumentsUploaded;
 
   // Check if seller is pending verification and can be approved
   // Can approve if: pending verification, has all required details, email verified, all documents uploaded, but not yet fully verified
-  const canApproveVerification = isSeller && 
+  const canApproveVerification = isSeller &&
     selectedUser.onboardingStage === 'pending_verification' &&
     hasAllRequiredDetails &&
     !isFullyVerified;
 
   const handleApproveVerification = async () => {
     if (!userId) return;
-    
-    if (window.confirm('Are you sure you want to approve this seller\'s verification? This will mark them as verified.')) {
+    setShowApproveModal(true);
+  };
+
+  const confirmApproveVerification = () => {
+    if (userId) {
       approveVerification.mutate(userId);
     }
+    setShowApproveModal(false);
   };
 
   return (
@@ -291,10 +302,10 @@ const UserDetail = () => {
               <DetailValue>
                 {selectedUser.createdAt
                   ? new Date(selectedUser.createdAt).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })
                   : "N/A"}
               </DetailValue>
             </DetailContent>
@@ -309,12 +320,12 @@ const UserDetail = () => {
               <DetailValue>
                 {selectedUser.lastLogin
                   ? new Date(selectedUser.lastLogin).toLocaleString("en-US", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
                   : "Never logged in"}
               </DetailValue>
             </DetailContent>
@@ -371,9 +382,9 @@ const UserDetail = () => {
                 <DetailContent>
                   <DetailLabel>Onboarding Stage</DetailLabel>
                   <DetailValue>
-                    {isFullyVerified 
+                    {isFullyVerified
                       ? "Verified"
-                      : selectedUser.onboardingStage 
+                      : selectedUser.onboardingStage
                         ? selectedUser.onboardingStage.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())
                         : "Not Set"}
                   </DetailValue>
@@ -387,9 +398,9 @@ const UserDetail = () => {
                 <DetailContent>
                   <DetailLabel>Verification Status</DetailLabel>
                   <DetailValue>
-                    {isFullyVerified 
+                    {isFullyVerified
                       ? "Verified"
-                      : selectedUser.verificationStatus 
+                      : selectedUser.verificationStatus
                         ? selectedUser.verificationStatus.charAt(0).toUpperCase() + selectedUser.verificationStatus.slice(1)
                         : "Pending"}
                   </DetailValue>
@@ -475,15 +486,15 @@ const UserDetail = () => {
                             </DocumentStatusBadge>
                           )}
                         </DocumentPreviewHeader>
-                        <DocumentPreviewImage 
-                          src={docInfo.url} 
+                        <DocumentPreviewImage
+                          src={docInfo.url}
                           alt="Business Certificate"
                           onClick={() => setSelectedDocument(docInfo.url)}
                         />
                         <DocumentActions>
-                          <DocumentViewButton 
-                            href={docInfo.url} 
-                            target="_blank" 
+                          <DocumentViewButton
+                            href={docInfo.url}
+                            target="_blank"
                             rel="noopener noreferrer"
                           >
                             <FaEye /> View Full Size
@@ -520,6 +531,66 @@ const UserDetail = () => {
                   })()}
 
                   {(() => {
+                    const docInfo = getDocumentInfo(selectedUser.verificationDocuments.businessCertFormA);
+                    return docInfo.url && (
+                      <DocumentPreviewCard>
+                        <DocumentPreviewHeader>
+                          <DocumentIcon>
+                            <FaFileAlt />
+                          </DocumentIcon>
+                          <DocumentLabel>Business Certificate (Form A)</DocumentLabel>
+                          {docInfo.status && (
+                            <DocumentStatusBadge $status={docInfo.status}>
+                              {docInfo.status === 'verified' ? <FaCheckCircle /> : docInfo.status === 'rejected' ? <FaTimesCircle /> : null}
+                              {docInfo.status.charAt(0).toUpperCase() + docInfo.status.slice(1)}
+                            </DocumentStatusBadge>
+                          )}
+                        </DocumentPreviewHeader>
+                        <DocumentPreviewImage
+                          src={docInfo.url}
+                          alt="Business Certificate (Form A)"
+                          onClick={() => setSelectedDocument(docInfo.url)}
+                        />
+                        <DocumentActions>
+                          <DocumentViewButton
+                            href={docInfo.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <FaEye /> View Full Size
+                          </DocumentViewButton>
+                          <DocumentButtonGroup>
+                            <DocumentApproveButton
+                              onClick={() => handleDocumentStatusUpdate('businessCertFormA', 'verified')}
+                              disabled={updateDocumentStatus.isLoading || docInfo.status === 'verified'}
+                            >
+                              {updateDocumentStatus.isLoading ? (
+                                <Spinner />
+                              ) : (
+                                <>
+                                  <FaCheck /> Verify
+                                </>
+                              )}
+                            </DocumentApproveButton>
+                            <DocumentRejectButton
+                              onClick={() => handleDocumentStatusUpdate('businessCertFormA', 'rejected')}
+                              disabled={updateDocumentStatus.isLoading || docInfo.status === 'rejected' || docInfo.status === 'verified'}
+                            >
+                              {updateDocumentStatus.isLoading ? (
+                                <Spinner />
+                              ) : (
+                                <>
+                                  <FaTimes /> Reject
+                                </>
+                              )}
+                            </DocumentRejectButton>
+                          </DocumentButtonGroup>
+                        </DocumentActions>
+                      </DocumentPreviewCard>
+                    );
+                  })()}
+
+                  {(() => {
                     const docInfo = getDocumentInfo(selectedUser.verificationDocuments.idProof);
                     return docInfo.url && (
                       <DocumentPreviewCard>
@@ -535,15 +606,15 @@ const UserDetail = () => {
                             </DocumentStatusBadge>
                           )}
                         </DocumentPreviewHeader>
-                        <DocumentPreviewImage 
-                          src={docInfo.url} 
+                        <DocumentPreviewImage
+                          src={docInfo.url}
                           alt="ID Proof"
                           onClick={() => setSelectedDocument(docInfo.url)}
                         />
                         <DocumentActions>
-                          <DocumentViewButton 
-                            href={docInfo.url} 
-                            target="_blank" 
+                          <DocumentViewButton
+                            href={docInfo.url}
+                            target="_blank"
                             rel="noopener noreferrer"
                           >
                             <FaEye /> View Full Size
@@ -595,15 +666,15 @@ const UserDetail = () => {
                             </DocumentStatusBadge>
                           )}
                         </DocumentPreviewHeader>
-                        <DocumentPreviewImage 
-                          src={docInfo.url} 
+                        <DocumentPreviewImage
+                          src={docInfo.url}
                           alt="Address Proof"
                           onClick={() => setSelectedDocument(docInfo.url)}
                         />
                         <DocumentActions>
-                          <DocumentViewButton 
-                            href={docInfo.url} 
-                            target="_blank" 
+                          <DocumentViewButton
+                            href={docInfo.url}
+                            target="_blank"
                             rel="noopener noreferrer"
                           >
                             <FaEye /> View Full Size
@@ -641,14 +712,15 @@ const UserDetail = () => {
 
                   {(() => {
                     const hasBusinessCert = getDocumentInfo(selectedUser.verificationDocuments.businessCert).url;
+                    const hasBusinessCertFormA = getDocumentInfo(selectedUser.verificationDocuments.businessCertFormA).url;
                     const hasIdProof = getDocumentInfo(selectedUser.verificationDocuments.idProof).url;
                     const hasAddresProof = getDocumentInfo(selectedUser.verificationDocuments.addresProof).url;
-                    return !hasBusinessCert && !hasIdProof && !hasAddresProof && (
-                    <DocumentItem>
-                      <DocumentContent>
-                        <DocumentLabel>No verification documents uploaded</DocumentLabel>
-                      </DocumentContent>
-                    </DocumentItem>
+                    return !hasBusinessCert && !hasBusinessCertFormA && !hasIdProof && !hasAddresProof && (
+                      <DocumentItem>
+                        <DocumentContent>
+                          <DocumentLabel>No verification documents uploaded</DocumentLabel>
+                        </DocumentContent>
+                      </DocumentItem>
                     );
                   })()}
                 </DocumentsGrid>
@@ -712,6 +784,16 @@ const UserDetail = () => {
           </VerificationSection>
         )}
       </Content>
+
+      <ConfirmationModal
+        isOpen={showApproveModal}
+        onClose={() => setShowApproveModal(false)}
+        onConfirm={confirmApproveVerification}
+        title="Approve Seller Verification"
+        message="Are you sure you want to approve this seller's verification? This will mark them as verified."
+        confirmText="Approve"
+        confirmColor="#27ae60"
+      />
     </Container>
   );
 };
@@ -889,8 +971,8 @@ const RoleBadge = styled.span`
     role === "admin"
       ? "#4CC9F020"
       : role === "seller"
-      ? "#F8961E20"
-      : "#4361EE20"};
+        ? "#F8961E20"
+        : "#4361EE20"};
   color: ${({ role }) =>
     role === "admin" ? "#4CC9F0" : role === "seller" ? "#F8961E" : "#4361EE"};
 `;
@@ -905,14 +987,14 @@ const StatusBadge = styled.span`
     status === "active"
       ? "#4CC9F020"
       : status === "pending"
-      ? "#F8961E20"
-      : "#F7258520"};
+        ? "#F8961E20"
+        : "#F7258520"};
   color: ${({ status }) =>
     status === "active"
       ? "#4CC9F0"
       : status === "pending"
-      ? "#F8961E"
-      : "#F72585"};
+        ? "#F8961E"
+        : "#F72585"};
 `;
 
 const ErrorMessage = styled.div`
@@ -1283,14 +1365,14 @@ const DocumentStatusBadge = styled.div`
   font-size: 12px;
   font-weight: 600;
   margin-left: auto;
-  background: ${props => 
-    props.$status === 'verified' ? '#4CC9F020' : 
-    props.$status === 'rejected' ? '#F7258520' : 
-    '#F8961E20'};
-  color: ${props => 
-    props.$status === 'verified' ? '#4CC9F0' : 
-    props.$status === 'rejected' ? '#F72585' : 
-    '#F8961E'};
+  background: ${props =>
+    props.$status === 'verified' ? '#4CC9F020' :
+      props.$status === 'rejected' ? '#F7258520' :
+        '#F8961E20'};
+  color: ${props =>
+    props.$status === 'verified' ? '#4CC9F0' :
+      props.$status === 'rejected' ? '#F72585' :
+        '#F8961E'};
 
   svg {
     font-size: 14px;

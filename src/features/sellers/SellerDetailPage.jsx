@@ -28,9 +28,10 @@ import normalizeError from '../../shared/utils/normalizeError';
 import useSellerAdmin, { usePayoutVerificationDetails, useGetSellerById } from '../../shared/hooks/useSellerAdmin';
 import adminSellerApi from '../../shared/services/adminSellerApi';
 import PayoutVerificationModal from '../../shared/components/Modal/payoutVerificationModal';
-import { PATHS } from '../../routes/routhPath';
+import { PATHS } from '../../routes/routePath';
 import { LoadingSpinner } from '../../shared/components/LoadingSpinner';
 import { toast } from 'react-toastify';
+import useAuth from '../../shared/hooks/useAuth';
 
 /**
  * Normalizes seller data from any admin API response structure
@@ -42,37 +43,18 @@ import { toast } from 'react-toastify';
 const normalizeSellerResponse = (response) => {
   if (!response) return null;
 
-  // Axios wraps response in .data, so response is the axios response object
-  // response.data = actual API response
-  const apiResponse = response?.data || response;
-
-  // handleFactory.getOne structure: { status: 'success', data: { data: {...} } }
-  if (apiResponse?.data?.data && apiResponse.data.data._id) {
-    return apiResponse.data.data;
-  }
-
-  // Custom endpoint structure: { status: 'success', data: { seller: {...} } }
-  if (apiResponse?.data?.seller && apiResponse.data.seller._id) {
-    return apiResponse.data.seller;
-  }
-
-  // Direct data structure: { status: 'success', data: {...} }
-  if (apiResponse?.data && apiResponse.data._id) {
-    return apiResponse.data;
-  }
-
-  // Already normalized or direct object: {...}
-  if (apiResponse?._id) {
-    return apiResponse;
-  }
-
-  return null;
+  const data = response?.data?.data?.data || response?.data?.data || response?.data?.seller || response?.data || response;
+  return data?._id ? data : null;
 };
 
 const SellerDetailPage = () => {
   const { id: sellerId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { adminData } = useAuth();
+  const admin = adminData?.data?.data?.data || adminData?.data?.data || adminData?.data || adminData;
+  const isSuperadmin = admin?.role === 'superadmin';
+
   const [showResetModal, setShowResetModal] = useState(false);
   const [showResetLockedModal, setShowResetLockedModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
@@ -87,8 +69,8 @@ const SellerDetailPage = () => {
 
   const { data: sellerResponse, isLoading, error, refetch: refetchSeller } = useGetSellerById(sellerId);
   const { data: balanceData, isLoading: isBalanceLoading } = useGetSellerBalance(sellerId);
-  const { 
-    data: payoutVerificationData, 
+  const {
+    data: payoutVerificationData,
     refetch: refetchPayoutVerification,
     isLoading: isPayoutVerificationLoading,
     error: payoutVerificationError,
@@ -102,7 +84,6 @@ const SellerDetailPage = () => {
     mutationFn: () => adminSellerApi.reactivateSeller(sellerId),
     onSuccess: () => {
       queryClient.invalidateQueries(["admin", "seller", sellerId, "details"]);
-      queryClient.invalidateQueries(["admin", "sellers"]);
       toast.success("Seller reactivated. They can log in and use their account again.");
     },
     onError: (err) => {
@@ -119,269 +100,15 @@ const SellerDetailPage = () => {
   const updateDocumentStatus = useMutation({
     mutationFn: ({ sellerId: targetSellerId, documentType, status }) =>
       adminSellerApi.updateDocumentStatus(targetSellerId, documentType, status),
-    // CACHE UPDATE: Update React Query cache with backend response
-    // WHY BACKEND RESPONSE IS AUTHORITATIVE:
-    // - Backend has updated database and computed derived fields
-    // - Response includes: status, isVerified, isProcessed, shouldShowButtons
-    // - UI must reflect database state, not frontend assumptions
-    // WHY NO OPTIMISTIC UPDATES:
-    // - Prevents UI showing incorrect state if API fails
-    // - Ensures buttons hide only when backend confirms verification
-    // - State persists correctly after page refresh
-    onSuccess: async (response, variables) => {
-      const { documentType, status } = variables;
-      
-      // Extract verification documents and seller status from backend response
-      // Backend response includes computed fields (isVerified, isProcessed, shouldShowButtons)
-      // Also includes updated verificationStatus and onboardingStage if all documents are verified
-      const responseSeller = response?.data?.data?.seller;
-      const responseVerificationDocuments = responseSeller?.verificationDocuments;
-      const responseVerificationStatus = responseSeller?.verificationStatus;
-      const responseOnboardingStage = responseSeller?.onboardingStage;
-      const responseVerifiedBy = responseSeller?.verifiedBy;
-      const responseVerifiedAt = responseSeller?.verifiedAt;
-      const responseVerification = responseSeller?.verification;
-      
-      if (!responseVerificationDocuments) {
-        console.error('[updateDocumentStatus onSuccess] ❌ No verificationDocuments in response');
-        return;
-      }
-      
-      // CRITICAL: Validate backend response before updating cache
-      const confirmedStatus = responseVerificationDocuments[documentType]?.status;
-      const confirmedDoc = responseVerificationDocuments[documentType];
-      
-      if (confirmedStatus !== status) {
-        console.error('[updateDocumentStatus onSuccess] ❌ Status mismatch in response!', {
-          expected: status,
-          actual: confirmedStatus,
-          documentType,
-        });
-        return; // Don't update cache if response is invalid
-      }
-      
-      if (!confirmedDoc) {
-        console.error('[updateDocumentStatus onSuccess] ❌ Document not found in response!', {
-          documentType,
-          responseVerificationDocuments,
-        });
-        return;
-      }
-      
-      console.log('[updateDocumentStatus onSuccess] ✅ Response validated:', {
-        documentType,
-        status: confirmedStatus,
-        isVerified: confirmedDoc.isVerified,
-        isProcessed: confirmedDoc.isProcessed,
-        shouldShowButtons: confirmedDoc.shouldShowButtons,
-      });
-      
-      // CRITICAL FIX: Update cache using a more robust approach
-      // Ensure we preserve the exact structure and trigger React Query to recognize the change
-      queryClient.setQueryData(["admin", "seller", sellerId, "details"], (oldData) => {
-        if (!oldData) {
-          console.warn('[updateDocumentStatus onSuccess] No oldData found in cache');
-          return oldData;
-        }
-        
-        // Deep clone to ensure React Query detects the change
-        // Update cache using structure detection - preserve exact structure
-        // Path 1: handleFactory.getOne structure: oldData.data.data.data
-        if (oldData?.data?.data?.data && oldData.data.data.data._id) {
-          // CRITICAL: Use backend response as the complete source of truth
-          // Merge with old data only to preserve other seller fields
-          const updated = {
-            ...oldData,
-            data: {
-              ...oldData.data,
-              data: {
-                ...oldData.data.data,
-                data: {
-                  ...oldData.data.data.data,
-                  // CRITICAL: Use backend response directly - it's the complete, authoritative state
-                  // This ensures all computed fields (isVerified, isProcessed, shouldShowButtons) are preserved
-                  verificationDocuments: responseVerificationDocuments
-                }
-              }
-            }
-          };
-          
-          // Verify the update includes computed fields
-          const verifyNormalized = normalizeSellerResponse(updated);
-          const verifyDoc = verifyNormalized?.verificationDocuments?.[documentType];
-          
-          if (verifyDoc?.status !== status) {
-            console.error('[updateDocumentStatus onSuccess] ❌ Cache update failed (path 1): Status mismatch!', {
-              expected: status,
-              actual: verifyDoc?.status,
-            });
-          } else {
-            console.log('[updateDocumentStatus onSuccess] ✅ Cache updated (path 1):', {
-              documentType,
-              status: verifyDoc?.status,
-              isVerified: verifyDoc?.isVerified,
-              isProcessed: verifyDoc?.isProcessed,
-              shouldShowButtons: verifyDoc?.shouldShowButtons,
-            });
-          }
-          
-          return updated;
-        }
-        
-        // Path 2: Direct seller at oldData.data.data
-        if (oldData?.data?.data && oldData.data.data._id && !oldData.data.data.data) {
-          // CRITICAL: Use backend response as the complete source of truth
-          const updated = {
-            ...oldData,
-            data: {
-              ...oldData.data,
-              data: {
-                ...oldData.data.data,
-                // CRITICAL: Use backend response directly - it's the complete, authoritative state
-                verificationDocuments: responseVerificationDocuments,
-                // Include updated verificationStatus and onboardingStage if provided
-                ...(responseVerificationStatus !== undefined && { verificationStatus: responseVerificationStatus }),
-                ...(responseOnboardingStage !== undefined && { onboardingStage: responseOnboardingStage }),
-                ...(responseVerifiedBy !== undefined && { verifiedBy: responseVerifiedBy }),
-                ...(responseVerifiedAt !== undefined && { verifiedAt: responseVerifiedAt }),
-                ...(responseVerification && { verification: { ...oldData.data.data.verification, ...responseVerification } }),
-              }
-            }
-          };
-          
-          const verifyNormalized = normalizeSellerResponse(updated);
-          const verifyDoc = verifyNormalized?.verificationDocuments?.[documentType];
-          
-          if (verifyDoc?.status !== status) {
-            console.error('[updateDocumentStatus onSuccess] ❌ Cache update failed (path 2): Status mismatch!', {
-              expected: status,
-              actual: verifyDoc?.status,
-            });
-          } else {
-            console.log('[updateDocumentStatus onSuccess] ✅ Cache updated (path 2):', {
-              documentType,
-              status: verifyDoc?.status,
-              isVerified: verifyDoc?.isVerified,
-              isProcessed: verifyDoc?.isProcessed,
-              shouldShowButtons: verifyDoc?.shouldShowButtons,
-            });
-          }
-          
-          return updated;
-        }
-        
-        // Path 3: Fallback - rebuild structure preserving other seller data
-        const normalized = normalizeSellerResponse(oldData);
-        if (normalized) {
-          // CRITICAL: Use backend response as the complete source of truth
-          const updated = {
-            ...oldData,
-            data: {
-              ...oldData.data,
-              data: {
-                ...normalized,
-                // CRITICAL: Use backend response directly - it's the complete, authoritative state
-                verificationDocuments: responseVerificationDocuments,
-                // Include updated verificationStatus and onboardingStage if provided
-                ...(responseVerificationStatus !== undefined && { verificationStatus: responseVerificationStatus }),
-                ...(responseOnboardingStage !== undefined && { onboardingStage: responseOnboardingStage }),
-                ...(responseVerifiedBy !== undefined && { verifiedBy: responseVerifiedBy }),
-                ...(responseVerifiedAt !== undefined && { verifiedAt: responseVerifiedAt }),
-                ...(responseVerification && { verification: { ...normalized.verification, ...responseVerification } }),
-              }
-            }
-          };
-          
-          const verifyNormalized = normalizeSellerResponse(updated);
-          const verifyDoc = verifyNormalized?.verificationDocuments?.[documentType];
-          
-          if (verifyDoc?.status !== status) {
-            console.error('[updateDocumentStatus onSuccess] ❌ Cache update failed (path 3): Status mismatch!', {
-              expected: status,
-              actual: verifyDoc?.status,
-            });
-          } else {
-            console.log('[updateDocumentStatus onSuccess] ✅ Cache updated (path 3):', {
-              documentType,
-              status: verifyDoc?.status,
-              isVerified: verifyDoc?.isVerified,
-              isProcessed: verifyDoc?.isProcessed,
-              shouldShowButtons: verifyDoc?.shouldShowButtons,
-            });
-          }
-          
-          return updated;
-        }
-        
-        // Last resort: return oldData if structure is unrecognized
-        console.warn('[updateDocumentStatus onSuccess] ⚠️ Unrecognized cache structure, returning oldData');
-        return oldData;
-      });
-      
-      // CRITICAL: Force React Query to recognize the cache update
-      // Use a small delay to ensure cache update completes before verification
-      await new Promise(resolve => setTimeout(resolve, 0));
-      
-      // Verify cache update: Check that computed fields are present
-      const finalCache = queryClient.getQueryData(["admin", "seller", sellerId, "details"]);
-      const finalSeller = normalizeSellerResponse(finalCache);
-      const finalDoc = finalSeller?.verificationDocuments?.[documentType];
-      
-      console.log('[updateDocumentStatus onSuccess] 🎯 Final cache verification:', {
-        documentType,
-        expectedStatus: status,
-        actualStatus: finalDoc?.status,
-        isVerified: finalDoc?.isVerified,
-        isProcessed: finalDoc?.isProcessed,
-        shouldShowButtons: finalDoc?.shouldShowButtons,
-        matches: finalDoc?.status === status,
-      });
-      
-      if (finalDoc?.status !== status) {
-        console.error('[updateDocumentStatus onSuccess] ❌ CRITICAL: Status mismatch after cache update!', {
-          expected: status,
-          actual: finalDoc?.status,
-        });
-        // CRITICAL FIX: If cache update failed, refetch from backend
-        // This ensures UI eventually reflects correct state
-        console.warn('[updateDocumentStatus onSuccess] ⚠️ Refetching seller details to correct cache state');
-        queryClient.invalidateQueries(["admin", "seller", sellerId, "details"]);
-      }
-      
-      // Clear processing state: buttons can be re-enabled
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "seller", sellerId, "details"] });
       setProcessingDocument(null);
-      
-      // Invalidate sellers list: refresh list view (doesn't affect current seller details)
-      queryClient.invalidateQueries(["admin", "sellers"]);
-      
-      // IMPORTANT: Do NOT invalidate current seller details query unless cache update failed
-      // Cache update is authoritative - refetch would overwrite backend response
     },
-    // ERROR HANDLING: Revert state on API failure
-    // WHY INVALIDATE CACHE:
-    // - API call failed, database was not updated
-    // - Cache may contain stale data
-    // - Refetch ensures UI matches database state
     onError: (error) => {
-      // Clear processing state: allow user to retry
       setProcessingDocument(null);
-      
-      // Log error for debugging
-      console.error('[updateDocumentStatus onError] API call failed:', {
-        error,
-        message: error?.message,
-        response: error?.response?.data,
-        status: error?.response?.status,
-        isTimeout: error?.isTimeout,
-      });
-      
-      // Invalidate cache: refetch from backend to ensure UI matches database
-      queryClient.invalidateQueries(["admin", "seller", sellerId, "details"]);
-      
-      // Show user-friendly error message
-      const errorMessage = error?.response?.data?.message || 
-                          error?.message || 
-                          'Failed to update document status. Please try again.';
+      const errorMessage = error?.response?.data?.message ||
+        error?.message ||
+        'Failed to update document status. Please try again.';
       toast.error(errorMessage);
     },
   });
@@ -408,65 +135,46 @@ const SellerDetailPage = () => {
    */
   const handleDocumentStatusUpdate = async (documentType, status) => {
     if (!sellerId) return;
-    
-    // SAFETY: Prevent duplicate submissions
+
     if (processingDocument || updateDocumentStatus.isPending) {
       toast.warning('Please wait for the current operation to complete');
       return;
     }
 
-    // SAFETY: Validate document state using normalized data
     const document = seller?.verificationDocuments?.[documentType];
     if (document) {
       const docInfo = getDocumentInfo(document);
-      
-      // Block if already processed (verified or rejected)
+
       if (isDocumentProcessed(docInfo)) {
         toast.warning('This document has already been processed');
         return;
       }
-      
-      // Block if already verified (redundant check, but explicit)
+
       if (isDocumentVerified(docInfo)) {
         toast.warning('This document is already verified');
         return;
       }
     }
 
-    // Set processing state: buttons will be disabled during request
     setProcessingDocument(documentType);
 
     try {
-      console.log('[handleDocumentStatusUpdate] Calling API with:', { sellerId, documentType, status });
-      
-      // CRITICAL: Wait for backend response - NO optimistic updates
-      // Backend response includes computed fields (isVerified, isProcessed, shouldShowButtons)
-      const response = await updateDocumentStatus.mutateAsync({ sellerId, documentType, status });
-
-      console.log('[handleDocumentStatusUpdate] ✅ API call successful:', {
-        response,
-        responseData: response?.data,
-        verificationDocuments: response?.data?.data?.seller?.verificationDocuments,
-        updatedDocument: response?.data?.data?.seller?.verificationDocuments?.[documentType],
-      });
+      await updateDocumentStatus.mutateAsync({ sellerId, documentType, status });
 
       const label =
         documentType === 'businessCert'
           ? 'Business certificate'
           : documentType === 'idProof'
-          ? 'ID proof'
-          : 'Address proof';
+            ? 'ID proof'
+            : 'Address proof';
       const action = status === 'verified' ? 'verified' : 'rejected';
 
       toast.success(`${label} ${action} successfully`);
-      // Processing state cleared in onSuccess callback
     } catch (error) {
-      // Processing state cleared in onError callback
-      console.error('[handleDocumentStatusUpdate] Error:', error);
       toast.error(
         error?.response?.data?.message ||
-          getUserFriendlyErrorMessage(error) ||
-          'Failed to update document status'
+        getUserFriendlyErrorMessage(error) ||
+        'Failed to update document status'
       );
     }
   };
@@ -474,7 +182,7 @@ const SellerDetailPage = () => {
   // Normalize all seller data sources
   const sellerCore = normalizeSellerResponse(sellerResponse);
   const sellerBalanceData = normalizeSellerResponse(balanceData);
-  
+
   // IMPORTANT: Don't normalize payoutVerificationData - we need the raw structure to access paymentMethodRecords
   // The backend returns: { status: 'success', data: { seller: { paymentMethodRecords: [...] } } }
   const sellerPayoutData = normalizeSellerResponse(payoutVerificationData);
@@ -486,11 +194,11 @@ const SellerDetailPage = () => {
   // - payoutVerificationData.data.data.seller.paymentMethodRecords = the records array
   const paymentMethodRecords = useMemo(() => {
     let records = [];
-    
+
     if (payoutVerificationData) {
       // Try all possible paths
       const apiResponse = payoutVerificationData.data || payoutVerificationData;
-      
+
       // Path 1: payoutVerificationData.data.data.seller.paymentMethodRecords (most likely)
       if (apiResponse?.data?.seller?.paymentMethodRecords) {
         records = apiResponse.data.seller.paymentMethodRecords;
@@ -508,7 +216,7 @@ const SellerDetailPage = () => {
         records = sellerPayoutData.paymentMethodRecords;
       }
     }
-    
+
     return Array.isArray(records) ? records : [];
   }, [payoutVerificationData, sellerPayoutData]);
 
@@ -518,14 +226,14 @@ const SellerDetailPage = () => {
   const paymentMethods = useMemo(() => {
     // Try multiple paths to get paymentMethods from payout verification endpoint
     const apiResponse = payoutVerificationData?.data || payoutVerificationData;
-    
+
     // Path 1: payoutVerificationData.data.data.seller.paymentMethods
     const fromPayout1 = apiResponse?.data?.seller?.paymentMethods;
     // Path 2: payoutVerificationData.data.seller.paymentMethods
     const fromPayout2 = apiResponse?.seller?.paymentMethods;
-    
+
     const fromPayout = fromPayout1 || fromPayout2;
-    
+
     if (fromPayout && (fromPayout.bankAccount || fromPayout.mobileMoney)) {
       return fromPayout;
     }
@@ -584,54 +292,59 @@ const SellerDetailPage = () => {
   // Merge seller data predictably - single source of truth
   const seller = useMemo(() => sellerCore
     ? {
-        ...sellerCore,
+      ...sellerCore,
 
-        // Merge balance fields from balance endpoint
-        ...(sellerBalanceData && {
-          balance: sellerBalanceData.balance ?? sellerCore.balance,
-          withdrawableBalance: sellerBalanceData.withdrawableBalance ?? sellerCore.withdrawableBalance,
-          lockedBalance: sellerBalanceData.lockedBalance ?? sellerCore.lockedBalance,
-          pendingBalance: sellerBalanceData.pendingBalance ?? sellerCore.pendingBalance,
-          totalRevenue: sellerBalanceData.totalRevenue ?? sellerCore.totalRevenue,
-          totalWithdrawn: sellerBalanceData.totalWithdrawn ?? sellerCore.totalWithdrawn,
-          balanceBreakdown: sellerBalanceData.balanceBreakdown ?? sellerCore.balanceBreakdown,
-          balanceResets: sellerBalanceData.balanceResets ?? sellerCore.balanceResets,
-          fundLocks: sellerBalanceData.fundLocks ?? sellerCore.fundLocks,
-          fundUnlocks: sellerBalanceData.fundUnlocks ?? sellerCore.fundUnlocks,
-          lastBalanceResetAt: sellerBalanceData.lastBalanceResetAt ?? sellerCore.lastBalanceResetAt,
-          lastBalanceResetBy: sellerBalanceData.lastBalanceResetBy ?? sellerCore.lastBalanceResetBy,
-          lockedAt: sellerBalanceData.lockedAt ?? sellerCore.lockedAt,
-          lockedBalanceResets: sellerBalanceData.lockedBalanceResets ?? sellerCore.lockedBalanceResets,
-          lockedBy: sellerBalanceData.lockedBy ?? sellerCore.lockedBy,
-          lockedReason: sellerBalanceData.lockedReason ?? sellerCore.lockedReason,
-        }),
+      // Merge balance fields from balance endpoint
+      ...(sellerBalanceData && {
+        balance: sellerBalanceData.balance ?? sellerCore.balance,
+        withdrawableBalance: sellerBalanceData.withdrawableBalance ?? sellerCore.withdrawableBalance,
+        lockedBalance: sellerBalanceData.lockedBalance ?? sellerCore.lockedBalance,
+        pendingBalance: sellerBalanceData.pendingBalance ?? sellerCore.pendingBalance,
+        totalRevenue: sellerBalanceData.totalRevenue ?? sellerCore.totalRevenue,
+        totalWithdrawn: sellerBalanceData.totalWithdrawn ?? sellerCore.totalWithdrawn,
+        balanceBreakdown: sellerBalanceData.balanceBreakdown ?? sellerCore.balanceBreakdown,
+        balanceResets: sellerBalanceData.balanceResets ?? sellerCore.balanceResets,
+        fundLocks: sellerBalanceData.fundLocks ?? sellerCore.fundLocks,
+        fundUnlocks: sellerBalanceData.fundUnlocks ?? sellerCore.fundUnlocks,
+        lastBalanceResetAt: sellerBalanceData.lastBalanceResetAt ?? sellerCore.lastBalanceResetAt,
+        lastBalanceResetBy: sellerBalanceData.lastBalanceResetBy ?? sellerCore.lastBalanceResetBy,
+        lockedAt: sellerBalanceData.lockedAt ?? sellerCore.lockedAt,
+        lockedBalanceResets: sellerBalanceData.lockedBalanceResets ?? sellerCore.lockedBalanceResets,
+        lockedBy: sellerBalanceData.lockedBy ?? sellerCore.lockedBy,
+        lockedReason: sellerBalanceData.lockedReason ?? sellerCore.lockedReason,
+      }),
 
-        // Merge payout fields from payout verification endpoint
-        ...(sellerPayoutData && {
-          // Use derived payout status so that once at least one payment method
-          // is approved, the seller-level payout status is shown as verified.
-          payoutStatus: derivedPayoutStatus,
-          payoutVerifiedAt: sellerPayoutData.payoutVerifiedAt ?? sellerCore.payoutVerifiedAt,
-          payoutVerifiedBy: sellerPayoutData.payoutVerifiedBy ?? sellerCore.payoutVerifiedBy,
-          payoutRejectionReason: sellerPayoutData.payoutRejectionReason ?? sellerCore.payoutRejectionReason,
-          payoutVerificationHistory: sellerPayoutData.payoutVerificationHistory ?? sellerCore.payoutVerificationHistory,
-        }),
-        
-        // CRITICAL: Merge paymentMethods from payout verification endpoint
-        // This ensures payment methods added by seller are visible for approval
-        // Use the paymentMethods computed above (from useMemo)
-        paymentMethods: paymentMethods,
-      }
+      // Merge payout fields from payout verification endpoint
+      ...(sellerPayoutData && {
+        // Use derived payout status so that once at least one payment method
+        // is approved, the seller-level payout status is shown as verified.
+        payoutStatus: derivedPayoutStatus,
+        payoutVerifiedAt: sellerPayoutData.payoutVerifiedAt ?? sellerCore.payoutVerifiedAt,
+        payoutVerifiedBy: sellerPayoutData.payoutVerifiedBy ?? sellerCore.payoutVerifiedBy,
+        payoutRejectionReason: sellerPayoutData.payoutRejectionReason ?? sellerCore.payoutRejectionReason,
+        payoutVerificationHistory: sellerPayoutData.payoutVerificationHistory ?? sellerCore.payoutVerificationHistory,
+      }),
+
+      // CRITICAL: Merge paymentMethods from payout verification endpoint
+      // This ensures payment methods added by seller are visible for approval
+      // Use the paymentMethods computed above (from useMemo)
+      paymentMethods: paymentMethods,
+    }
     : null, [sellerCore, sellerBalanceData, sellerPayoutData, paymentMethods, derivedPayoutStatus]);
 
   // Collect all unique admin IDs that verified payment methods (after seller is defined)
   const adminIds = useMemo(() => {
     const ids = new Set();
-    paymentMethodRecords?.forEach(pm => {
-      if (pm.verifiedBy) ids.add(pm.verifiedBy);
-    });
-    if (seller?.verifiedBy) ids.add(seller.verifiedBy);
-    if (seller?.payoutVerifiedBy) ids.add(seller.payoutVerifiedBy);
+    const addId = (val) => {
+      if (!val) return;
+      if (typeof val === 'string') ids.add(val);
+      else if (val._id) ids.add(val._id.toString());
+      else if (val.toString && val.toString() !== '[object Object]') ids.add(val.toString());
+    };
+
+    paymentMethodRecords?.forEach(pm => addId(pm.verifiedBy));
+    addId(seller?.verifiedBy);
+    addId(seller?.payoutVerifiedBy);
     return Array.from(ids);
   }, [paymentMethodRecords, seller]);
 
@@ -642,102 +355,74 @@ const SellerDetailPage = () => {
       queryKey: ["admin", "user", adminId],
       queryFn: async () => {
         try {
-          // Try admin endpoint first with shorter timeout
-          const adminPromise = adminUserApi.getAdminDetails(adminId);
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Admin fetch timeout')), 3000)
-          );
-          const response = await Promise.race([adminPromise, timeoutPromise]);
-          return response;
+          const response = await adminUserApi.getAdminDetails(adminId);
+          // Extract admin object from { status: 'success', data: { data: doc } }
+          return response?.data?.data?.data || response?.data?.data || response?.data || response;
         } catch (error) {
-          // Fallback to user endpoint with shorter timeout
           try {
-            const userPromise = adminUserApi.getUserDetails(adminId);
-            const timeoutPromise = new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('User fetch timeout')), 3000)
-            );
-            const response = await Promise.race([userPromise, timeoutPromise]);
-            return response;
+            const userResponse = await adminUserApi.getUserDetails(adminId);
+            return userResponse?.data?.data?.data || userResponse?.data?.data || userResponse?.data || userResponse;
           } catch (userError) {
-            // Silently fail - admin name is not critical
-            return null;
+            throw userError;
           }
         }
       },
-      enabled: !!adminId && !!seller && !isLoading, // Only fetch if seller is loaded and not loading
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      retry: false, // Don't retry - admin names are not critical
-      refetchOnWindowFocus: false, // Don't refetch on focus
+      enabled: !!adminId && !!seller && !isLoading,
+      staleTime: 1000 * 60 * 5,
+      retry: false,
+      refetchOnWindowFocus: false,
     })) : []
   });
 
-  // Create a map of admin ID to admin name
   const adminNamesMap = useMemo(() => {
     const map = {};
     adminQueries.forEach((query, index) => {
+      const adminId = adminIds[index];
       if (query.data) {
-        // Handle different response structures
-        // Backend returns: { status: 'success', data: { data: admin } } or { status: 'success', data: admin }
-        const admin = query.data?.data?.data || query.data?.data || query.data;
-        const adminId = adminIds[index];
-        
+        const admin = query.data;
         if (adminId && admin) {
-          // Try multiple fields for admin name
-          const adminName = admin?.name || admin?.fullName || admin?.username || admin?.email || null;
-          if (adminName) {
-            map[adminId] = adminName;
-            console.log('[SellerDetailPage] Found admin name:', { adminId, name: adminName });
-          } else {
-            console.warn('[SellerDetailPage] Admin name not found for ID:', adminId, 'Admin data:', admin);
-          }
+          const adminName = admin?.name || admin?.fullName || admin?.username || admin?.email || (adminId ? `Admin ${adminId.toString().substring(0, 8)}` : "Unknown Admin");
+          map[adminId] = adminName;
         }
-      } else if (query.isLoading) {
-        // Still loading
-        const adminId = adminIds[index];
-        console.log(`[AdminNamesMap] Still loading admin ${adminId}`);
-      } else if (query.error) {
-        // Error loading
-        const adminId = adminIds[index];
-        console.warn('[SellerDetailPage] Error fetching admin:', adminId, query.error);
+      } else if (query.error || (!query.isLoading && !query.data && adminId)) {
+        // If there's an error fetching the admin, show the ID as a fallback
+        map[adminId] = adminId ? `Admin ${adminId.toString().substring(0, 8)}` : "Unknown Admin";
       }
     });
-    
-    console.log('[SellerDetailPage] Final admin names map:', map);
-    console.log('[SellerDetailPage] Admin IDs collected:', adminIds);
     return map;
   }, [adminQueries, adminIds]);
 
-  
+  // Helper to safely display admin name or ID fallback
+  const getAdminDisplay = (adminId) => {
+    if (!adminId) return "Unknown Admin";
+    const idStr = typeof adminId === 'string' ? adminId : (adminId._id?.toString() || adminId.toString());
+    if (idStr === '[object Object]') return "Unknown Admin";
+    return adminNamesMap[idStr] || `Admin ${idStr.substring(0, 8)}`;
+  };
+
   // Check if seller has all required documents
   const hasAllRequiredDocuments = () => {
     if (!seller) return false;
     const docs = seller.verificationDocuments || {};
-    
-    const hasBusinessCert = docs.businessCert && 
-      (typeof docs.businessCert === 'string' || (docs.businessCert && docs.businessCert.url));
-    const hasIdProof = docs.idProof && 
+
+    const hasIdProof = docs.idProof &&
       (typeof docs.idProof === 'string' || (docs.idProof && docs.idProof.url));
-    const hasAddressProof = docs.addresProof && 
-      (typeof docs.addresProof === 'string' || (docs.addresProof && docs.addresProof.url));
-    
-    return hasBusinessCert && hasIdProof && hasAddressProof;
+
+    return hasIdProof;
   };
 
-  const getMissingDocuments = () => {
+  /**
+   * Returns list of missing documents
+   */
+  const getMissingDocuments = (seller) => {
     if (!seller) return [];
     const missing = [];
     const docs = seller.verificationDocuments || {};
-    
-    if (!docs.businessCert || (typeof docs.businessCert !== 'string' && (!docs.businessCert || !docs.businessCert.url))) {
-      missing.push('Business Certificate');
-    }
+
     if (!docs.idProof || (typeof docs.idProof !== 'string' && (!docs.idProof || !docs.idProof.url))) {
       missing.push('ID Proof');
     }
-    if (!docs.addresProof || (typeof docs.addresProof !== 'string' && (!docs.addresProof || !docs.addresProof.url))) {
-      missing.push('Address Proof');
-    }
-    
+
     return missing;
   };
 
@@ -759,58 +444,58 @@ const SellerDetailPage = () => {
   const getDocumentInfo = (document) => {
     // Empty state: no document exists
     if (!document) {
-      return { 
-        url: null, 
-        status: null, 
-        verifiedBy: null, 
+      return {
+        url: null,
+        status: null,
+        verifiedBy: null,
         verifiedAt: null,
         isVerified: false,
         isProcessed: false,
         shouldShowButtons: false,
       };
     }
-    
+
     // Legacy format: document stored as URL string
     // Backward compatibility for old data
     if (typeof document === 'string') {
-      return { 
-        url: document, 
-        status: 'pending', 
-        verifiedBy: null, 
+      return {
+        url: document,
+        status: 'pending',
+        verifiedBy: null,
         verifiedAt: null,
         isVerified: false,
         isProcessed: false,
         shouldShowButtons: true, // Has URL, status is pending
       };
     }
-    
+
     // Modern format: document object with status and metadata
     // CRITICAL: Read status directly from document - this is the single source of truth
     const status = document.status || 'pending';
-    
+
     // TRUST BACKEND: If backend computed these fields, use them
     // Fallback computation is ONLY for backward compatibility
     // CRITICAL: Once verified, these fields should never revert to false
-    const isVerified = document.isVerified !== undefined 
-      ? document.isVerified 
+    const isVerified = document.isVerified !== undefined
+      ? document.isVerified
       : status === 'verified';
-    
+
     const isProcessed = document.isProcessed !== undefined
       ? document.isProcessed
       : status === 'verified' || status === 'rejected';
-    
+
     // CRITICAL: Buttons should only show if status is pending AND document has URL
     // Once verified/rejected, shouldShowButtons must be false
     const shouldShowButtons = document.shouldShowButtons !== undefined
       ? document.shouldShowButtons
       : status === 'pending' && !!document.url;
-    
+
     // DEFENSIVE: Ensure verified documents never show buttons
     // This prevents stale data from causing buttons to reappear
-    const finalShouldShowButtons = (status === 'verified' || status === 'rejected') 
-      ? false 
+    const finalShouldShowButtons = (status === 'verified' || status === 'rejected')
+      ? false
       : shouldShowButtons;
-    
+
     return {
       url: document.url || null,
       status: status, // CRITICAL: This is the single source of truth
@@ -867,10 +552,10 @@ const SellerDetailPage = () => {
   const shouldShowDocumentButtons = (documentInfo, documentType) => {
     // Guard: Document must exist
     if (!documentInfo) return false;
-    
+
     // Guard: Document must have a URL (can't verify without document)
     if (!documentInfo.url) return false;
-    
+
     // BUSINESS RULE: Use normalized shouldShowButtons field
     // This field is computed by backend or getDocumentInfo fallback
     // It encodes: status === 'pending' && has URL
@@ -890,7 +575,7 @@ const SellerDetailPage = () => {
 
   const handleApproveVerification = async () => {
     if (!hasAllRequiredDocuments()) {
-      const missingDocs = getMissingDocuments();
+      const missingDocs = getMissingDocuments(seller);
       toast.error(`Cannot approve seller verification. Missing required documents: ${missingDocs.join(', ')}`);
       return;
     }
@@ -904,7 +589,7 @@ const SellerDetailPage = () => {
       await approveVerification.mutateAsync(seller._id);
       toast.success('Seller verification approved successfully');
       queryClient.invalidateQueries(["admin", "user", sellerId]);
-      queryClient.invalidateQueries(["admin", "sellers"]);
+      queryClient.invalidateQueries(["admin", "seller", sellerId, "details"]);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to approve seller verification');
     }
@@ -925,7 +610,7 @@ const SellerDetailPage = () => {
       setShowRejectModal(false);
       setRejectionReason("");
       queryClient.invalidateQueries(["admin", "user", sellerId]);
-      queryClient.invalidateQueries(["admin", "sellers"]);
+      queryClient.invalidateQueries(["admin", "seller", sellerId, "details"]);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to reject seller verification');
     }
@@ -940,7 +625,6 @@ const SellerDetailPage = () => {
   }
 
   if (error) {
-    console.error('❌ [SellerDetailPage] Error loading seller:', error);
     const isTimeout = error?.isTimeout || error?.status === 408 || error?.message?.toLowerCase?.().includes('timeout');
     const errorMessage = isTimeout
       ? 'Request timed out. The server may be slow or your connection is unstable. Please try again.'
@@ -958,8 +642,8 @@ const SellerDetailPage = () => {
             <RetryButton onClick={() => refetchSeller()} disabled={isLoading}>
               Try again
             </RetryButton>
-            <BackButton onClick={() => navigate(`/dashboard/${PATHS.USERS}`)}>
-              <FaArrowLeft /> Back to Users
+            <BackButton onClick={() => navigate(`/dashboard/${PATHS.SELLERS}`)}>
+              <FaArrowLeft /> Back to Sellers
             </BackButton>
           </ErrorActions>
         </ErrorState>
@@ -968,21 +652,14 @@ const SellerDetailPage = () => {
   }
 
   if (!seller) {
-    console.error('❌ [SellerDetailPage] Seller is null/undefined after extraction');
-    console.error('   sellerResponse:', sellerResponse);
-    console.error('   sellerResponse?.data:', sellerResponse?.data);
-    console.error('   sellerResponse?.data?.seller:', sellerResponse?.data?.seller);
     return (
       <Container>
         <ErrorState>
           <FaExclamationTriangle style={{ fontSize: '3rem', color: '#ef4444', marginBottom: '1rem' }} />
           <h2>Seller Not Found</h2>
           <p>The seller you're looking for doesn't exist.</p>
-          <p style={{ fontSize: '0.9rem', color: '#8d99ae', marginTop: '0.5rem' }}>
-            Response structure: {JSON.stringify(sellerResponse, null, 2)}
-          </p>
-          <BackButton onClick={() => navigate(`/dashboard/${PATHS.USERS}`)}>
-            <FaArrowLeft /> Back to Users
+          <BackButton onClick={() => navigate(`/dashboard/${PATHS.SELLERS}`)}>
+            <FaArrowLeft /> Back to Sellers
           </BackButton>
         </ErrorState>
       </Container>
@@ -991,8 +668,8 @@ const SellerDetailPage = () => {
 
   return (
     <Container>
-      <BackButton onClick={() => navigate(`/dashboard/${PATHS.USERS}`)}>
-        <FaArrowLeft /> Back to Users
+      <BackButton onClick={() => navigate(`/dashboard/${PATHS.SELLERS}`)}>
+        <FaArrowLeft /> Back to Sellers
       </BackButton>
 
       <PageHeader>
@@ -1072,7 +749,6 @@ const SellerDetailPage = () => {
                         await reactivateSellerMutation.mutateAsync();
                         await updateStatus.mutateAsync({ sellerId, status: 'active' });
                         queryClient.invalidateQueries(['admin', 'seller', sellerId, 'details']);
-                        queryClient.invalidateQueries(['admin', 'sellers']);
                         toast.success('Seller status and account set to active.');
                       } catch (err) {
                         toast.error(err?.response?.data?.message || 'Failed to set active.');
@@ -1116,11 +792,8 @@ const SellerDetailPage = () => {
           <CardBody>
             {(() => {
               // Compute identity fully verified: all 3 documents + email + phone verified
-              const businessCertInfo = getDocumentInfo(seller.verificationDocuments?.businessCert);
               const idProofInfo = getDocumentInfo(seller.verificationDocuments?.idProof);
-              const addressProofInfo = getDocumentInfo(seller.verificationDocuments?.addresProof);
-              const allDocsVerified =
-                businessCertInfo.isVerified && idProofInfo.isVerified && addressProofInfo.isVerified;
+              const allDocsVerified = idProofInfo.isVerified;
               const isPhoneVerified =
                 seller.phone != null && String(seller.phone).trim() !== '';
               const isIdentityFullyVerified =
@@ -1214,7 +887,7 @@ const SellerDetailPage = () => {
             {seller.verifiedBy && (
               <InfoRow>
                 <InfoLabel>Verified By</InfoLabel>
-                <InfoValue>{adminNamesMap[seller.verifiedBy] || `Admin ${seller.verifiedBy}`}</InfoValue>
+                <InfoValue>{getAdminDisplay(seller.verifiedBy)}</InfoValue>
               </InfoRow>
             )}
           </CardBody>
@@ -1230,43 +903,9 @@ const SellerDetailPage = () => {
               // CRITICAL: Read directly from seller.verificationDocuments[documentType].status
               // This is the SINGLE SOURCE OF TRUTH
               const businessCert = getDocumentInfo(seller.verificationDocuments?.businessCert);
+              const businessCertFormA = getDocumentInfo(seller.verificationDocuments?.businessCertFormA);
               const idProof = getDocumentInfo(seller.verificationDocuments?.idProof);
-              const addressProof = getDocumentInfo(seller.verificationDocuments?.addresProof);
 
-              // DEBUG: Log normalized document state for verification
-              // This helps verify that:
-              // - Normalization is working correctly
-              // - Backend-computed fields are present
-              // - Button visibility logic is correct
-              // IMPORTANT: rawDocument is for debugging only - never use as source of truth
-              console.log('[Document Status Debug]', {
-                businessCert: { 
-                  status: businessCert.status,
-                  isVerified: businessCert.isVerified, // From normalized data
-                  isProcessed: businessCert.isProcessed, // From normalized data
-                  shouldShowButtons: businessCert.shouldShowButtons, // From normalized data
-                  url: businessCert.url,
-                  rawDocument: seller.verificationDocuments?.businessCert // Debug only
-                },
-                idProof: { 
-                  status: idProof.status,
-                  isVerified: idProof.isVerified,
-                  isProcessed: idProof.isProcessed,
-                  shouldShowButtons: idProof.shouldShowButtons,
-                  url: idProof.url,
-                  rawDocument: seller.verificationDocuments?.idProof // Debug only
-                },
-                addressProof: { 
-                  status: addressProof.status,
-                  isVerified: addressProof.isVerified,
-                  isProcessed: addressProof.isProcessed,
-                  shouldShowButtons: addressProof.shouldShowButtons,
-                  url: addressProof.url,
-                  rawDocument: seller.verificationDocuments?.addresProof // Debug only
-                },
-                rawDocs: seller.verificationDocuments, // Debug only - never use as source of truth
-                sellerId: seller?._id,
-              });
 
               return (
                 <>
@@ -1282,7 +921,7 @@ const SellerDetailPage = () => {
                         {businessCert.status ? businessCert.status.toUpperCase() : 'PENDING'}
                         {businessCert.verifiedBy && (
                           <span style={{ fontSize: '0.75rem', color: '#6b7280', marginLeft: '0.5rem' }}>
-                            (by {adminNamesMap[businessCert.verifiedBy] || `Admin ${businessCert.verifiedBy}`})
+                            (by {getAdminDisplay(businessCert.verifiedBy)})
                           </span>
                         )}
                       </DocumentStatus>
@@ -1314,6 +953,50 @@ const SellerDetailPage = () => {
                     </DocumentActionsRow>
                   </DocumentItem>
 
+                  <DocumentItem key={`businessCertFormA-${businessCertFormA.status}-${seller?._id}`}>
+                    <DocumentIcon>
+                      <FaFileAlt />
+                    </DocumentIcon>
+                    <DocumentInfo>
+                      <DocumentName>Business Certificate (Form A)</DocumentName>
+                      <DocumentStatus $status={businessCertFormA.status}>
+                        {businessCertFormA.status === 'verified' && <FaCheckCircle />}
+                        {businessCertFormA.status === 'rejected' && <FaTimesCircle />}
+                        {businessCertFormA.status ? businessCertFormA.status.toUpperCase() : 'PENDING'}
+                        {businessCertFormA.verifiedBy && (
+                          <span style={{ fontSize: '0.75rem', color: '#6b7280', marginLeft: '0.5rem' }}>
+                            (by {getAdminDisplay(businessCertFormA.verifiedBy)})
+                          </span>
+                        )}
+                      </DocumentStatus>
+                    </DocumentInfo>
+                    <DocumentActionsRow>
+                      {businessCertFormA.url && (
+                        <DocumentLink href={businessCertFormA.url} target="_blank">
+                          <FaEye /> View
+                        </DocumentLink>
+                      )}
+                      {shouldShowDocumentButtons(businessCertFormA, 'businessCertFormA') && (
+                        <SmallActionGroup>
+                          <SmallActionButton
+                            $variant="success"
+                            onClick={() => handleDocumentStatusUpdate('businessCertFormA', 'verified')}
+                            disabled={shouldDisableDocumentButtons('businessCertFormA')}
+                          >
+                            <FaCheckCircle /> Verify
+                          </SmallActionButton>
+                          <SmallActionButton
+                            $variant="danger"
+                            onClick={() => handleDocumentStatusUpdate('businessCertFormA', 'rejected')}
+                            disabled={shouldDisableDocumentButtons('businessCertFormA')}
+                          >
+                            <FaTimesCircle /> Reject
+                          </SmallActionButton>
+                        </SmallActionGroup>
+                      )}
+                    </DocumentActionsRow>
+                  </DocumentItem>
+
                   <DocumentItem key={`idProof-${idProof.status}-${seller?._id}`}>
                     <DocumentIcon>
                       <FaIdCard />
@@ -1326,7 +1009,7 @@ const SellerDetailPage = () => {
                         {idProof.status ? idProof.status.toUpperCase() : 'PENDING'}
                         {idProof.verifiedBy && (
                           <span style={{ fontSize: '0.75rem', color: '#6b7280', marginLeft: '0.5rem' }}>
-                            (by {adminNamesMap[idProof.verifiedBy] || `Admin ${idProof.verifiedBy}`})
+                            (by {getAdminDisplay(idProof.verifiedBy)})
                           </span>
                         )}
                       </DocumentStatus>
@@ -1358,49 +1041,6 @@ const SellerDetailPage = () => {
                     </DocumentActionsRow>
                   </DocumentItem>
 
-                  <DocumentItem key={`addressProof-${addressProof.status}-${seller?._id}`}>
-                    <DocumentIcon>
-                      <FaFileAlt />
-                    </DocumentIcon>
-                    <DocumentInfo>
-                      <DocumentName>Address Proof</DocumentName>
-                      <DocumentStatus $status={addressProof.status}>
-                        {addressProof.status === 'verified' && <FaCheckCircle />}
-                        {addressProof.status === 'rejected' && <FaTimesCircle />}
-                        {addressProof.status ? addressProof.status.toUpperCase() : 'PENDING'}
-                        {addressProof.verifiedBy && (
-                          <span style={{ fontSize: '0.75rem', color: '#6b7280', marginLeft: '0.5rem' }}>
-                            (by {adminNamesMap[addressProof.verifiedBy] || `Admin ${addressProof.verifiedBy}`})
-                          </span>
-                        )}
-                      </DocumentStatus>
-                    </DocumentInfo>
-                    <DocumentActionsRow>
-                      {addressProof.url && (
-                        <DocumentLink href={addressProof.url} target="_blank">
-                          <FaEye /> View
-                        </DocumentLink>
-                      )}
-                      {shouldShowDocumentButtons(addressProof, 'addresProof') && (
-                        <SmallActionGroup>
-                          <SmallActionButton
-                            $variant="success"
-                            onClick={() => handleDocumentStatusUpdate('addresProof', 'verified')}
-                            disabled={shouldDisableDocumentButtons('addresProof')}
-                          >
-                            <FaCheckCircle /> Verify
-                          </SmallActionButton>
-                          <SmallActionButton
-                            $variant="danger"
-                            onClick={() => handleDocumentStatusUpdate('addresProof', 'rejected')}
-                            disabled={shouldDisableDocumentButtons('addresProof')}
-                          >
-                            <FaTimesCircle /> Reject
-                          </SmallActionButton>
-                        </SmallActionGroup>
-                      )}
-                    </DocumentActionsRow>
-                  </DocumentItem>
 
                   {!hasAllRequiredDocuments() && (
                     <WarningBox>
@@ -1640,8 +1280,8 @@ const SellerDetailPage = () => {
           <CardHeader>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: '0.5rem' }}>
               <CardTitle>Payment Methods (Payout Verification)</CardTitle>
-              <ActionButton 
-                variant="info" 
+              <ActionButton
+                variant="info"
                 onClick={() => {
                   refetchPayoutVerification();
                   queryClient.invalidateQueries(["admin", "seller", sellerId, "payout-verification"]);
@@ -1657,281 +1297,281 @@ const SellerDetailPage = () => {
           <CardBody>
             {/* Debug: Log payment methods availability */}
             {/* Only show seller.paymentMethods if they have actual data (not just empty objects) */}
-            {paymentMethods?.bankAccount && 
-             (paymentMethods.bankAccount.accountName || paymentMethods.bankAccount.accountNumber || paymentMethods.bankAccount.bankName) && (
-              <PaymentMethodCard>
-                <PaymentMethodIcon>
-                  <FaBuilding />
-                </PaymentMethodIcon>
-                <PaymentMethodInfo>
-                  <PaymentMethodHeader>
-                    <PaymentMethodTitle>Bank Account (Seller Profile)</PaymentMethodTitle>
-                    <PaymentMethodStatusBadge $status={paymentMethods.bankAccount.payoutStatus || 'pending'}>
-                      {paymentMethods.bankAccount.payoutStatus === 'verified' && <FaCheckCircle />}
-                      {paymentMethods.bankAccount.payoutStatus === 'rejected' && <FaTimesCircle />}
-                      {(paymentMethods.bankAccount.payoutStatus === 'pending' || !paymentMethods.bankAccount.payoutStatus) && <FaWallet />}
-                      {paymentMethods.bankAccount.payoutStatus === 'verified' ? 'VERIFIED' : (paymentMethods.bankAccount.payoutStatus ? paymentMethods.bankAccount.payoutStatus.toUpperCase() : 'PENDING')}
-                    </PaymentMethodStatusBadge>
-                  </PaymentMethodHeader>
-                  <PaymentMethodDetails>
-                    <PaymentMethodDetail>
-                      <strong>Account Name:</strong> {paymentMethods.bankAccount.accountName || 'Not provided'}
-                    </PaymentMethodDetail>
-                    <PaymentMethodDetail>
-                      <strong>Account Number:</strong> {paymentMethods.bankAccount.accountNumber || 'Not provided'}
-                    </PaymentMethodDetail>
-                    <PaymentMethodDetail>
-                      <strong>Bank:</strong> {paymentMethods.bankAccount.bankName || 'Not provided'}
-                    </PaymentMethodDetail>
-                    {paymentMethods.bankAccount.branch && (
+            {paymentMethods?.bankAccount &&
+              (paymentMethods.bankAccount.accountName || paymentMethods.bankAccount.accountNumber || paymentMethods.bankAccount.bankName) && (
+                <PaymentMethodCard>
+                  <PaymentMethodIcon>
+                    <FaBuilding />
+                  </PaymentMethodIcon>
+                  <PaymentMethodInfo>
+                    <PaymentMethodHeader>
+                      <PaymentMethodTitle>Bank Account (Seller Profile)</PaymentMethodTitle>
+                      <PaymentMethodStatusBadge $status={paymentMethods.bankAccount.payoutStatus || 'pending'}>
+                        {paymentMethods.bankAccount.payoutStatus === 'verified' && <FaCheckCircle />}
+                        {paymentMethods.bankAccount.payoutStatus === 'rejected' && <FaTimesCircle />}
+                        {(paymentMethods.bankAccount.payoutStatus === 'pending' || !paymentMethods.bankAccount.payoutStatus) && <FaWallet />}
+                        {paymentMethods.bankAccount.payoutStatus === 'verified' ? 'VERIFIED' : (paymentMethods.bankAccount.payoutStatus ? paymentMethods.bankAccount.payoutStatus.toUpperCase() : 'PENDING')}
+                      </PaymentMethodStatusBadge>
+                    </PaymentMethodHeader>
+                    <PaymentMethodDetails>
                       <PaymentMethodDetail>
-                        <strong>Branch:</strong> {paymentMethods.bankAccount.branch}
+                        <strong>Account Name:</strong> {paymentMethods.bankAccount.accountName || 'Not provided'}
                       </PaymentMethodDetail>
+                      <PaymentMethodDetail>
+                        <strong>Account Number:</strong> {paymentMethods.bankAccount.accountNumber || 'Not provided'}
+                      </PaymentMethodDetail>
+                      <PaymentMethodDetail>
+                        <strong>Bank:</strong> {paymentMethods.bankAccount.bankName || 'Not provided'}
+                      </PaymentMethodDetail>
+                      {paymentMethods.bankAccount.branch && (
+                        <PaymentMethodDetail>
+                          <strong>Branch:</strong> {paymentMethods.bankAccount.branch}
+                        </PaymentMethodDetail>
+                      )}
+                    </PaymentMethodDetails>
+                    {(paymentMethods.bankAccount.payoutStatus === 'pending' || !paymentMethods.bankAccount.payoutStatus || paymentMethods.bankAccount.payoutStatus === 'rejected') && (
+                      <PaymentMethodActions>
+                        <ActionButton
+                          variant="success"
+                          onClick={() => {
+                            setSelectedPaymentMethod('bank');
+                            setShowPayoutModal(true);
+                          }}
+                          style={{ marginTop: '1rem' }}
+                        >
+                          <FaWallet /> {paymentMethods.bankAccount.payoutStatus === 'rejected' ? 'Re-verify' : 'Verify'} Payout
+                        </ActionButton>
+                      </PaymentMethodActions>
                     )}
-                  </PaymentMethodDetails>
-                  {(paymentMethods.bankAccount.payoutStatus === 'pending' || !paymentMethods.bankAccount.payoutStatus || paymentMethods.bankAccount.payoutStatus === 'rejected') && (
-                    <PaymentMethodActions>
-                      <ActionButton 
-                        variant="success" 
-                        onClick={() => {
-                          setSelectedPaymentMethod('bank');
-                          setShowPayoutModal(true);
-                        }}
-                        style={{ marginTop: '1rem' }}
-                      >
-                        <FaWallet /> {paymentMethods.bankAccount.payoutStatus === 'rejected' ? 'Re-verify' : 'Verify'} Payout
-                      </ActionButton>
-                    </PaymentMethodActions>
-                  )}
-                </PaymentMethodInfo>
-              </PaymentMethodCard>
-            )}
+                  </PaymentMethodInfo>
+                </PaymentMethodCard>
+              )}
 
-            {paymentMethods?.mobileMoney && 
-             (paymentMethods.mobileMoney.accountName || paymentMethods.mobileMoney.phone || paymentMethods.mobileMoney.network) && (
-              <PaymentMethodCard>
-                <PaymentMethodIcon>
-                  <FaMobileAlt />
-                </PaymentMethodIcon>
-                <PaymentMethodInfo>
-                  <PaymentMethodHeader>
-                    <PaymentMethodTitle>
-                      Mobile Money ({paymentMethods.mobileMoney.network || 'Unknown'}) - Seller Profile
-                    </PaymentMethodTitle>
-                    <PaymentMethodStatusBadge $status={paymentMethods.mobileMoney.payoutStatus || 'pending'}>
-                      {paymentMethods.mobileMoney.payoutStatus === 'verified' && <FaCheckCircle />}
-                      {paymentMethods.mobileMoney.payoutStatus === 'rejected' && <FaTimesCircle />}
-                      {(paymentMethods.mobileMoney.payoutStatus === 'pending' || !paymentMethods.mobileMoney.payoutStatus) && <FaWallet />}
-                      {paymentMethods.mobileMoney.payoutStatus === 'verified' ? 'VERIFIED' : (paymentMethods.mobileMoney.payoutStatus ? paymentMethods.mobileMoney.payoutStatus.toUpperCase() : 'PENDING')}
-                    </PaymentMethodStatusBadge>
-                  </PaymentMethodHeader>
-                  <PaymentMethodDetails>
-                    <PaymentMethodDetail>
-                      <strong>Account Name:</strong> {paymentMethods.mobileMoney.accountName || 'Not provided'}
-                    </PaymentMethodDetail>
-                    <PaymentMethodDetail>
-                      <strong>Phone Number:</strong> {paymentMethods.mobileMoney.phone || 'Not provided'}
-                    </PaymentMethodDetail>
-                    <PaymentMethodDetail>
-                      <strong>Network:</strong> {paymentMethods.mobileMoney.network || 'Not provided'}
-                    </PaymentMethodDetail>
-                  </PaymentMethodDetails>
-                  {(paymentMethods.mobileMoney.payoutStatus === 'pending' || !paymentMethods.mobileMoney.payoutStatus || paymentMethods.mobileMoney.payoutStatus === 'rejected') && (
-                    <PaymentMethodActions>
-                      <ActionButton 
-                        variant="success" 
-                        onClick={() => {
-                          const network = paymentMethods.mobileMoney.network;
-                          const paymentMethodType = network === 'MTN' ? 'mtn_momo' :
-                                                   network === 'Vodafone' || network === 'vodafone' ? 'vodafone_cash' :
-                                                   'airtel_tigo_money';
-                          setSelectedPaymentMethod(paymentMethodType);
-                          setShowPayoutModal(true);
-                        }}
-                        style={{ marginTop: '1rem' }}
-                      >
-                        <FaWallet /> {paymentMethods.mobileMoney.payoutStatus === 'rejected' ? 'Re-verify' : 'Verify'} Payout
-                      </ActionButton>
-                    </PaymentMethodActions>
-                  )}
-                </PaymentMethodInfo>
-              </PaymentMethodCard>
-            )}
+            {paymentMethods?.mobileMoney &&
+              (paymentMethods.mobileMoney.accountName || paymentMethods.mobileMoney.phone || paymentMethods.mobileMoney.network) && (
+                <PaymentMethodCard>
+                  <PaymentMethodIcon>
+                    <FaMobileAlt />
+                  </PaymentMethodIcon>
+                  <PaymentMethodInfo>
+                    <PaymentMethodHeader>
+                      <PaymentMethodTitle>
+                        Mobile Money ({paymentMethods.mobileMoney.network || 'Unknown'}) - Seller Profile
+                      </PaymentMethodTitle>
+                      <PaymentMethodStatusBadge $status={paymentMethods.mobileMoney.payoutStatus || 'pending'}>
+                        {paymentMethods.mobileMoney.payoutStatus === 'verified' && <FaCheckCircle />}
+                        {paymentMethods.mobileMoney.payoutStatus === 'rejected' && <FaTimesCircle />}
+                        {(paymentMethods.mobileMoney.payoutStatus === 'pending' || !paymentMethods.mobileMoney.payoutStatus) && <FaWallet />}
+                        {paymentMethods.mobileMoney.payoutStatus === 'verified' ? 'VERIFIED' : (paymentMethods.mobileMoney.payoutStatus ? paymentMethods.mobileMoney.payoutStatus.toUpperCase() : 'PENDING')}
+                      </PaymentMethodStatusBadge>
+                    </PaymentMethodHeader>
+                    <PaymentMethodDetails>
+                      <PaymentMethodDetail>
+                        <strong>Account Name:</strong> {paymentMethods.mobileMoney.accountName || 'Not provided'}
+                      </PaymentMethodDetail>
+                      <PaymentMethodDetail>
+                        <strong>Phone Number:</strong> {paymentMethods.mobileMoney.phone || 'Not provided'}
+                      </PaymentMethodDetail>
+                      <PaymentMethodDetail>
+                        <strong>Network:</strong> {paymentMethods.mobileMoney.network || 'Not provided'}
+                      </PaymentMethodDetail>
+                    </PaymentMethodDetails>
+                    {(paymentMethods.mobileMoney.payoutStatus === 'pending' || !paymentMethods.mobileMoney.payoutStatus || paymentMethods.mobileMoney.payoutStatus === 'rejected') && (
+                      <PaymentMethodActions>
+                        <ActionButton
+                          variant="success"
+                          onClick={() => {
+                            const network = paymentMethods.mobileMoney.network;
+                            const paymentMethodType = network === 'MTN' ? 'mtn_momo' :
+                              network === 'Vodafone' || network === 'vodafone' ? 'vodafone_cash' :
+                                'airtel_tigo_money';
+                            setSelectedPaymentMethod(paymentMethodType);
+                            setShowPayoutModal(true);
+                          }}
+                          style={{ marginTop: '1rem' }}
+                        >
+                          <FaWallet /> {paymentMethods.mobileMoney.payoutStatus === 'rejected' ? 'Re-verify' : 'Verify'} Payout
+                        </ActionButton>
+                      </PaymentMethodActions>
+                    )}
+                  </PaymentMethodInfo>
+                </PaymentMethodCard>
+              )}
 
             {/* Show ALL PaymentMethod Records individually */}
             {(() => {
               const hasRecords = paymentMethodRecords && Array.isArray(paymentMethodRecords) && paymentMethodRecords.length > 0;
-              
+
               // If we have records, show them
               if (hasRecords) {
-              return (
-                <>
-                  {((paymentMethods?.bankAccount && (paymentMethods.bankAccount.accountName || paymentMethods.bankAccount.accountNumber || paymentMethods.bankAccount.bankName)) ||
-                    (paymentMethods?.mobileMoney && (paymentMethods.mobileMoney.accountName || paymentMethods.mobileMoney.phone || paymentMethods.mobileMoney.network))) && (
-                    <Divider style={{ margin: '2rem 0 1rem 0' }} />
-                  )}
-                  <div style={{ marginBottom: '1.5rem' }}>
-                    {isPayoutVerificationLoading && (
-                      <InfoText style={{ fontSize: '0.9rem', color: '#64748b', fontStyle: 'italic' }}>
-                        Loading payment information…
-                      </InfoText>
-                    )}
-                    {payoutVerificationError && (() => {
-                      const { title, message, canRetry } = normalizeError(
-                        payoutVerificationError,
-                        {
-                          fallbackTitle: "Unable to load payment details",
-                          fallbackMessage: "Please try again. If the problem continues, contact support.",
-                          defaultCanRetry: true,
-                        }
-                      );
-                      return (
-                        <InfoText style={{ fontSize: '0.9rem', color: '#ef4444', marginBottom: '0.5rem' }}>
-                          <strong>{title}.</strong>{' '}
-                          <span>{message}</span>
-                          {canRetry && (
-                            <button 
-                              onClick={() => refetchPayoutVerification()} 
-                              style={{ marginLeft: '0.5rem', padding: '0.25rem 0.5rem', fontSize: '0.875rem', cursor: 'pointer' }}
-                            >
-                              Retry
-                            </button>
-                          )}
+                return (
+                  <>
+                    {((paymentMethods?.bankAccount && (paymentMethods.bankAccount.accountName || paymentMethods.bankAccount.accountNumber || paymentMethods.bankAccount.bankName)) ||
+                      (paymentMethods?.mobileMoney && (paymentMethods.mobileMoney.accountName || paymentMethods.mobileMoney.phone || paymentMethods.mobileMoney.network))) && (
+                        <Divider style={{ margin: '2rem 0 1rem 0' }} />
+                      )}
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      {isPayoutVerificationLoading && (
+                        <InfoText style={{ fontSize: '0.9rem', color: '#64748b', fontStyle: 'italic' }}>
+                          Loading payment information…
                         </InfoText>
-                      );
-                    })()}
-                    <InfoText style={{ fontSize: '0.95rem', color: '#64748b' }}>
-                      <strong>Payment Method Records ({paymentMethodRecords.length}):</strong>{' '}
-                      These are payment methods added by the seller through the payment method system. Each one needs individual verification.
-                    </InfoText>
-                  </div>
+                      )}
+                      {payoutVerificationError && (() => {
+                        const { title, message, canRetry } = normalizeError(
+                          payoutVerificationError,
+                          {
+                            fallbackTitle: "Unable to load payment details",
+                            fallbackMessage: "Please try again. If the problem continues, contact support.",
+                            defaultCanRetry: true,
+                          }
+                        );
+                        return (
+                          <InfoText style={{ fontSize: '0.9rem', color: '#ef4444', marginBottom: '0.5rem' }}>
+                            <strong>{title}.</strong>{' '}
+                            <span>{message}</span>
+                            {canRetry && (
+                              <button
+                                onClick={() => refetchPayoutVerification()}
+                                style={{ marginLeft: '0.5rem', padding: '0.25rem 0.5rem', fontSize: '0.875rem', cursor: 'pointer' }}
+                              >
+                                Retry
+                              </button>
+                            )}
+                          </InfoText>
+                        );
+                      })()}
+                      <InfoText style={{ fontSize: '0.95rem', color: '#64748b' }}>
+                        <strong>Payment Method Records ({paymentMethodRecords.length}):</strong>{' '}
+                        These are payment methods added by the seller through the payment method system. Each one needs individual verification.
+                      </InfoText>
+                    </div>
                     {paymentMethodRecords.map((pm, index) => {
                       return (
-                  <PaymentMethodCard key={pm._id || index} style={{ marginBottom: '1.5rem' }}>
-                    <PaymentMethodIcon>
-                      {pm.type === 'bank_transfer' ? <FaBuilding /> : <FaMobileAlt />}
-                    </PaymentMethodIcon>
-                    <PaymentMethodInfo>
-                      <PaymentMethodHeader>
-                        <PaymentMethodTitle>
-                          {pm.type === 'bank_transfer' ? 'Bank Account' : `Mobile Money (${pm.provider || 'Unknown'})`}
-                          {pm.isDefault && (
-                            <DefaultBadge style={{ marginLeft: '0.5rem', fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}>Default</DefaultBadge>
-                          )}
-                          <span style={{ marginLeft: '0.5rem', fontSize: '0.85rem', color: '#64748b', fontWeight: 'normal' }}>
-                            (#{index + 1})
-                          </span>
-                        </PaymentMethodTitle>
-                        <PaymentMethodStatusBadge $status={pm.verificationStatus || 'pending'}>
-                          {pm.verificationStatus === 'verified' && <FaCheckCircle />}
-                          {pm.verificationStatus === 'rejected' && <FaTimesCircle />}
-                          {(pm.verificationStatus === 'pending' || !pm.verificationStatus) && <FaWallet />}
-                          {pm.verificationStatus === 'verified' ? 'VERIFIED' : (pm.verificationStatus ? pm.verificationStatus.toUpperCase() : 'PENDING')}
-                        </PaymentMethodStatusBadge>
-                      </PaymentMethodHeader>
-                      <PaymentMethodDetails>
-                        {pm.type === 'bank_transfer' ? (
-                          <>
-                            <PaymentMethodDetail>
-                              <strong>Account Name:</strong> {pm.accountName || pm.name || 'Not provided'}
-                            </PaymentMethodDetail>
-                            <PaymentMethodDetail>
-                              <strong>Account Number:</strong> {pm.accountNumber || 'Not provided'}
-                            </PaymentMethodDetail>
-                            <PaymentMethodDetail>
-                              <strong>Bank:</strong> {pm.bankName || 'Not provided'}
-                            </PaymentMethodDetail>
-                            {pm.branch && (
-                              <PaymentMethodDetail>
-                                <strong>Branch:</strong> {pm.branch}
-                              </PaymentMethodDetail>
+                        <PaymentMethodCard key={pm._id || index} style={{ marginBottom: '1.5rem' }}>
+                          <PaymentMethodIcon>
+                            {pm.type === 'bank_transfer' ? <FaBuilding /> : <FaMobileAlt />}
+                          </PaymentMethodIcon>
+                          <PaymentMethodInfo>
+                            <PaymentMethodHeader>
+                              <PaymentMethodTitle>
+                                {pm.type === 'bank_transfer' ? 'Bank Account' : `Mobile Money (${pm.provider || 'Unknown'})`}
+                                {pm.isDefault && (
+                                  <DefaultBadge style={{ marginLeft: '0.5rem', fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}>Default</DefaultBadge>
+                                )}
+                                <span style={{ marginLeft: '0.5rem', fontSize: '0.85rem', color: '#64748b', fontWeight: 'normal' }}>
+                                  (#{index + 1})
+                                </span>
+                              </PaymentMethodTitle>
+                              <PaymentMethodStatusBadge $status={pm.verificationStatus || 'pending'}>
+                                {pm.verificationStatus === 'verified' && <FaCheckCircle />}
+                                {pm.verificationStatus === 'rejected' && <FaTimesCircle />}
+                                {(pm.verificationStatus === 'pending' || !pm.verificationStatus) && <FaWallet />}
+                                {pm.verificationStatus === 'verified' ? 'VERIFIED' : (pm.verificationStatus ? pm.verificationStatus.toUpperCase() : 'PENDING')}
+                              </PaymentMethodStatusBadge>
+                            </PaymentMethodHeader>
+                            <PaymentMethodDetails>
+                              {pm.type === 'bank_transfer' ? (
+                                <>
+                                  <PaymentMethodDetail>
+                                    <strong>Account Name:</strong> {pm.accountName || pm.name || 'Not provided'}
+                                  </PaymentMethodDetail>
+                                  <PaymentMethodDetail>
+                                    <strong>Account Number:</strong> {pm.accountNumber || 'Not provided'}
+                                  </PaymentMethodDetail>
+                                  <PaymentMethodDetail>
+                                    <strong>Bank:</strong> {pm.bankName || 'Not provided'}
+                                  </PaymentMethodDetail>
+                                  {pm.branch && (
+                                    <PaymentMethodDetail>
+                                      <strong>Branch:</strong> {pm.branch}
+                                    </PaymentMethodDetail>
+                                  )}
+                                </>
+                              ) : (
+                                <>
+                                  <PaymentMethodDetail>
+                                    <strong>Account Name:</strong> {pm.accountName || pm.name || 'Not provided'}
+                                  </PaymentMethodDetail>
+                                  <PaymentMethodDetail>
+                                    <strong>Phone Number:</strong> {pm.mobileNumber || 'Not provided'}
+                                  </PaymentMethodDetail>
+                                  <PaymentMethodDetail>
+                                    <strong>Network:</strong> {pm.provider || 'Not provided'}
+                                  </PaymentMethodDetail>
+                                </>
+                              )}
+                              {/* Verified At and Verified By are now shown together in a special section when verified */}
+                              {pm.verificationStatus !== 'verified' && pm.verifiedAt && (
+                                <PaymentMethodDetail>
+                                  <strong>Verified At:</strong> {new Date(pm.verifiedAt).toLocaleDateString('en-US', {
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric',
+                                  })}
+                                </PaymentMethodDetail>
+                              )}
+                              {pm.verificationStatus !== 'verified' && pm.verifiedBy && (
+                                <PaymentMethodDetail>
+                                  <strong>Verified By:</strong> {getAdminDisplay(pm.verifiedBy)}
+                                </PaymentMethodDetail>
+                              )}
+                            </PaymentMethodDetails>
+                            {pm.rejectionReason && pm.verificationStatus === 'rejected' && (
+                              <RejectionBox style={{ marginTop: '1rem', padding: '0.75rem' }}>
+                                <FaExclamationTriangle style={{ marginRight: '0.5rem' }} />
+                                <div>
+                                  <strong>Rejection Reason:</strong>
+                                  <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.9rem' }}>{pm.rejectionReason}</p>
+                                </div>
+                              </RejectionBox>
                             )}
-                          </>
-                        ) : (
-                          <>
-                            <PaymentMethodDetail>
-                              <strong>Account Name:</strong> {pm.accountName || pm.name || 'Not provided'}
-                            </PaymentMethodDetail>
-                            <PaymentMethodDetail>
-                              <strong>Phone Number:</strong> {pm.mobileNumber || 'Not provided'}
-                            </PaymentMethodDetail>
-                            <PaymentMethodDetail>
-                              <strong>Network:</strong> {pm.provider || 'Not provided'}
-                            </PaymentMethodDetail>
-                          </>
-                        )}
-                        {/* Verified At and Verified By are now shown together in a special section when verified */}
-                        {pm.verificationStatus !== 'verified' && pm.verifiedAt && (
-                          <PaymentMethodDetail>
-                            <strong>Verified At:</strong> {new Date(pm.verifiedAt).toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric',
-                            })}
-                          </PaymentMethodDetail>
-                        )}
-                        {pm.verificationStatus !== 'verified' && pm.verifiedBy && (
-                          <PaymentMethodDetail>
-                            <strong>Verified By:</strong> {adminNamesMap[pm.verifiedBy] || `Admin ${pm.verifiedBy}`}
-                          </PaymentMethodDetail>
-                        )}
-                      </PaymentMethodDetails>
-                      {pm.rejectionReason && pm.verificationStatus === 'rejected' && (
-                        <RejectionBox style={{ marginTop: '1rem', padding: '0.75rem' }}>
-                          <FaExclamationTriangle style={{ marginRight: '0.5rem' }} />
-                          <div>
-                            <strong>Rejection Reason:</strong>
-                            <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.9rem' }}>{pm.rejectionReason}</p>
-                          </div>
-                        </RejectionBox>
-                      )}
-                      {/* Show Verified By if verified, otherwise show Verify Button */}
-                      {pm.verificationStatus === 'verified' && pm.verifiedBy ? (
-                        <PaymentMethodDetail style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: '#f0f9ff', borderRadius: '0.5rem' }}>
-                          <strong>Verified By:</strong> {adminNamesMap[pm.verifiedBy] || `Admin ${pm.verifiedBy}`}
-                          {pm.verifiedAt && (
-                            <span style={{ marginLeft: '1rem', fontSize: '0.9rem', color: '#64748b' }}>
-                              on {new Date(pm.verifiedAt).toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric',
-                              })}
-                            </span>
-                          )}
-                        </PaymentMethodDetail>
-                      ) : (pm.verificationStatus === 'pending' || !pm.verificationStatus || pm.verificationStatus === 'rejected') ? (
-                        <PaymentMethodActions>
-                          <ActionButton 
-                            variant="success" 
-                            onClick={() => {
-                              // Determine payment method type for approval
-                              let paymentMethodType;
-                              if (pm.type === 'bank_transfer') {
-                                paymentMethodType = 'bank';
-                              } else if (pm.type === 'mobile_money') {
-                                paymentMethodType = pm.provider === 'MTN' ? 'mtn_momo' :
-                                                   pm.provider === 'Vodafone' ? 'vodafone_cash' :
-                                                   'airtel_tigo_money';
-                              }
-                              // Store both the type and the actual record
-                              setSelectedPaymentMethod(paymentMethodType);
-                              setSelectedPaymentMethodRecord(pm); // Pass the actual PaymentMethod record
-                              setShowPayoutModal(true);
-                            }}
-                            style={{ marginTop: '1rem' }}
-                          >
-                            <FaWallet /> {pm.verificationStatus === 'rejected' ? 'Re-verify' : 'Verify'} Payout
-                          </ActionButton>
-                        </PaymentMethodActions>
-                      ) : null}
-                    </PaymentMethodInfo>
-                  </PaymentMethodCard>
-                    );
-                  })}
+                            {/* Show Verified By if verified, otherwise show Verify Button */}
+                            {pm.verificationStatus === 'verified' && pm.verifiedBy ? (
+                              <PaymentMethodDetail style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: '#f0f9ff', borderRadius: '0.5rem' }}>
+                                <strong>Verified By:</strong> {getAdminDisplay(pm.verifiedBy)}
+                                {pm.verifiedAt && (
+                                  <span style={{ marginLeft: '0.5rem', fontSize: '0.9rem', color: '#64748b' }}>
+                                    {" "}on {new Date(pm.verifiedAt).toLocaleDateString('en-US', {
+                                      year: 'numeric',
+                                      month: 'long',
+                                      day: 'numeric',
+                                    })}
+                                  </span>
+                                )}
+                              </PaymentMethodDetail>
+                            ) : (pm.verificationStatus === 'pending' || !pm.verificationStatus || pm.verificationStatus === 'rejected') ? (
+                              <PaymentMethodActions>
+                                <ActionButton
+                                  variant="success"
+                                  onClick={() => {
+                                    // Determine payment method type for approval
+                                    let paymentMethodType;
+                                    if (pm.type === 'bank_transfer') {
+                                      paymentMethodType = 'bank';
+                                    } else if (pm.type === 'mobile_money') {
+                                      paymentMethodType = pm.provider === 'MTN' ? 'mtn_momo' :
+                                        pm.provider === 'Vodafone' ? 'vodafone_cash' :
+                                          'airtel_tigo_money';
+                                    }
+                                    // Store both the type and the actual record
+                                    setSelectedPaymentMethod(paymentMethodType);
+                                    setSelectedPaymentMethodRecord(pm); // Pass the actual PaymentMethod record
+                                    setShowPayoutModal(true);
+                                  }}
+                                  style={{ marginTop: '1rem' }}
+                                >
+                                  <FaWallet /> {pm.verificationStatus === 'rejected' ? 'Re-verify' : 'Verify'} Payout
+                                </ActionButton>
+                              </PaymentMethodActions>
+                            ) : null}
+                          </PaymentMethodInfo>
+                        </PaymentMethodCard>
+                      );
+                    })}
                   </>
                 );
               }
-              
+
               // If no paymentMethodRecords AND no seller profile payment methods, show empty state
               if (!paymentMethods?.bankAccount && !paymentMethods?.mobileMoney) {
                 return (
@@ -1947,7 +1587,7 @@ const SellerDetailPage = () => {
                   </EmptyState>
                 );
               }
-              
+
               // If seller profile payment methods exist but no records, return null (don't show empty state)
               return null;
             })()}
@@ -1956,16 +1596,18 @@ const SellerDetailPage = () => {
       </ContentGrid>
 
       {/* Action Buttons */}
-      <ActionSection>
-        <ActionButton $variant="warning" onClick={() => setShowResetModal(true)}>
-          <FaUndo /> Reset Balance
-        </ActionButton>
-        {seller?.lockedBalance > 0 && (
-          <ActionButton $variant="info" onClick={() => setShowResetLockedModal(true)}>
-            <FaLock /> Reset Locked Balance
+      {isSuperadmin && (
+        <ActionSection>
+          <ActionButton $variant="warning" onClick={() => setShowResetModal(true)}>
+            <FaUndo /> Reset Balance
           </ActionButton>
-        )}
-      </ActionSection>
+          {seller?.lockedBalance > 0 && (
+            <ActionButton $variant="info" onClick={() => setShowResetLockedModal(true)}>
+              <FaLock /> Reset Locked Balance
+            </ActionButton>
+          )}
+        </ActionSection>
+      )}
 
       {/* Modals */}
       {showPayoutModal && (
@@ -1982,10 +1624,10 @@ const SellerDetailPage = () => {
             setShowPayoutModal(false);
             setSelectedPaymentMethod(null);
             setSelectedPaymentMethodRecord(null); // Clear the selected record
-            
+
             // Wait a moment for backend transaction to commit
             await new Promise(resolve => setTimeout(resolve, 300));
-            
+
             // Invalidate and refetch to get updated status
             await queryClient.invalidateQueries(["admin", "seller", sellerId, "payout-verification"]);
             await queryClient.invalidateQueries(["admin", "seller", sellerId]);
@@ -2311,14 +1953,14 @@ const StatusBadge = styled.div`
     $status === 'verified' || $status === 'active'
       ? '#d1fae5'
       : $status === 'rejected' || $status === 'inactive'
-      ? '#fee2e2'
-      : '#fef3c7'};
+        ? '#fee2e2'
+        : '#fef3c7'};
   color: ${({ $status }) =>
     $status === 'verified' || $status === 'active'
       ? '#10b981'
       : $status === 'rejected' || $status === 'inactive'
-      ? '#ef4444'
-      : '#f59e0b'};
+        ? '#ef4444'
+        : '#f59e0b'};
 `;
 
 const DocumentItem = styled.div`
@@ -2356,8 +1998,8 @@ const DocumentStatus = styled.div`
     $status === 'verified'
       ? '#10b981'
       : $status === 'rejected'
-      ? '#ef4444'
-      : '#f59e0b'};
+        ? '#ef4444'
+        : '#f59e0b'};
   display: flex;
   align-items: center;
   gap: 0.25rem;
@@ -2408,8 +2050,8 @@ const SmallActionButton = styled.button`
     $variant === 'success'
       ? '#10b981'
       : $variant === 'danger'
-      ? '#ef4444'
-      : '#e5e7eb'};
+        ? '#ef4444'
+        : '#e5e7eb'};
   color: ${({ $variant }) =>
     $variant === 'success' || $variant === 'danger' ? '#ffffff' : '#111827'};
 
@@ -2547,20 +2189,20 @@ const PaymentMethodStatusBadge = styled.div`
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  background: ${({ $status }) => 
+  background: ${({ $status }) =>
     $status === 'verified' ? '#10b98120' :
-    $status === 'rejected' ? '#ef444420' :
-    '#f59e0b20'
+      $status === 'rejected' ? '#ef444420' :
+        '#f59e0b20'
   };
-  color: ${({ $status }) => 
+  color: ${({ $status }) =>
     $status === 'verified' ? '#10b981' :
-    $status === 'rejected' ? '#ef4444' :
-    '#f59e0b'
+      $status === 'rejected' ? '#ef4444' :
+        '#f59e0b'
   };
-  border: 1px solid ${({ $status }) => 
+  border: 1px solid ${({ $status }) =>
     $status === 'verified' ? '#10b98140' :
-    $status === 'rejected' ? '#ef444440' :
-    '#f59e0b40'
+      $status === 'rejected' ? '#ef444440' :
+        '#f59e0b40'
   };
 `;
 
@@ -2669,12 +2311,12 @@ const ActionButton = styled.button`
     $variant === "success"
       ? "#10b981"
       : $variant === "danger"
-      ? "#ef4444"
-      : $variant === "warning"
-      ? "#f59e0b"
-      : $variant === "info"
-      ? "#17a2b8"
-      : "#6c757d"};
+        ? "#ef4444"
+        : $variant === "warning"
+          ? "#f59e0b"
+          : $variant === "info"
+            ? "#17a2b8"
+            : "#6c757d"};
   color: white;
   opacity: ${({ disabled }) => (disabled ? 0.6 : 1)};
   pointer-events: ${({ disabled }) => (disabled ? "none" : "auto")};

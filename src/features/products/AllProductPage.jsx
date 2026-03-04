@@ -6,9 +6,10 @@ import useProduct from "../../shared/hooks/useProduct";
 import { useEazShop } from "../../shared/hooks/useEazShop";
 import { useMemo, useState } from "react";
 import { LoadingSpinner } from "../../shared/components/LoadingSpinner";
-import { PATHS } from "../../routes/routhPath";
+import { PATHS } from "../../routes/routePath";
 import { toast } from "react-toastify";
 import { FaAward } from "react-icons/fa";
+import { ConfirmationModal } from "../../shared/components/modal/ConfirmationModal";
 
 // Helper function to calculate total stock from variants
 const calculateTotalStock = (product) => {
@@ -27,7 +28,7 @@ export default function AllProductPage() {
   const navigate = useNavigate();
   const { getProducts, approveProduct, rejectProduct, deleteProduct } = useProduct();
   const { data, isLoading: productLoading, error: productError } = getProducts;
-  
+
   // Debug: Log the raw response
   console.log("🔍 [AllProductPage] Raw API response:", data);
   console.log("🔍 [AllProductPage] Response structure:", {
@@ -41,7 +42,7 @@ export default function AllProductPage() {
     nestedDataType: Array.isArray(data?.data?.data) ? 'array' : typeof data?.data?.data,
     nestedDataPreview: data?.data?.data ? (Array.isArray(data.data.data) ? `Array[${data.data.data.length}]` : JSON.stringify(data.data.data).substring(0, 100)) : 'null'
   });
-  
+
   // Expand data.data to see what's inside
   if (data?.data) {
     console.log("🔍 [AllProductPage] data.data contents:", data.data);
@@ -58,46 +59,46 @@ export default function AllProductPage() {
       console.log("⚠️ [AllProductPage] No data received");
       return [];
     }
-    
+
     console.log("📦 [AllProductPage] Raw data structure:", JSON.stringify(data, null, 2));
-    
+
     // Backend returns: { status: 'success', results: number, total: number, data: { data: products[] } }
     // Check for nested data.data.data (from getAllProduct controller)
     if (data.data?.data && Array.isArray(data.data.data)) {
       console.log("✅ [AllProductPage] Found products at data.data.data:", data.data.data.length);
       return data.data.data;
     }
-    
+
     // Check for data.data.products
     if (data.data?.products && Array.isArray(data.data.products)) {
       console.log("✅ [AllProductPage] Found products at data.data.products:", data.data.products.length);
       return data.data.products;
     }
-    
+
     // Check for data.products
     if (data.products && Array.isArray(data.products)) {
       console.log("✅ [AllProductPage] Found products at data.products:", data.products.length);
       return data.products;
     }
-    
+
     // Check for data.results (if it's an array, not just a count)
     if (data.results && Array.isArray(data.results)) {
       console.log("✅ [AllProductPage] Found products at data.results:", data.results.length);
       return data.results;
     }
-    
+
     // Check if data itself is an array
     if (Array.isArray(data)) {
       console.log("✅ [AllProductPage] Data is array:", data.length);
       return data;
     }
-    
+
     // Check for data.data as array
     if (data.data && Array.isArray(data.data)) {
       console.log("✅ [AllProductPage] Found products at data.data:", data.data.length);
       return data.data;
     }
-    
+
     // If results is 0, it means no products found (not a structure issue)
     if (data.results === 0 || data.total === 0) {
       console.warn("⚠️ [AllProductPage] API returned 0 products. This could mean:");
@@ -119,6 +120,7 @@ export default function AllProductPage() {
   const [itemsPerPage] = useState(10);
   const [rejectModal, setRejectModal] = useState({ open: false, productId: null, productName: "" });
   const [rejectReason, setRejectReason] = useState("");
+  const [actionModalConfig, setActionModalConfig] = useState({ isOpen: false, type: null, payload: null });
   const [sortConfig, setSortConfig] = useState({
     key: null,
     direction: "ascending",
@@ -164,14 +166,14 @@ export default function AllProductPage() {
       statusFilter === "all" || (product.status || "active") === statusFilter;
     const matchesModeration =
       moderationFilter === "all" || (product.moderationStatus || "pending") === moderationFilter;
-    
+
     // Tab filtering - handle null/undefined moderationStatus
     const moderationStatus = (product.moderationStatus || "").toLowerCase();
-    const matchesTab = 
+    const matchesTab =
       activeTab === "all" ||
       (activeTab === "approved" && (moderationStatus === "approved")) ||
       (activeTab === "unapproved" && (moderationStatus === "pending" || moderationStatus === "rejected" || !moderationStatus));
-    
+
     return matchesSearch && matchesStatus && matchesModeration && matchesTab;
   });
 
@@ -184,64 +186,44 @@ export default function AllProductPage() {
   );
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
 
-  const handleDelete = async (productId) => {
+  const handleDelete = (productId) => {
     if (!productId) {
       toast.error("Product ID is missing");
       return;
     }
-    
-    // Show confirmation with more context about soft delete
-    const confirmed = window.confirm(
-      `Are you sure you want to remove this product from the marketplace?\n\n` +
-      `This will archive the product (soft delete). If the product has order history, ` +
-      `it will be preserved for records. Only products with zero orders can be permanently deleted.`
-    );
-    
-    if (!confirmed) {
-      return;
-    }
-    
+    setActionModalConfig({ isOpen: true, type: 'delete', payload: productId });
+  };
+
+  const handleMarkAsEazShop = (productId) => {
+    setActionModalConfig({ isOpen: true, type: 'markEazShop', payload: productId });
+  };
+
+  const handleApproveProduct = (productId, productName) => {
+    setActionModalConfig({ isOpen: true, type: 'approve', payload: { id: productId, name: productName } });
+  };
+
+  const confirmAction = async () => {
+    const { type, payload } = actionModalConfig;
+    if (!type || !payload) return;
+
     try {
-      const result = await deleteProduct.mutateAsync(productId);
-      
-      // Handle different response formats
-      const message = result?.message || 
-                     result?.data?.note || 
-                     "Product removed from marketplace";
-      
-      toast.success(message);
-      
-      // CRITICAL: Delete mutation already invalidates queries in onSuccess
-      // Do NOT call refetch() here - it causes immediate full fetch of all products
-      // React Query will automatically refetch when component re-renders
-    } catch (error) {
-      const errorMessage = error.response?.data?.message || 
-                          error.message || 
-                          "Failed to delete product";
-      toast.error(`Failed to remove product: ${errorMessage}`);
-      console.error("Delete product error:", error);
-    }
-  };
-
-  const handleMarkAsEazShop = async (productId) => {
-    if (window.confirm("Mark this product as an EazShop Official Store product?")) {
-      try {
-        await markAsEazShopMutation.mutateAsync(productId);
+      if (type === 'delete') {
+        const result = await deleteProduct.mutateAsync(payload);
+        const message = result?.message || result?.data?.note || "Product removed from marketplace";
+        toast.success(message);
+      } else if (type === 'markEazShop') {
+        await markAsEazShopMutation.mutateAsync(payload);
         toast.success("Product marked as Saiisai product!");
-      } catch (error) {
-        toast.error("Failed to mark product as Saiisai: " + (error.message || "Unknown error"));
-      }
-    }
-  };
-
-  const handleApproveProduct = async (productId, productName) => {
-    if (window.confirm(`Approve product "${productName}"?`)) {
-      try {
-        await approveProduct.mutateAsync({ productId, notes: "" });
+      } else if (type === 'approve') {
+        await approveProduct.mutateAsync({ productId: payload.id, notes: "" });
         toast.success("Product approved successfully!");
-      } catch (error) {
-        toast.error("Failed to approve product: " + (error.response?.data?.message || error.message || "Unknown error"));
       }
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || error.message || "Failed to perform action";
+      toast.error(`Failed: ${errorMessage}`);
+      console.error(`Action error [${type}]:`, error);
+    } finally {
+      setActionModalConfig({ isOpen: false, type: null, payload: null });
     }
   };
 
@@ -252,10 +234,10 @@ export default function AllProductPage() {
     }
 
     try {
-      await rejectProduct.mutateAsync({ 
-        productId: rejectModal.productId, 
+      await rejectProduct.mutateAsync({
+        productId: rejectModal.productId,
         reason: rejectReason,
-        notes: rejectReason 
+        notes: rejectReason
       });
       toast.success("Product rejected successfully!");
       setRejectModal({ open: false, productId: null, productName: "" });
@@ -278,7 +260,7 @@ export default function AllProductPage() {
   const handlePageChange = (newPage) => {
     setPage(newPage);
   };
-  
+
   if (productLoading) return <LoadingSpinner />;
   if (productError) {
     return (
@@ -290,7 +272,7 @@ export default function AllProductPage() {
       </DashboardContainer>
     );
   }
-  
+
   // Debug info
   console.log("Total products:", products.length);
   console.log("Filtered products:", filteredProducts.length);
@@ -340,22 +322,22 @@ export default function AllProductPage() {
           </FilterSelect>
         </Controls>
       </Header>
-      
+
       {/* Tabs */}
       <TabsContainer>
-        <TabButton 
+        <TabButton
           $active={activeTab === "all"}
           onClick={() => setActiveTab("all")}
         >
           All Products ({products.length})
         </TabButton>
-        <TabButton 
+        <TabButton
           $active={activeTab === "approved"}
           onClick={() => setActiveTab("approved")}
         >
           Approved ({approvedCount})
         </TabButton>
-        <TabButton 
+        <TabButton
           $active={activeTab === "unapproved"}
           onClick={() => setActiveTab("unapproved")}
         >
@@ -407,106 +389,106 @@ export default function AllProductPage() {
               const productId = product.id || product._id;
               return (
                 <TableRow key={productId}>
-                <TableCell>
-                  <ProductImage src={product.imageCover} alt={product.name} />
-                </TableCell>
-                <TableCell>
-                  <ProductName>{product.name}</ProductName>
-                </TableCell>
-                <TableCell>
-                  <SellerInfo>{product.seller?.shopName || product.seller?.name || "N/A"}</SellerInfo>
-                </TableCell>
-                <TableCell>
-                  <PriceInfo>₵{product.price?.toFixed(2) || "0.00"}</PriceInfo>
-                </TableCell>
-                <TableCell>
-                  <StockIndicator stock={product.totalStock || calculateTotalStock(product)}>
-                    {(product.totalStock || calculateTotalStock(product)) > 0
-                      ? (product.totalStock || calculateTotalStock(product))
-                      : "Out of stock"}
-                  </StockIndicator>
-                </TableCell>
-                <TableCell>
-                  <CategoryInfo>
-                    {product.parentCategory?.name ||
-                      product.subCategory?.name ||
-                      "Uncategorized"}
-                  </CategoryInfo>
-                </TableCell>
-                <TableCell>
-                  <StatusPill status={product.status}>
-                    {product.status.replace("-", " ")}
-                  </StatusPill>
-                </TableCell>
-                <TableCell>
-                  {product.isPreOrder ? (
-                    <PreOrderBadge>
-                      {product.preOrderOriginCountry ? `Pre-Order (${product.preOrderOriginCountry})` : 'Pre-Order'}
-                    </PreOrderBadge>
-                  ) : (
-                    <span style={{ color: '#94a3b8' }}>Regular</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <ModerationPill status={product.moderationStatus || "pending"}>
-                    {product.moderationStatus || "pending"}
-                  </ModerationPill>
-                </TableCell>
-                <TableCell>
-                  <ActionButtons>
-                    {product.moderationStatus === "pending" && (
-                      <>
-                        <ActionButton
-                          title="Approve Product"
-                          $approve
-                          onClick={() => handleApproveProduct(product.id || product._id, product.name)}
-                          disabled={approveProduct.isPending}
-                        >
-                          <FiCheck />
-                        </ActionButton>
-                        <ActionButton
-                          title="Reject Product"
-                          $reject
-                          onClick={() => openRejectModal(product.id || product._id, product.name)}
-                          disabled={rejectProduct.isPending}
-                        >
-                          <FiX />
-                        </ActionButton>
-                      </>
+                  <TableCell>
+                    <ProductImage src={product.imageCover} alt={product.name} />
+                  </TableCell>
+                  <TableCell>
+                    <ProductName>{product.name}</ProductName>
+                  </TableCell>
+                  <TableCell>
+                    <SellerInfo>{product.seller?.shopName || product.seller?.name || "N/A"}</SellerInfo>
+                  </TableCell>
+                  <TableCell>
+                    <PriceInfo>₵{product.price?.toFixed(2) || "0.00"}</PriceInfo>
+                  </TableCell>
+                  <TableCell>
+                    <StockIndicator stock={product.totalStock || calculateTotalStock(product)}>
+                      {(product.totalStock || calculateTotalStock(product)) > 0
+                        ? (product.totalStock || calculateTotalStock(product))
+                        : "Out of stock"}
+                    </StockIndicator>
+                  </TableCell>
+                  <TableCell>
+                    <CategoryInfo>
+                      {product.parentCategory?.name ||
+                        product.subCategory?.name ||
+                        "Uncategorized"}
+                    </CategoryInfo>
+                  </TableCell>
+                  <TableCell>
+                    <StatusPill status={product.status}>
+                      {product.status.replace("-", " ")}
+                    </StatusPill>
+                  </TableCell>
+                  <TableCell>
+                    {product.isPreOrder ? (
+                      <PreOrderBadge>
+                        {product.preOrderOriginCountry ? `Pre-Order (${product.preOrderOriginCountry})` : 'Pre-Order'}
+                      </PreOrderBadge>
+                    ) : (
+                      <span style={{ color: '#94a3b8' }}>Regular</span>
                     )}
-                    <ActionButton
-                      title="View"
-                      onClick={() => navigate(`/dashboard/${PATHS.PRODUCTDETAILS.replace(':id', product.id || product._id)}`)}
-                    >
-                      <FiEye />
-                    </ActionButton>
-                    <ActionButton 
-                      title="Edit"
-                      onClick={() => navigate(`/dashboard/${PATHS.PRODUCTDETAILS.replace(':id', product.id || product._id)}`)}
-                    >
-                      <FiEdit />
-                    </ActionButton>
-                    {!product.isEazShopProduct && (
+                  </TableCell>
+                  <TableCell>
+                    <ModerationPill status={product.moderationStatus || "pending"}>
+                      {product.moderationStatus || "pending"}
+                    </ModerationPill>
+                  </TableCell>
+                  <TableCell>
+                    <ActionButtons>
+                      {product.moderationStatus === "pending" && (
+                        <>
+                          <ActionButton
+                            title="Approve Product"
+                            $approve
+                            onClick={() => handleApproveProduct(product.id || product._id, product.name)}
+                            disabled={approveProduct.isPending}
+                          >
+                            <FiCheck />
+                          </ActionButton>
+                          <ActionButton
+                            title="Reject Product"
+                            $reject
+                            onClick={() => openRejectModal(product.id || product._id, product.name)}
+                            disabled={rejectProduct.isPending}
+                          >
+                            <FiX />
+                          </ActionButton>
+                        </>
+                      )}
                       <ActionButton
-                        title="Mark as Saiisai Product"
-                        onClick={() => handleMarkAsEazShop(product.id || product._id)}
-                        $eazshop
-                        disabled={markAsEazShopMutation.isPending}
+                        title="View"
+                        onClick={() => navigate(`/dashboard/${PATHS.PRODUCTDETAILS.replace(':id', product.id || product._id)}`)}
                       >
-                        <FaAward />
+                        <FiEye />
                       </ActionButton>
-                    )}
-                    <ActionButton
-                      title="Delete"
-                      danger
-                      onClick={() => handleDelete(product.id || product._id)}
-                      disabled={deleteProduct.isPending}
-                    >
-                      {deleteProduct.isPending ? "..." : <FiTrash2 />}
-                    </ActionButton>
-                  </ActionButtons>
-                </TableCell>
-              </TableRow>
+                      <ActionButton
+                        title="Edit"
+                        onClick={() => navigate(`/dashboard/${PATHS.PRODUCTDETAILS.replace(':id', product.id || product._id)}`)}
+                      >
+                        <FiEdit />
+                      </ActionButton>
+                      {!product.isEazShopProduct && (
+                        <ActionButton
+                          title="Mark as Saiisai Product"
+                          onClick={() => handleMarkAsEazShop(product.id || product._id)}
+                          $eazshop
+                          disabled={markAsEazShopMutation.isPending}
+                        >
+                          <FaAward />
+                        </ActionButton>
+                      )}
+                      <ActionButton
+                        title="Delete"
+                        danger
+                        onClick={() => handleDelete(product.id || product._id)}
+                        disabled={deleteProduct.isPending}
+                      >
+                        {deleteProduct.isPending ? "..." : <FiTrash2 />}
+                      </ActionButton>
+                    </ActionButtons>
+                  </TableCell>
+                </TableRow>
               );
             })
           )}
@@ -573,8 +555,8 @@ export default function AllProductPage() {
               <ModalButton $cancel onClick={closeRejectModal}>
                 Cancel
               </ModalButton>
-              <ModalButton 
-                $confirm 
+              <ModalButton
+                $confirm
                 onClick={handleRejectProduct}
                 disabled={!rejectReason.trim() || rejectProduct.isPending}
               >
@@ -584,6 +566,24 @@ export default function AllProductPage() {
           </ModalContent>
         </ModalOverlay>
       )}
+
+      <ConfirmationModal
+        isOpen={actionModalConfig.isOpen}
+        onClose={() => setActionModalConfig({ isOpen: false, type: null, payload: null })}
+        onConfirm={confirmAction}
+        title={
+          actionModalConfig.type === 'delete' ? 'Remove Product' :
+            actionModalConfig.type === 'markEazShop' ? 'Mark as Saiisai Product' :
+              'Approve Product'
+        }
+        message={
+          actionModalConfig.type === 'delete' ? 'Are you sure you want to remove this product from the marketplace?\n\nThis will archive the product (soft delete). If the product has order history, it will be preserved for records. Only products with zero orders can be permanently deleted.' :
+            actionModalConfig.type === 'markEazShop' ? 'Mark this product as an Official Store product?' :
+              `Approve product "${actionModalConfig.payload?.name}"?`
+        }
+        confirmText={actionModalConfig.type === 'delete' ? 'Remove' : 'Approve'}
+        confirmColor={actionModalConfig.type === 'delete' ? '#dc2626' : actionModalConfig.type === 'approve' ? '#10b981' : '#4361ee'}
+      />
     </DashboardContainer>
   );
 }
@@ -776,14 +776,14 @@ const StatusPill = styled.span`
     status === "active"
       ? "#dcfce7"
       : status === "inactive"
-      ? "#f1f5f9"
-      : "#fee2e2"};
+        ? "#f1f5f9"
+        : "#fee2e2"};
   color: ${({ status }) =>
     status === "active"
       ? "#166534"
       : status === "inactive"
-      ? "#475569"
-      : "#b91c1c"};
+        ? "#475569"
+        : "#b91c1c"};
 `;
 
 const ActionButtons = styled.div`
@@ -792,12 +792,12 @@ const ActionButtons = styled.div`
 `;
 
 const ActionButton = styled.button`
-  background: ${({ danger, $eazshop, $approve, $reject }) => 
-    danger ? "#fee2e2" : 
-    $eazshop ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" : 
-    $approve ? "#dcfce7" :
-    $reject ? "#fee2e2" :
-    "#eff6ff"};
+  background: ${({ danger, $eazshop, $approve, $reject }) =>
+    danger ? "#fee2e2" :
+      $eazshop ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" :
+        $approve ? "#dcfce7" :
+          $reject ? "#fee2e2" :
+            "#eff6ff"};
   border: none;
   border-radius: 8px;
   padding: 0.5rem;
@@ -805,21 +805,21 @@ const ActionButton = styled.button`
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: ${({ danger, $eazshop, $approve, $reject }) => 
-    danger ? "#b91c1c" : 
-    $eazshop ? "white" : 
-    $approve ? "#166534" :
-    $reject ? "#b91c1c" :
-    "#2563eb"};
+  color: ${({ danger, $eazshop, $approve, $reject }) =>
+    danger ? "#b91c1c" :
+      $eazshop ? "white" :
+        $approve ? "#166534" :
+          $reject ? "#b91c1c" :
+            "#2563eb"};
   transition: all 0.2s ease;
 
   &:hover:not(:disabled) {
-    background: ${({ danger, $eazshop, $approve, $reject }) => 
-      danger ? "#fecaca" : 
-      $eazshop ? "linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)" : 
-      $approve ? "#bbf7d0" :
-      $reject ? "#fecaca" :
-      "#dbeafe"};
+    background: ${({ danger, $eazshop, $approve, $reject }) =>
+    danger ? "#fecaca" :
+      $eazshop ? "linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)" :
+        $approve ? "#bbf7d0" :
+          $reject ? "#fecaca" :
+            "#dbeafe"};
     transform: translateY(-1px);
   }
 
@@ -848,14 +848,14 @@ const ModerationPill = styled.span`
     status === "approved"
       ? "#dcfce7"
       : status === "rejected"
-      ? "#fee2e2"
-      : "#fef9c3"};
+        ? "#fee2e2"
+        : "#fef9c3"};
   color: ${({ status }) =>
     status === "approved"
       ? "#166534"
       : status === "rejected"
-      ? "#b91c1c"
-      : "#854d0e"};
+        ? "#b91c1c"
+        : "#854d0e"};
 `;
 
 const ModalOverlay = styled.div`

@@ -11,7 +11,7 @@ import IconWrapper from '../../components/ui/IconWrapper';
 import { FaChartBar, FaUsers, FaShoppingCart, FaDollarSign, FaBell } from 'react-icons/fa';
 import { useAdminStats } from '../../shared/hooks/useAdminStats';
 import { useNotifications, useUnreadCount } from '../../shared/hooks/notifications/useNotifications';
-import { PATHS } from '../../routes/routhPath';
+import { PATHS } from '../../routes/routePath';
 
 const AdminDashboardWrapper = styled.div`
   background: var(--color-grey-50);

@@ -24,6 +24,7 @@ import {
 import { formatDate } from "../../shared/utils/helpers";
 import { toast } from "react-toastify";
 import { LoadingSpinner } from "../../shared/components/LoadingSpinner";
+import { ConfirmationModal } from "../../shared/components/modal/ConfirmationModal";
 
 const Container = styled.div`
   padding: ${(props) => (props.$embedded ? '0' : '2rem')};
@@ -343,6 +344,8 @@ export default function DeviceSessionsPage({ embedded = false }) {
   const [selectedSession, setSelectedSession] = useState(null);
   const [showModal, setShowModal] = useState(false);
 
+  const [logoutModalConfig, setLogoutModalConfig] = useState({ isOpen: false, type: null, id: null });
+
   const params = useMemo(() => {
     const queryParams = {
       page,
@@ -386,27 +389,25 @@ export default function DeviceSessionsPage({ embedded = false }) {
   }, [sessions, suspiciousData]);
 
   const handleLogoutDevice = (deviceId) => {
-    if (window.confirm("Are you sure you want to logout this device?")) {
-      forceLogoutDevice.mutate(deviceId, {
-        onSuccess: () => {
-          refetch();
-        },
-      });
-    }
+    setLogoutModalConfig({ isOpen: true, type: 'device', id: deviceId });
   };
 
   const handleLogoutUser = (userId) => {
-    if (
-      window.confirm(
-        "Are you sure you want to logout ALL sessions for this user?"
-      )
-    ) {
-      forceLogoutUser.mutate(userId, {
-        onSuccess: () => {
-          refetch();
-        },
+    setLogoutModalConfig({ isOpen: true, type: 'user', id: userId });
+  };
+
+  const confirmLogout = () => {
+    const { type, id } = logoutModalConfig;
+    if (type === 'device') {
+      forceLogoutDevice.mutate(id, {
+        onSuccess: () => refetch(),
+      });
+    } else if (type === 'user') {
+      forceLogoutUser.mutate(id, {
+        onSuccess: () => refetch(),
       });
     }
+    setLogoutModalConfig({ isOpen: false, type: null, id: null });
   };
 
   const handleViewDetails = (session) => {
@@ -831,6 +832,18 @@ export default function DeviceSessionsPage({ embedded = false }) {
           </div>
         </div>
       )}
+
+      <ConfirmationModal
+        isOpen={logoutModalConfig.isOpen}
+        onClose={() => setLogoutModalConfig({ isOpen: false, type: null, id: null })}
+        onConfirm={confirmLogout}
+        title={logoutModalConfig.type === 'device' ? 'Logout Device' : 'Logout All User Sessions'}
+        message={logoutModalConfig.type === 'device'
+          ? 'Are you sure you want to logout this device?'
+          : 'Are you sure you want to logout ALL sessions for this user?'}
+        confirmText="Logout"
+        confirmColor="#e74c3c"
+      />
     </Container>
   );
 }

@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { 
-  FaBell, 
-  FaShoppingCart, 
-  FaTruck, 
-  FaMoneyBillWave, 
-  FaHeadset, 
+import {
+  FaBell,
+  FaShoppingCart,
+  FaTruck,
+  FaMoneyBillWave,
+  FaHeadset,
   FaBox,
   FaCheckCircle,
   FaExclamationCircle,
@@ -17,13 +17,15 @@ import {
 } from 'react-icons/fa';
 import { useNotifications, useMarkAsRead, useDeleteNotification } from '../hooks/notifications/useNotifications';
 import { PATHS } from '../../routes/routePaths';
+import { ConfirmationModal } from './modal/ConfirmationModal';
 
 const NotificationDropdown = ({ unreadCount }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [notificationToDelete, setNotificationToDelete] = useState(null);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
-  const { data: notificationsData } = useNotifications({ 
+  const { data: notificationsData } = useNotifications({
     limit: 5
     // Show recent notifications (both read and unread)
   });
@@ -139,6 +141,13 @@ const NotificationDropdown = ({ unreadCount }) => {
     }
   };
 
+  const confirmDelete = () => {
+    if (notificationToDelete) {
+      deleteNotification.mutate(notificationToDelete);
+      setNotificationToDelete(null);
+    }
+  };
+
   // Debug: Log unreadCount to verify it's being passed correctly
   useEffect(() => {
     console.log('[EazAdmin NotificationDropdown] 🔔 unreadCount prop:', {
@@ -201,9 +210,7 @@ const NotificationDropdown = ({ unreadCount }) => {
                     <DeleteButton
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (window.confirm('Delete this notification?')) {
-                          deleteNotification.mutate(notification._id);
-                        }
+                        setNotificationToDelete(notification._id);
                       }}
                       title="Delete notification"
                     >
@@ -225,6 +232,16 @@ const NotificationDropdown = ({ unreadCount }) => {
           </DropdownFooter>
         </DropdownMenu>
       )}
+
+      <ConfirmationModal
+        isOpen={!!notificationToDelete}
+        onClose={() => setNotificationToDelete(null)}
+        onConfirm={confirmDelete}
+        title="Delete Notification"
+        message="Are you sure you want to delete this notification?"
+        confirmText="Delete"
+        confirmColor="#dc2626"
+      />
     </DropdownContainer>
   );
 };

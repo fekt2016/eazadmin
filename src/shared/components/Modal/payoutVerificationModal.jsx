@@ -24,7 +24,7 @@ const PayoutVerificationModal = ({ seller, paymentMethodType: propPaymentMethodT
     if (propPaymentMethodType) {
       return propPaymentMethodType;
     }
-    
+
     // If we have a paymentMethodRecord, determine type from it
     if (paymentMethodRecord) {
       if (paymentMethodRecord.type === 'bank_transfer') {
@@ -36,7 +36,7 @@ const PayoutVerificationModal = ({ seller, paymentMethodType: propPaymentMethodT
         return 'airtel_tigo_money';
       }
     }
-    
+
     // Otherwise, auto-detect from seller's payment methods
     if (seller.paymentMethods?.bankAccount) {
       return 'bank';
@@ -50,7 +50,7 @@ const PayoutVerificationModal = ({ seller, paymentMethodType: propPaymentMethodT
   };
 
   const paymentMethodType = getPaymentMethodType();
-  
+
   // Get payment details - prefer paymentMethodRecord if provided, otherwise use seller.paymentMethods
   const getPaymentDetails = () => {
     // If we have a paymentMethodRecord, convert it to the expected format
@@ -73,7 +73,7 @@ const PayoutVerificationModal = ({ seller, paymentMethodType: propPaymentMethodT
         };
       }
     }
-    
+
     // Fallback to seller.paymentMethods
     if (paymentMethodType === 'bank') {
       return seller.paymentMethods?.bankAccount;
@@ -114,17 +114,17 @@ const PayoutVerificationModal = ({ seller, paymentMethodType: propPaymentMethodT
         paymentMethod: paymentMethodType,
       });
       toast.success('Payout verification approved successfully');
-      
+
       // Wait a moment for backend transaction to commit
       await new Promise(resolve => setTimeout(resolve, 300));
-      
+
       // Invalidate queries to refresh the data and show updated status
       await queryClient.invalidateQueries(["admin", "seller", seller._id, "payout-verification"]);
       await queryClient.invalidateQueries(["admin", "seller", seller._id]);
       // Force refetch immediately
       await queryClient.refetchQueries(["admin", "seller", seller._id, "payout-verification"]);
       await queryClient.refetchQueries(["admin", "seller", seller._id]);
-      
+
       onClose();
     } catch (error) {
       console.error('[PayoutVerificationModal] Error approving payout verification:', error);
@@ -161,7 +161,15 @@ const PayoutVerificationModal = ({ seller, paymentMethodType: propPaymentMethodT
       setRejectionReason("");
       onClose();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to reject payout verification');
+      console.error('[PayoutVerificationModal] Error rejecting payout verification:', error);
+      const { title, message } = normalizeError(error, {
+        fallbackTitle: "Rejection failed",
+        fallbackMessage: "Failed to reject payout verification. Please try again.",
+        defaultCanRetry: true,
+      });
+      const friendly = message || "Failed to reject payout verification";
+      setActionError(`${title}. ${friendly}`);
+      toast.error(friendly);
     }
   };
 
@@ -198,7 +206,7 @@ const PayoutVerificationModal = ({ seller, paymentMethodType: propPaymentMethodT
               let currentStatus = 'pending';
               let rejectionReason = null;
               let verifiedAt = null;
-              
+
               if (paymentMethodType === 'bank' && seller.paymentMethods?.bankAccount) {
                 currentStatus = seller.paymentMethods.bankAccount.payoutStatus || 'pending';
                 rejectionReason = seller.paymentMethods.bankAccount.payoutRejectionReason;
@@ -570,14 +578,14 @@ const StatusBadge = styled.div`
     $status === 'verified'
       ? '#d1fae5'
       : $status === 'rejected'
-      ? '#fee2e2'
-      : '#fef3c7'};
+        ? '#fee2e2'
+        : '#fef3c7'};
   color: ${({ $status }) =>
     $status === 'verified'
       ? '#10b981'
       : $status === 'rejected'
-      ? '#ef4444'
-      : '#f59e0b'};
+        ? '#ef4444'
+        : '#f59e0b'};
 `;
 
 const RejectionBox = styled.div`
@@ -704,23 +712,23 @@ const ActionButton = styled.button`
     variant === "success"
       ? "#10b981"
       : variant === "danger"
-      ? "#ef4444"
-      : variant === "secondary"
-      ? "#6c757d"
-      : "#4361ee"};
+        ? "#ef4444"
+        : variant === "secondary"
+          ? "#6c757d"
+          : "#4361ee"};
   color: white;
   opacity: ${({ disabled }) => (disabled ? 0.6 : 1)};
   pointer-events: ${({ disabled }) => (disabled ? "none" : "auto")};
 
   &:hover:not(:disabled) {
     background: ${({ variant }) =>
-      variant === "success"
-        ? "#059669"
-        : variant === "danger"
+    variant === "success"
+      ? "#059669"
+      : variant === "danger"
         ? "#dc2626"
         : variant === "secondary"
-        ? "#5a6268"
-        : "#3a56d4"};
+          ? "#5a6268"
+          : "#3a56d4"};
     transform: translateY(-1px);
   }
 `;

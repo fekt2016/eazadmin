@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supportService } from '../services/supportApi';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
-import { PATHS } from '../../routes/routhPath';
+import { PATHS } from '../../routes/routePath';
 
 /**
  * React Query hooks for support ticket operations (Admin)

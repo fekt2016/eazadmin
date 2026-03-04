@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import styled from 'styled-components';
 import {
   FaPlus,
@@ -20,9 +21,28 @@ import {
 import { LoadingSpinner } from '../../shared/components/LoadingSpinner';
 import { shippingRateService } from '../../shared/services/shippingRateApi';
 import InternationalShippingManagementPage from './InternationalShippingManagementPage';
+import ShippingRateSettingsPage from './ShippingRateSettingsPage';
+import ShippingDashboardPage from './ShippingDashboardPage';
+import { ConfirmationModal } from '../../shared/components/modal/ConfirmationModal';
+import { toast } from 'react-toastify';
 
 const ShippingRatesPage = () => {
-  const [activeTab, setActiveTab] = useState('local'); // 'local' | 'international' | 'international-management'
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(tabParam || 'dashboard'); // 'dashboard' | 'local' | 'international' | 'international-management' | 'settings'
+
+  // Update tab when URL param changes
+  useEffect(() => {
+    if (tabParam && ['dashboard', 'local', 'international', 'international-management', 'settings'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
+
+  // Update URL param when tab changes
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    setSearchParams({ tab });
+  };
   const [filters, setFilters] = useState({
     isActive: '',
   });
@@ -40,6 +60,7 @@ const ShippingRatesPage = () => {
     estimatedDays: '2-3',
     isActive: true,
   });
+  const [zoneToDelete, setZoneToDelete] = useState(null);
 
   const { data: shippingZonesData, isLoading, error, refetch } = useGetShippingZones(filters);
   const [internationalMatrix, setInternationalMatrix] = useState([]);
@@ -67,7 +88,7 @@ const ShippingRatesPage = () => {
         if (!cancelled) {
           setInternationalError(
             err?.response?.data?.message ||
-              'Failed to load international shipping bands',
+            'Failed to load international shipping bands',
           );
         }
       } finally {
@@ -82,11 +103,11 @@ const ShippingRatesPage = () => {
       cancelled = true;
     };
   }, [activeTab]);
-  
+
   // Extract shipping zones from response - handle different response structures
   const shippingZones = useMemo(() => {
     if (!shippingZonesData) return [];
-    
+
     // Try different possible response structures
     let zones = [];
     if (shippingZonesData?.data?.data?.shippingZones) {
@@ -98,10 +119,10 @@ const ShippingRatesPage = () => {
     } else if (Array.isArray(shippingZonesData)) {
       zones = shippingZonesData;
     }
-    
+
     console.log('📊 [ShippingRatesPage] Raw data:', shippingZonesData);
     console.log('📊 [ShippingRatesPage] Extracted zones:', zones);
-    
+
     return zones;
   }, [shippingZonesData]);
 
@@ -180,7 +201,7 @@ const ShippingRatesPage = () => {
 
     // Validate maxKm is greater than minKm
     if (submitData.maxKm <= submitData.minKm) {
-      alert('Max Distance (km) must be greater than Min Distance (km)');
+      toast.error('Max Distance (km) must be greater than Min Distance (km)');
       return;
     }
 
@@ -215,19 +236,21 @@ const ShippingRatesPage = () => {
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = (id) => {
     const zone = shippingZones.find(z => z._id === id);
-    const zoneName = zone ? `Zone ${zone.name}` : 'this zone';
-    
-    if (!window.confirm(`Are you sure you want to delete ${zoneName}? This action cannot be undone.`)) {
-      return;
-    }
+    setZoneToDelete(zone || { _id: id });
+  };
+
+  const confirmDelete = async () => {
+    if (!zoneToDelete) return;
 
     try {
-      await deleteMutation.mutateAsync(id);
-      // Refetch is handled automatically by React Query invalidation in the hook
+      await deleteMutation.mutateAsync(zoneToDelete._id);
+      toast.success('Shipping zone deleted successfully');
     } catch (error) {
-      alert(error?.response?.data?.message || 'Failed to delete shipping zone');
+      toast.error(error?.response?.data?.message || 'Failed to delete shipping zone');
+    } finally {
+      setZoneToDelete(null);
     }
   };
 
@@ -250,145 +273,163 @@ const ShippingRatesPage = () => {
     <PageContainer>
       <PageHeader>
         <HeaderTitle>
-          <h1>Shipping Charges</h1>
-          <p>Manage local zones, view international charges, and configure international shipping (China/USA → Ghana).</p>
+          <h1>Shipping Activities</h1>
+          <p>Manage shipping dashboard, local zones, international charges, and platform settings.</p>
         </HeaderTitle>
       </PageHeader>
 
       <TabsContainer>
         <TabButton
           type="button"
+          $active={activeTab === 'dashboard'}
+          onClick={() => handleTabChange('dashboard')}
+        >
+          Shipping Dashboard
+        </TabButton>
+        <TabButton
+          type="button"
           $active={activeTab === 'local'}
-          onClick={() => setActiveTab('local')}
+          onClick={() => handleTabChange('local')}
         >
           Local Shipping Zones
         </TabButton>
         <TabButton
           type="button"
           $active={activeTab === 'international'}
-          onClick={() => setActiveTab('international')}
+          onClick={() => handleTabChange('international')}
         >
           International Shipping Charges
         </TabButton>
         <TabButton
           type="button"
           $active={activeTab === 'international-management'}
-          onClick={() => setActiveTab('international-management')}
+          onClick={() => handleTabChange('international-management')}
         >
           International Shipping Management
         </TabButton>
+        <TabButton
+          type="button"
+          $active={activeTab === 'settings'}
+          onClick={() => handleTabChange('settings')}
+        >
+          Shipping Rate Settings
+        </TabButton>
       </TabsContainer>
+
+      {activeTab === 'dashboard' && (
+        <ShippingDashboardPage embedded />
+      )}
 
       {activeTab === 'local' && (
         <>
-      <FiltersSection>
-        <SearchBox>
-          <FaSearch />
-          <input
-            type="text"
-            placeholder="Search by zone name, distance, or estimate..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </SearchBox>
+          <FiltersSection>
+            <SearchBox>
+              <FaSearch />
+              <input
+                type="text"
+                placeholder="Search by zone name, distance, or estimate..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </SearchBox>
 
-        <FilterGroup>
-          <FilterLabel>
-            <FaFilter />
-            Filters:
-          </FilterLabel>
-          <Select
-            value={filters.isActive || 'all'}
-            onChange={(e) => handleFilterChange('isActive', e.target.value)}
-          >
-            <option value="all">All Status</option>
-            <option value="true">Active</option>
-            <option value="false">Inactive</option>
-          </Select>
-        </FilterGroup>
-      </FiltersSection>
+            <FilterGroup>
+              <FilterLabel>
+                <FaFilter />
+                Filters:
+              </FilterLabel>
+              <Select
+                value={filters.isActive || 'all'}
+                onChange={(e) => handleFilterChange('isActive', e.target.value)}
+              >
+                <option value="all">All Status</option>
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
+              </Select>
+            </FilterGroup>
+          </FiltersSection>
 
-      <TableContainer>
-        <Table>
-          <thead>
-            <tr>
-              <th>Zone</th>
-              <th>Distance Range (km)</th>
-              <th>Base Rate</th>
-              <th>Per Kg Rate</th>
-              <th>Same-Day Multiplier</th>
-              <th>Express Multiplier</th>
-              <th>Estimate</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {error ? (
-              <tr>
-                <td colSpan="9" style={{ textAlign: 'center', padding: '2rem', color: '#dc3545' }}>
-                  <strong>Error loading shipping zones:</strong>{' '}
-                  {error?.response?.data?.message || error?.message || 'Unknown error'}
-                  <br />
-                  <button onClick={() => refetch()} style={{ marginTop: '1rem', padding: '0.5rem 1rem' }}>
-                    Retry
-                  </button>
-                </td>
-              </tr>
-            ) : filteredZones.length === 0 ? (
-              <tr>
-                <td colSpan="9" style={{ textAlign: 'center', padding: '2rem' }}>
-                  No shipping zones found. Click "Add New Shipping Zone" to create one.
-                  {shippingZones.length === 0 && !isLoading && (
-                    <div style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#666' }}>
-                      (Database has zones but they're not loading. Check console for details.)
-                    </div>
-                  )}
-                </td>
-              </tr>
-            ) : (
-              filteredZones.map((zone) => (
-                <tr key={zone._id}>
-                  <td>
-                    <ZoneBadge zone={zone.name}>Zone {zone.name}</ZoneBadge>
-                  </td>
-                  <td>
-                    {zone.minKm} - {zone.maxKm} km
-                  </td>
-                  <td>GH₵{zone.baseRate.toFixed(2)}</td>
-                  <td>GH₵{zone.perKgRate.toFixed(2)}</td>
-                  <td>{zone.sameDayMultiplier}x</td>
-                  <td>{zone.expressMultiplier}x</td>
-                  <td>{zone.estimatedDays}</td>
-                  <td>
-                    <StatusBadge active={zone.isActive}>
-                      {zone.isActive ? 'Active' : 'Inactive'}
-                    </StatusBadge>
-                  </td>
-                  <td>
-                    <ActionButtons>
-                      <EditButton 
-                        onClick={() => handleOpenModal(zone)}
-                        title="Edit Zone"
-                        disabled={deleteMutation.isPending || updateMutation.isPending}
-                      >
-                        <FaEdit />
-                      </EditButton>
-                      <DeleteButton 
-                        onClick={() => handleDelete(zone._id)}
-                        title="Delete Zone"
-                        disabled={deleteMutation.isPending || updateMutation.isPending}
-                      >
-                        <FaTrash />
-                      </DeleteButton>
-                    </ActionButtons>
-                  </td>
+          <TableContainer>
+            <Table>
+              <thead>
+                <tr>
+                  <th>Zone</th>
+                  <th>Distance Range (km)</th>
+                  <th>Base Rate</th>
+                  <th>Per Kg Rate</th>
+                  <th>Same-Day Multiplier</th>
+                  <th>Express Multiplier</th>
+                  <th>Estimate</th>
+                  <th>Status</th>
+                  <th>Actions</th>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </Table>
-      </TableContainer>
+              </thead>
+              <tbody>
+                {error ? (
+                  <tr>
+                    <td colSpan="9" style={{ textAlign: 'center', padding: '2rem', color: '#dc3545' }}>
+                      <strong>Error loading shipping zones:</strong>{' '}
+                      {error?.response?.data?.message || error?.message || 'Unknown error'}
+                      <br />
+                      <button onClick={() => refetch()} style={{ marginTop: '1rem', padding: '0.5rem 1rem' }}>
+                        Retry
+                      </button>
+                    </td>
+                  </tr>
+                ) : filteredZones.length === 0 ? (
+                  <tr>
+                    <td colSpan="9" style={{ textAlign: 'center', padding: '2rem' }}>
+                      No shipping zones found. Click "Add New Shipping Zone" to create one.
+                      {shippingZones.length === 0 && !isLoading && (
+                        <div style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#666' }}>
+                          (Database has zones but they're not loading. Check console for details.)
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredZones.map((zone) => (
+                    <tr key={zone._id}>
+                      <td>
+                        <ZoneBadge zone={zone.name}>Zone {zone.name}</ZoneBadge>
+                      </td>
+                      <td>
+                        {zone.minKm} - {zone.maxKm} km
+                      </td>
+                      <td>GH₵{zone.baseRate.toFixed(2)}</td>
+                      <td>GH₵{zone.perKgRate.toFixed(2)}</td>
+                      <td>{zone.sameDayMultiplier}x</td>
+                      <td>{zone.expressMultiplier}x</td>
+                      <td>{zone.estimatedDays}</td>
+                      <td>
+                        <StatusBadge active={zone.isActive}>
+                          {zone.isActive ? 'Active' : 'Inactive'}
+                        </StatusBadge>
+                      </td>
+                      <td>
+                        <ActionButtons>
+                          <EditButton
+                            onClick={() => handleOpenModal(zone)}
+                            title="Edit Zone"
+                            disabled={deleteMutation.isPending || updateMutation.isPending}
+                          >
+                            <FaEdit />
+                          </EditButton>
+                          <DeleteButton
+                            onClick={() => handleDelete(zone._id)}
+                            title="Delete Zone"
+                            disabled={deleteMutation.isPending || updateMutation.isPending}
+                          >
+                            <FaTrash />
+                          </DeleteButton>
+                        </ActionButtons>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </Table>
+          </TableContainer>
         </>
       )}
 
@@ -455,6 +496,10 @@ const ShippingRatesPage = () => {
 
       {activeTab === 'international-management' && (
         <InternationalShippingManagementPage embedded />
+      )}
+
+      {activeTab === 'settings' && (
+        <ShippingRateSettingsPage embedded />
       )}
 
       {/* Modal */}
@@ -650,6 +695,16 @@ const ShippingRatesPage = () => {
           </ModalContent>
         </ModalOverlay>
       )}
+
+      <ConfirmationModal
+        isOpen={!!zoneToDelete}
+        onClose={() => setZoneToDelete(null)}
+        onConfirm={confirmDelete}
+        title="Delete Shipping Zone"
+        message={`Are you sure you want to delete ${zoneToDelete?.name ? `Zone ${zoneToDelete.name}` : 'this zone'}? This action cannot be undone.`}
+        confirmText="Delete"
+        confirmColor="#e74c3c"
+      />
     </PageContainer>
   );
 };
@@ -687,28 +742,40 @@ const HeaderTitle = styled.div`
 `;
 
 const TabsContainer = styled.div`
-  display: inline-flex;
-  border-radius: 999px;
-  border: 1px solid #e0e0e0;
-  padding: 0.15rem;
-  background: #f9fafb;
+  display: flex;
+  flex-direction: row;
+  overflow-x: auto;
+  gap: 0.75rem;
+  padding-bottom: 0.5rem;
   margin-bottom: 1.5rem;
+
+  /* Hide scrollbar for styling */
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  scrollbar-width: none;
 `;
 
 const TabButton = styled.button`
-  border: none;
-  background: ${(props) => (props.$active ? '#ffffff' : 'transparent')};
-  color: ${(props) => (props.$active ? '#111827' : '#6b7280')};
-  padding: 0.45rem 1.1rem;
-  border-radius: 999px;
-  font-size: 0.9rem;
-  font-weight: 500;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.1rem;
+  border-radius: 10px;
   cursor: pointer;
-  transition: all 0.15s ease-in-out;
+  transition: all 0.2s ease;
+  background: ${(props) => (props.$active ? '#4361ee' : '#ffffff')};
+  border: 1px solid ${(props) => (props.$active ? '#4361ee' : '#e0e0e0')};
+  color: ${(props) => (props.$active ? '#ffffff' : '#374151')};
+  font-size: 0.9rem;
+  font-weight: ${(props) => (props.$active ? '600' : '500')};
+  white-space: nowrap;
+  box-shadow: ${(props) => (props.$active ? '0 4px 12px rgba(67, 97, 238, 0.3)' : 'none')};
 
   &:hover {
-    background: #ffffff;
-    color: #111827;
+    background: ${(props) => (props.$active ? '#4361ee' : '#f9fafb')};
+    border-color: ${(props) => (props.$active ? '#4361ee' : '#d1d5db')};
   }
 `;
 

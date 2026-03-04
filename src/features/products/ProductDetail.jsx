@@ -18,8 +18,9 @@ import {
 import useProduct from "../../shared/hooks/useProduct";
 import adApi from "../../shared/services/adApi";
 import { LoadingSpinner } from "../../shared/components/LoadingSpinner";
-import { PATHS } from "../../routes/routhPath";
+import { PATHS } from "../../routes/routePath";
 import { toast } from "react-toastify";
+import { ConfirmationModal } from "../../shared/components/modal/ConfirmationModal";
 
 const getPromotionKeyFromLink = (link) => {
   if (!link || typeof link !== "string") return "";
@@ -42,6 +43,16 @@ export default function ProductDetail() {
   const updatePromoMutation = updateProduct;
   const [selectedImage, setSelectedImage] = useState(0);
   const [promotionKey, setPromotionKey] = useState("");
+  const [showApproveModal, setShowApproveModal] = useState(false);
+  const [shippingData, setShippingData] = useState({
+    weight: "",
+    length: "",
+    width: "",
+    height: "",
+    freeShipping: false,
+    shippingClass: ""
+  });
+  const [isUpdatingShipping, setIsUpdatingShipping] = useState(false);
 
   const product = useMemo(() => {
     if (!productData) return null;
@@ -56,8 +67,16 @@ export default function ProductDetail() {
   useEffect(() => {
     if (product) {
       setPromotionKey(product.promotionKey || "");
+      setShippingData({
+        weight: product.shipping?.weight || product.specifications?.weight || "",
+        length: product.shipping?.dimensions?.length || "",
+        width: product.shipping?.dimensions?.width || "",
+        height: product.shipping?.dimensions?.height || "",
+        freeShipping: !!product.shipping?.freeShipping,
+        shippingClass: product.shipping?.shippingClass || ""
+      });
     }
-  }, [product?.id, product?._id, product?.promotionKey]);
+  }, [product?.id, product?._id, product?.promotionKey, product?.shipping, product?.specifications]);
 
   // Fetch admin promotions for dropdown (add product to promotion)
   const { data: promosData } = useQuery({
@@ -113,14 +132,18 @@ export default function ProductDetail() {
   }, [product]);
 
   // Handle approve product
-  const handleApproveProduct = async () => {
-    if (window.confirm(`Approve product "${product.name}"?`)) {
-      try {
-        await approveMutation.mutateAsync({ productId: id, notes: "" });
-        toast.success("Product approved successfully!");
-      } catch (error) {
-        toast.error("Failed to approve product: " + (error.response?.data?.message || error.message || "Unknown error"));
-      }
+  const handleApproveProduct = () => {
+    setShowApproveModal(true);
+  };
+
+  const confirmApprove = async () => {
+    try {
+      await approveMutation.mutateAsync({ productId: id, notes: "" });
+      toast.success("Product approved successfully!");
+    } catch (error) {
+      toast.error("Failed to approve product: " + (error.response?.data?.message || error.message || "Unknown error"));
+    } finally {
+      setShowApproveModal(false);
     }
   };
   const handleSavePromotionKey = () => {
@@ -148,6 +171,49 @@ export default function ProductDetail() {
         },
       }
     );
+  };
+  const handleUpdateShipping = async () => {
+    const idToUpdate = product?.id || product?._id;
+    if (!idToUpdate) {
+      toast.error("Cannot update shipping: missing product ID.");
+      return;
+    }
+
+    setIsUpdatingShipping(true);
+    try {
+      await updateProduct.mutate({
+        id: idToUpdate,
+        data: {
+          shipping: {
+            weight: Number(shippingData.weight) || 0,
+            dimensions: {
+              length: Number(shippingData.length) || 0,
+              width: Number(shippingData.width) || 0,
+              height: Number(shippingData.height) || 0,
+            },
+            freeShipping: shippingData.freeShipping,
+            shippingClass: shippingData.shippingClass
+          }
+        },
+      }, {
+        onSuccess: () => {
+          toast.success("Shipping information updated.");
+          setIsUpdatingShipping(false);
+        },
+        onError: (error) => {
+          toast.error(
+            error?.response?.data?.message ||
+            error?.message ||
+            "Failed to update shipping information."
+          );
+          setIsUpdatingShipping(false);
+        }
+      });
+    } catch (error) {
+      console.error("Shipping update error:", error);
+      toast.error("An unexpected error occurred while updating shipping information.");
+      setIsUpdatingShipping(false);
+    }
   };
 
   const attributeKeys = useMemo(() => {
@@ -386,6 +452,85 @@ export default function ProductDetail() {
             </InfoGrid>
           </InfoCard>
 
+          {/* Shipping & Dimensions Card */}
+          <InfoCard>
+            <CardTitle>
+              <FaBox /> Shipping & Dimensions
+            </CardTitle>
+            <InfoGrid>
+              <InfoItem>
+                <InfoLabel>Weight (kg)</InfoLabel>
+                <EditableInput
+                  type="number"
+                  step="0.01"
+                  value={shippingData.weight}
+                  onChange={(e) => setShippingData({ ...shippingData, weight: e.target.value })}
+                  placeholder="0.00"
+                />
+              </InfoItem>
+              <InfoItem>
+                <InfoLabel>Dimensions (L × W × H) cm</InfoLabel>
+                <DimensionsRow>
+                  <EditableInput
+                    type="number"
+                    step="0.1"
+                    value={shippingData.length}
+                    onChange={(e) => setShippingData({ ...shippingData, length: e.target.value })}
+                    placeholder="L"
+                  />
+                  <span>×</span>
+                  <EditableInput
+                    type="number"
+                    step="0.1"
+                    value={shippingData.width}
+                    onChange={(e) => setShippingData({ ...shippingData, width: e.target.value })}
+                    placeholder="W"
+                  />
+                  <span>×</span>
+                  <EditableInput
+                    type="number"
+                    step="0.1"
+                    value={shippingData.height}
+                    onChange={(e) => setShippingData({ ...shippingData, height: e.target.value })}
+                    placeholder="H"
+                  />
+                </DimensionsRow>
+              </InfoItem>
+              <InfoItem>
+                <InfoLabel>Shipping Class</InfoLabel>
+                <EditableSelect
+                  value={shippingData.shippingClass}
+                  onChange={(e) => setShippingData({ ...shippingData, shippingClass: e.target.value })}
+                >
+                  <option value="">Standard</option>
+                  <option value="small">Small Item</option>
+                  <option value="medium">Medium Item</option>
+                  <option value="large">Large Item (Bulky)</option>
+                  <option value="fragile">Fragile</option>
+                </EditableSelect>
+              </InfoItem>
+              <InfoItem>
+                <InfoLabel>Free Shipping</InfoLabel>
+                <CheckboxContainer>
+                  <input
+                    type="checkbox"
+                    checked={shippingData.freeShipping}
+                    onChange={(e) => setShippingData({ ...shippingData, freeShipping: e.target.checked })}
+                  />
+                  <span>Enable Free Shipping</span>
+                </CheckboxContainer>
+              </InfoItem>
+            </InfoGrid>
+            <SaveButtonContainer>
+              <PromoSaveButton
+                onClick={handleUpdateShipping}
+                disabled={isUpdatingShipping}
+              >
+                {isUpdatingShipping ? "Updating..." : "Update Shipping Details"}
+              </PromoSaveButton>
+            </SaveButtonContainer>
+          </InfoCard>
+
           {/* Seller Info Card */}
           {product.seller && (
             <InfoCard>
@@ -573,10 +718,18 @@ export default function ProductDetail() {
           )}
         </InfoSection>
       </ContentGrid>
+      <ConfirmationModal
+        isOpen={showApproveModal}
+        onClose={() => setShowApproveModal(false)}
+        onConfirm={confirmApprove}
+        title="Approve Product"
+        message={`Are you sure you want to approve product "${product.name}"?`}
+        confirmText="Approve"
+        confirmColor="#10b981"
+      />
     </Container>
   );
 }
-
 // Styled Components
 const Container = styled.div`
   padding: 2rem;
@@ -862,6 +1015,66 @@ const PromoHelp = styled.p`
   margin: 0;
   font-size: 0.8rem;
   color: #6b7280;
+`;
+
+const EditableInput = styled.input`
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.95rem;
+  width: 100%;
+
+  &:focus {
+    border-color: #4f46e5;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+  }
+`;
+
+const EditableSelect = styled.select`
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.95rem;
+  width: 100%;
+  background: white;
+
+  &:focus {
+    border-color: #4f46e5;
+    outline: none;
+  }
+`;
+
+const DimensionsRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  span {
+    color: #94a3b8;
+    font-weight: 600;
+  }
+`;
+
+const CheckboxContainer = styled.label`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.95rem;
+  color: #1e293b;
+
+  input {
+    width: 1rem;
+    height: 1rem;
+    cursor: pointer;
+  }
+`;
+
+const SaveButtonContainer = styled.div`
+  margin-top: 1.5rem;
+  display: flex;
+  justify-content: flex-end;
 `;
 
 const InfoLabel = styled.label`

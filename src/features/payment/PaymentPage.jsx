@@ -6,7 +6,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { useGetWithdrawalRequests, useApproveWithdrawalRequest, useRejectWithdrawalRequest, useVerifyTransferStatus } from "../../shared/hooks/usePayout";
-import { PATHS } from "../../routes/routhPath";
+import { PATHS } from "../../routes/routePath";
 import { toast } from "react-toastify";
 // import {  FaFilter, FaFileExport, FaSync, FaCheck, ,, FaMoneyBillWave, ,, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import {

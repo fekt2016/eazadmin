@@ -20,15 +20,15 @@ import {
 import { useGetOrderById, useConfirmPayment } from '../../shared/hooks/useOrder';
 import { useUpdateOrderStatus } from '../../shared/hooks/useUpdateOrderStatus';
 import { useParams, Link } from "react-router-dom";
-import { PATHS } from '../../routes/routhPath';
+import { PATHS } from '../../routes/routePath';
 import useDynamicPageTitle from '../../shared/hooks/useDynamicPageTitle';
 import { toast } from 'react-toastify';
 import { useQueryClient, useQueries } from '@tanstack/react-query';
 import { orderService } from '../../shared/services/orderApi';
 import adminSellerApi from '../../shared/services/adminSellerApi';
-
-// Platform store ID – display "EazShop Store" when seller details are not available
-const EAZSHOP_STORE_ID = '6970b22eaba06cadfd4b8035';
+import { EAZSHOP_SELLER_ID, PLATFORM_STORE_NAME } from '../../shared/constants/systemConstants';
+import { normalizeApiResponse } from '../../shared/utils/apiUtils';
+import ConfirmationModal from '../../shared/components/Modal/ConfirmationModal';
 
 const OrderDetail = () => {
   const { id: orderId } = useParams();
@@ -43,13 +43,14 @@ const OrderDetail = () => {
     "Please leave the package at the front door if I'm not home."
   );
   const [order, setOrder] = useState(null);
+  const [paymentModalConfig, setPaymentModalConfig] = useState({ isOpen: false, currentPaymentMethod: null, orderId: null });
 
   // Seller IDs from the fetched order – use sellerId (actual seller), not id (SellerOrder id).
   // Exclude EazShop store ID so we don't fetch it (display "EazShop Store" instead).
   const sellerIdsToFetch = order?.sellers?.length
     ? [...new Set(
       order.sellers
-        .filter((s) => s.sellerId && String(s.sellerId) !== EAZSHOP_STORE_ID)
+        .filter((s) => s.sellerId && String(s.sellerId) !== EAZSHOP_SELLER_ID)
         .map((s) => String(s.sellerId))
     )]
     : [];
@@ -60,8 +61,7 @@ const OrderDetail = () => {
       queryFn: async () => {
         try {
           const res = await adminSellerApi.getSellerDetails(sellerId);
-          const data = res?.data?.data ?? res?.data ?? res;
-          return data?.data ?? data ?? null;
+          return normalizeApiResponse(res);
         } catch (err) {
           if (err?.response?.status === 404) {
             console.warn(`[OrderDetail] Seller not found (may be inactive): ${sellerId}`, err?.response?.data?.message);
@@ -94,22 +94,11 @@ const OrderDetail = () => {
 
   useEffect(() => {
     if (orderData) {
-      // Support multiple API response shapes: { data: { data: doc } }, { data: { order: doc } }, { data: doc }
-      // Axios response: orderData.data = body; handleFactory returns { status, data: { data: doc } }
-      const body = orderData?.data ?? null;
-      const inner = body?.data ?? body ?? null;
-      const rawOrder = inner?.data ?? inner?.order ?? inner ?? null;
+      const rawOrder = normalizeApiResponse(orderData);
       if (!rawOrder || typeof rawOrder.orderNumber === "undefined") {
         return;
       }
-      // sellerOrder: from fetched order doc (rawOrder) — seller IDs come from here
-      const sellerOrderList = Array.isArray(rawOrder.sellerOrder)
-        ? rawOrder.sellerOrder
-        : Array.isArray(inner?.sellerOrder)
-          ? inner.sellerOrder
-          : Array.isArray(body?.sellerOrder)
-            ? body.sellerOrder
-            : [];
+      const sellerOrderList = rawOrder.sellerOrder || [];
       // Format dates (use rawOrder as source of truth)
       const createdAt = new Date((rawOrder.createdAt ?? orderform?.createdAt));
       const formattedDate = createdAt.toLocaleDateString("en-US", {
@@ -164,7 +153,7 @@ const OrderDetail = () => {
       const total = subtotal + shipping + tax;
 
       const currentStatus = (rawOrder.currentStatus || rawOrder.orderStatus || rawOrder.status || "").toString().toLowerCase();
-      const isDelivered = currentStatus === "delivered" || currentStatus === "delievered" || rawOrder.status === "completed";
+      const isDelivered = currentStatus === "delivered" || currentStatus === "delievered";
 
       const trackingNumber =
         rawOrder.trackingNumber ?? orderform?.trackingNumber ?? null;
@@ -184,7 +173,7 @@ const OrderDetail = () => {
         ? "delivered"
         : isPaid && isPendingStatus
           ? "confirmed"
-          : rawOrder.orderStatus || rawOrder.status || rawOrder.currentStatus || "pending";
+          : rawOrder.currentStatus || rawOrder.orderStatus || rawOrder.status || "pending";
 
       setOrder({
         id: rawOrder._id ?? orderform?.id,
@@ -230,12 +219,12 @@ const OrderDetail = () => {
           },
           {
             id: 2,
-            title: rawOrder.orderStatus === "confirmed" ? "Confirmed" : "Processing",
-            description: isPaid ? "Order confirmed and payment received" : (rawOrder.orderStatus === "confirmed"
+            title: currentStatus === "confirmed" ? "Confirmed" : "Processing",
+            description: isPaid ? "Order confirmed and payment received" : (currentStatus === "confirmed"
               ? "Order confirmed and payment received"
               : "Order is being prepared for shipment"),
             date: formattedDate,
-            completed: isPaid || (rawOrder.orderStatus !== "pending" && rawOrder.orderStatus !== "pending_payment"),
+            completed: isPaid || (currentStatus !== "pending" && currentStatus !== "pending_payment"),
           },
           {
             id: 3,
@@ -398,17 +387,15 @@ const OrderDetail = () => {
       return;
     }
 
-    // Show confirmation dialog
-    const confirmMessage = currentPaymentMethod === 'bank_transfer'
-      ? 'Confirm bank transfer payment for this order?'
-      : 'Mark cash on delivery payment as received?';
+    setPaymentModalConfig({ isOpen: true, currentPaymentMethod, orderId });
+  };
 
-    if (!window.confirm(confirmMessage)) {
-      return;
-    }
+  const confirmPaymentAction = async () => {
+    const { currentPaymentMethod, orderId: targetOrderId } = paymentModalConfig;
+    if (!targetOrderId) return;
 
     try {
-      await confirmPaymentMutation.mutateAsync(orderId);
+      await confirmPaymentMutation.mutateAsync(targetOrderId);
       toast.success(
         currentPaymentMethod === 'bank_transfer'
           ? 'Bank transfer payment confirmed successfully!'
@@ -420,11 +407,13 @@ const OrderDetail = () => {
 
       // Invalidate related queries
       queryClient.invalidateQueries({ queryKey: ['orders'] });
-      queryClient.invalidateQueries({ queryKey: ['order', orderId] });
+      queryClient.invalidateQueries({ queryKey: ['order', targetOrderId] });
     } catch (error) {
       const errorMessage = error.response?.data?.message || error.message || 'Failed to confirm payment';
       toast.error(errorMessage);
       console.error('Error confirming payment:', error);
+    } finally {
+      setPaymentModalConfig({ isOpen: false, currentPaymentMethod: null, orderId: null });
     }
   };
 
@@ -535,7 +524,7 @@ const OrderDetail = () => {
               <PaymentSection>
                 <PaymentMethod>{order.paymentMethod}</PaymentMethod>
                 <PaymentStatus status={order.isPaid ? 'paid' : (order.paymentStatus || orderData?.data?.data?.paymentStatus || 'pending')}>
-                  Payment Status: {order.isPaid ? 'Paid' : (order.paymentStatus || orderData?.data?.data?.paymentStatus || 'pending')}
+                  Payment Status: {order.isPaid ? 'Paid' : (order.paymentStatus || normalizeApiResponse(orderData)?.paymentStatus || 'pending')}
                 </PaymentStatus>
                 {order.isPaid && (
                   <PaymentDate>Paid on {order.paidAtFormatted ?? order.date}</PaymentDate>
@@ -543,7 +532,7 @@ const OrderDetail = () => {
 
                 {/* Payment Confirmation Button */}
                 {(() => {
-                  const orderform = orderData?.data?.data?.data || orderData?.data?.data;
+                  const orderform = normalizeApiResponse(orderData);
                   const rawPs = (order?.paymentStatus || orderform?.paymentStatus || 'pending').toString().toLowerCase();
                   const currentPaymentStatus = rawPs; // keep raw for button logic
                   const currentPaymentMethod = order?.rawPaymentMethod || orderform?.paymentMethod;
@@ -643,12 +632,12 @@ const OrderDetail = () => {
           <SellersList>
             {order.sellers.map((seller) => {
               const sellerIdStr = seller.sellerId ? String(seller.sellerId) : null;
-              const isEazShopStore = sellerIdStr === EAZSHOP_STORE_ID;
+              const isEazShopStore = sellerIdStr === EAZSHOP_SELLER_ID;
               const fetched = sellerIdStr ? sellerById[sellerIdStr] : null;
               const queryIndex = sellerIdStr ? sellerIdsToFetch.indexOf(sellerIdStr) : -1;
               const isLoadingSeller = queryIndex >= 0 && sellerQueries[queryIndex]?.isLoading;
-              const name = isEazShopStore ? "Saiisai Store" : (fetched?.name ?? seller.name ?? "—");
-              const shopName = isEazShopStore ? "Saiisai Store" : (fetched?.shopName ?? seller.shopName ?? "—");
+              const name = isEazShopStore ? PLATFORM_STORE_NAME : (fetched?.name ?? seller.name ?? "—");
+              const shopName = isEazShopStore ? PLATFORM_STORE_NAME : (fetched?.shopName ?? seller.shopName ?? "—");
               const email = isEazShopStore ? "Platform store" : (fetched?.email ?? seller.email ?? "—");
               const isInactive = fetched && (fetched.active === false || fetched.status !== "active");
               const fetchFailed = sellerIdStr && !isEazShopStore && !fetched && !isLoadingSeller;
@@ -771,6 +760,18 @@ const OrderDetail = () => {
           </TimelineContainer>
         </TimelineCard>
       </SummaryGrid>
+
+      <ConfirmationModal
+        isOpen={paymentModalConfig.isOpen}
+        onClose={() => setPaymentModalConfig({ isOpen: false, currentPaymentMethod: null, orderId: null })}
+        onConfirm={confirmPaymentAction}
+        title={paymentModalConfig.currentPaymentMethod === 'bank_transfer' ? 'Confirm Bank Transfer' : 'Mark Cash Received'}
+        message={paymentModalConfig.currentPaymentMethod === 'bank_transfer'
+          ? 'Confirm bank transfer payment for this order?'
+          : 'Mark cash on delivery payment as received?'}
+        confirmText="Confirm"
+        confirmColor="#27ae60"
+      />
     </OrderDetailContainer>
   );
 };

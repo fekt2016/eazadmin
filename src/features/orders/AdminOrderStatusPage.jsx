@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import {
   FaCheckCircle,
@@ -11,11 +12,12 @@ import {
   FaSave,
   FaHistory,
 } from 'react-icons/fa';
-import { useParams, useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
+import { PATHS } from '../../routes/routePath';
+import { normalizeApiResponse } from '../../shared/utils/apiUtils';
 import { useGetOrderById } from '../../shared/hooks/useOrder';
 import { useUpdateOrderStatus } from '../../shared/hooks/useUpdateOrderStatus';
 import { LoadingSpinner } from '../../shared/components/LoadingSpinner';
-import { PATHS } from '../../routes/routhPath';
 
 /**
  * AdminOrderStatusPage Component
@@ -32,28 +34,17 @@ const AdminOrderStatusPage = () => {
   const [location, setLocation] = useState('');
   const [optimisticTrackingEntry, setOptimisticTrackingEntry] = useState(null);
 
-  // API returns { status: 'success', data: { data: doc } } — order doc at data.data.data
-  const order =
-    orderData?.data?.data?.data ??
-    orderData?.data?.data ??
-    orderData?.data ??
-    orderData;
+  // Normalize order document
+  const order = normalizeApiResponse(orderData);
 
   useEffect(() => {
     if (!order) return;
-    const rawPs = (
-      order.paymentStatus ??
-      orderData?.data?.data?.data?.paymentStatus ??
-      orderData?.data?.data?.paymentStatus ??
-      ''
-    )
-      .toString()
-      .toLowerCase();
-    const isPaidLocal = rawPs === 'paid' || rawPs === 'completed';
+    const rawPaymentStatus = (order.paymentStatus || '').toString().toLowerCase();
+    const isPaidLocal = rawPaymentStatus === 'paid' || rawPaymentStatus === 'completed';
     const raw = (
       order.currentStatus ??
-      order.status ??
       order.orderStatus ??
+      order.status ??
       'pending_payment'
     )
       .toString()
@@ -62,7 +53,7 @@ const AdminOrderStatusPage = () => {
     setStatus(
       isPaidLocal && isPending
         ? 'confirmed'
-        : order.currentStatus ?? order.status ?? order.orderStatus ?? 'pending_payment',
+        : order.currentStatus ?? order.orderStatus ?? order.status ?? 'pending_payment',
     );
   }, [order, orderData]);
 
@@ -96,14 +87,7 @@ const AdminOrderStatusPage = () => {
     'local_dispatch',
   ]);
 
-  const rawPaymentStatus = (
-    order?.paymentStatus ??
-    orderData?.data?.data?.data?.paymentStatus ??
-    orderData?.data?.data?.paymentStatus ??
-    ''
-  )
-    .toString()
-    .toLowerCase();
+  const rawPaymentStatus = (order?.paymentStatus || '').toString().toLowerCase();
   const isPaid =
     rawPaymentStatus === 'paid' || rawPaymentStatus === 'completed';
 
@@ -114,8 +98,8 @@ const AdminOrderStatusPage = () => {
   const baseStatusOptions = isInternationalPreorder
     ? allStatusOptions
     : allStatusOptions.filter(
-        (opt) => !INTERNATIONAL_ONLY_STATUS_VALUES.has(opt.value),
-      );
+      (opt) => !INTERNATIONAL_ONLY_STATUS_VALUES.has(opt.value),
+    );
 
   // For unpaid orders, only allow cancellation (no progression)
   const selectableStatusOptions = isPaid
@@ -126,16 +110,16 @@ const AdminOrderStatusPage = () => {
     e.preventDefault();
 
     if (!status) {
-      alert('Please select a status');
+      toast.error('Please select a status');
       return;
     }
 
-     // Guard on the client as well: do not allow updating unpaid orders
-     // except to cancel them.
-     if (!isPaid && status !== 'cancelled') {
-       alert('Cannot update status while payment is pending. You may only cancel unpaid orders.');
-       return;
-     }
+    // Guard on the client as well: do not allow updating unpaid orders
+    // except to cancel them.
+    if (!isPaid && status !== 'cancelled') {
+      toast.error('Cannot update status while payment is pending. You may only cancel unpaid orders.');
+      return;
+    }
 
     // Create optimistic tracking entry for instant UI update
     const newTrackingEntry = {
@@ -162,20 +146,20 @@ const AdminOrderStatusPage = () => {
 
       // Refetch order data to get updated tracking history from server
       await refetch();
-      
+
       // Clear optimistic entry (real data will replace it)
       setOptimisticTrackingEntry(null);
-      
+
       // Clear form fields
       setMessage('');
       setLocation('');
-      
+
       // Update status to the new status so form reflects the change
       setStatus(status);
-      
+
       // Show success message
-      alert('Order status updated successfully!');
-      
+      toast.success('Order status updated successfully!');
+
       // Redirect to orders page after a brief delay to let user see the update
       setTimeout(() => {
         navigate(`/dashboard/${PATHS.ORDERS}`);
@@ -184,7 +168,7 @@ const AdminOrderStatusPage = () => {
       console.error('Failed to update order status:', error);
       // Remove optimistic entry on error
       setOptimisticTrackingEntry(null);
-      alert(error?.response?.data?.message || 'Failed to update order status');
+      toast.error(error?.response?.data?.message || 'Failed to update order status');
     }
   };
 
@@ -212,12 +196,12 @@ const AdminOrderStatusPage = () => {
   const trackingHistory = order.trackingHistory || [];
 
   // Current status: if buyer has paid but backend still says pending_payment, show Confirmed so it matches payment
-  const rawCurrentStatus = (order.currentStatus ?? order.status ?? order.orderStatus ?? 'pending_payment').toString().toLowerCase();
+  const rawCurrentStatus = (order.currentStatus ?? order.orderStatus ?? order.status ?? 'pending_payment').toString().toLowerCase();
   const isPendingStatus = rawCurrentStatus === 'pending' || rawCurrentStatus === 'pending_payment';
   const displayStatusValue =
     isPaid && isPendingStatus
       ? 'confirmed'
-      : (order.currentStatus || order.status || order.orderStatus || 'pending_payment');
+      : (order.currentStatus || order.orderStatus || order.status || 'pending_payment');
 
   // Use the full status catalog to resolve the human‑readable label
   // for the current status (even if it is not selectable anymore).
@@ -231,7 +215,7 @@ const AdminOrderStatusPage = () => {
   if (optimisticTrackingEntry) {
     historyWithOptimistic = [...trackingHistory, optimisticTrackingEntry];
   }
-  
+
   const sortedHistory = historyWithOptimistic.sort(
     (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
   );
@@ -241,7 +225,7 @@ const AdminOrderStatusPage = () => {
       <PageHeader>
         <HeaderTitle>
           <h1>Update Order Status</h1>
-          <p>Order #{order.orderNumber ?? orderData?.data?.data?.data?.orderNumber ?? orderData?.data?.data?.orderNumber ?? "—"}</p>
+          <p>Order #{order.orderNumber ?? "—"}</p>
         </HeaderTitle>
         <BackButton onClick={() => navigate(-1)}>← Back</BackButton>
       </PageHeader>

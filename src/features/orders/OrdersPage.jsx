@@ -15,6 +15,8 @@ import {
   FaAngleLeft,
   FaAngleRight,
 } from "react-icons/fa";
+import { ConfirmationModal } from '../../shared/components/modal/ConfirmationModal';
+import { toast } from 'react-toastify';
 
 export default function OrdersPage() {
   const navigate = useNavigate();
@@ -23,8 +25,15 @@ export default function OrdersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
+  const [orderToDelete, setOrderToDelete] = useState(null);
 
-  const { data: ordersData, isLoading, error, refetch } = useGetAllOrders();
+  const { data: ordersData, isLoading, error, refetch } = useGetAllOrders({
+    page: currentPage,
+    limit: pageSize,
+    search: searchTerm,
+    status: statusFilter === "all" ? undefined : statusFilter,
+    date: dateFilter === "all" ? undefined : dateFilter,
+  });
   const deleteOrderMutation = useDeleteOrder();
   const { data: statsData } = useGetOrderStats();
 
@@ -69,7 +78,7 @@ export default function OrdersPage() {
     currentPage: currentPageFromApi = 1,
     itemsPerPage = 10,
   } = pagination;
-  
+
   // Calculate pagination flags
   const hasNext = currentPageFromApi < totalPages;
   const hasPrev = currentPageFromApi > 1;
@@ -107,33 +116,37 @@ export default function OrdersPage() {
     return raw !== 'paid' && raw !== 'completed';
   };
 
-  const handleDeleteOrder = async (order) => {
+  const handleDeleteOrder = (order) => {
     const orderId = order._id ?? order.id;
-    const orderNumber = order.orderNumber ?? orderId;
-
     if (!orderId) return;
 
     if (!isOrderUnpaid(order)) {
-      alert('Only unpaid orders can be deleted. For paid orders, use cancellation or refund instead.');
+      toast.error('Only unpaid orders can be deleted. For paid orders, use cancellation or refund instead.');
       return;
     }
 
-    const confirmed = window.confirm(
-      `This will permanently delete order ${orderNumber} from the database (a backup is kept internally).\n\nAre you sure you want to continue?`,
-    );
-    if (!confirmed) return;
+    setOrderToDelete(order);
+  };
+
+  const confirmDeleteOrder = async () => {
+    if (!orderToDelete) return;
+    const order = orderToDelete;
+    const orderId = order._id ?? order.id;
+    const orderNumber = order.orderNumber ?? orderId;
 
     try {
       await deleteOrderMutation.mutateAsync(orderId.toString());
       await refetch();
-      alert(`Order ${orderNumber} deleted successfully.`);
+      toast.success(`Order ${orderNumber} deleted successfully.`);
     } catch (err) {
       console.error('Failed to delete order:', err);
-      alert(
+      toast.error(
         err?.response?.data?.message ||
-          err?.message ||
-          'Failed to delete order. Please try again.',
+        err?.message ||
+        'Failed to delete order. Please try again.',
       );
+    } finally {
+      setOrderToDelete(null);
     }
   };
 
@@ -344,77 +357,77 @@ export default function OrdersPage() {
               const orderId = order._id ?? order.id;
               const orderIdStr = orderId?.toString?.() ?? orderId;
               return (
-              <TableRow key={orderIdStr}>
-                <TableCell>{order.orderNumber ?? "—"}</TableCell>
-                <TableCell title={order.user?.email ?? ""}>{getCustomerDisplay(order)}</TableCell>
-                <TableCell>{formatDate(order.createdAt)}</TableCell>
-                <TableCell>
-                  {order.trackingNumber ? (
-                    <TrackingLink
-                      onClick={() => navigate(`/dashboard/tracking/${order.trackingNumber}`, { replace: false })}
-                      title="Track Order"
-                    >
-                      {order.trackingNumber}
-                    </TrackingLink>
-                  ) : (
-                    <TrackingPending>Pending...</TrackingPending>
-                  )}
-                </TableCell>
-                <TableCell>{calculateTotalQuantity(order)}</TableCell>
-                <TableCell>
-                  Gh₵{(order.totalPrice ?? order.total ?? 0).toFixed(2)}
-                </TableCell>
-                <TableCell>
-                  <StatusBadge $color={getStatusColor(order.orderStatus ?? order.currentStatus ?? order.status)}>
-                    {getStatusIcon(order.orderStatus ?? order.currentStatus ?? order.status)}
-                    {(order.orderStatus ?? order.currentStatus ?? order.status ?? "Unknown")
-                      .toString().charAt(0).toUpperCase() +
-                      (order.orderStatus ?? order.currentStatus ?? order.status ?? "unknown").toString().slice(1)}
-                  </StatusBadge>
-                </TableCell>
-                <TableCell>
-                  <ActionButtons>
-                    <ActionIcon
-                      $color="#3498db"
-                      title="View details"
-                      to={`detail/${orderIdStr}`}
-                    >
-                      <FaEye />
-                    </ActionIcon>
-                    <ActionIcon
-                      $color="#2ecc71"
-                      title="Update status"
-                      onClick={() => handleStatusChange(order)}
-                    >
-                      <FaEdit />
-                    </ActionIcon>
-                    <ActionIcon
-                      $color="#e74c3c"
-                      as="button"
-                      type="button"
-                      title={
-                        isOrderUnpaid(order)
-                          ? 'Delete unpaid order'
-                          : 'Only unpaid orders can be deleted'
-                      }
-                      onClick={() => handleDeleteOrder(order)}
-                      disabled={!isOrderUnpaid(order) || deleteOrderMutation.isPending}
-                      style={
-                        !isOrderUnpaid(order)
-                          ? { opacity: 0.4, cursor: 'not-allowed' }
-                          : undefined
-                      }
-                    >
-                      <FaTimesCircle />
-                    </ActionIcon>
-                  </ActionButtons>
-                </TableCell>
-              </TableRow>
+                <TableRow key={orderIdStr}>
+                  <TableCell>{order.orderNumber ?? "—"}</TableCell>
+                  <TableCell title={order.user?.email ?? ""}>{getCustomerDisplay(order)}</TableCell>
+                  <TableCell>{formatDate(order.createdAt)}</TableCell>
+                  <TableCell>
+                    {order.trackingNumber ? (
+                      <TrackingLink
+                        onClick={() => navigate(`/dashboard/tracking/${order.trackingNumber}`, { replace: false })}
+                        title="Track Order"
+                      >
+                        {order.trackingNumber}
+                      </TrackingLink>
+                    ) : (
+                      <TrackingPending>Pending...</TrackingPending>
+                    )}
+                  </TableCell>
+                  <TableCell>{calculateTotalQuantity(order)}</TableCell>
+                  <TableCell>
+                    Gh₵{(order.totalPrice ?? order.total ?? 0).toFixed(2)}
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge $color={getStatusColor(order.currentStatus ?? order.orderStatus ?? order.status)}>
+                      {getStatusIcon(order.currentStatus ?? order.orderStatus ?? order.status)}
+                      {(order.currentStatus ?? order.orderStatus ?? order.status ?? "Unknown")
+                        .toString().charAt(0).toUpperCase() +
+                        (order.currentStatus ?? order.orderStatus ?? order.status ?? "unknown").toString().slice(1)}
+                    </StatusBadge>
+                  </TableCell>
+                  <TableCell>
+                    <ActionButtons>
+                      <ActionIcon
+                        $color="#3498db"
+                        title="View details"
+                        to={`detail/${orderIdStr}`}
+                      >
+                        <FaEye />
+                      </ActionIcon>
+                      <ActionIcon
+                        $color="#2ecc71"
+                        title="Update status"
+                        onClick={() => handleStatusChange(order)}
+                      >
+                        <FaEdit />
+                      </ActionIcon>
+                      <ActionIcon
+                        $color="#e74c3c"
+                        as="button"
+                        type="button"
+                        title={
+                          isOrderUnpaid(order)
+                            ? 'Delete unpaid order'
+                            : 'Only unpaid orders can be deleted'
+                        }
+                        onClick={() => handleDeleteOrder(order)}
+                        disabled={!isOrderUnpaid(order) || deleteOrderMutation.isPending}
+                        style={
+                          !isOrderUnpaid(order)
+                            ? { opacity: 0.4, cursor: 'not-allowed' }
+                            : undefined
+                        }
+                      >
+                        <FaTimesCircle />
+                      </ActionIcon>
+                    </ActionButtons>
+                  </TableCell>
+                </TableRow>
               );
             })
           ) : (
             <NoOrdersRow>
-              <td colSpan="7">
+              <td colSpan="8">
                 <NoOrders>
                   <FaShoppingBag size={48} />
                   <h3>No orders found</h3>
@@ -488,6 +501,16 @@ export default function OrdersPage() {
           </PaginationButton>
         </PaginationControls>
       </PaginationContainer>
+
+      <ConfirmationModal
+        isOpen={!!orderToDelete}
+        onClose={() => setOrderToDelete(null)}
+        onConfirm={confirmDeleteOrder}
+        title="Delete Order"
+        message={`This will permanently delete order ${orderToDelete?.orderNumber || (orderToDelete?._id ?? orderToDelete?.id)} from the database (a backup is kept internally).\n\nAre you sure you want to continue?`}
+        confirmText="Delete"
+        confirmColor="#dc2626"
+      />
     </Container>
   );
 }

@@ -10,6 +10,8 @@ import CategoryListView from '../../shared/components/category/CategoryListView'
 import EmptyState from '../../shared/components/category/EmptyState';
 import useProduct from '../../shared/hooks/useProduct';
 import { LoadingSpinner, LoadingContainer } from '../../shared/components/LoadingSpinner';
+import { ConfirmationModal } from '../../shared/components/modal/ConfirmationModal';
+import { normalizeApiResponse } from "../../shared/utils/apiUtils";
 
 export default function CategoryPage() {
   const [showForm, setShowForm] = useState(false);
@@ -18,6 +20,7 @@ export default function CategoryPage() {
   const [imagePreview, setImagePreview] = useState(null);
   const itemsPerPage = 8;
   const [currentPage, setCurrentPage] = useState(1);
+  const [categoryToDelete, setCategoryToDelete] = useState(null);
   const [filters, setFilters] = useState({
     status: "ALL",
     search: "",
@@ -70,8 +73,14 @@ export default function CategoryPage() {
 
   // Add handleDelete function
   const handleDelete = (categoryId) => {
-    if (window.confirm("Are you sure you want to delete this category?")) {
-      deleteCategory.mutate(categoryId);
+    setCategoryToDelete(categoryId);
+  };
+
+  const confirmDelete = () => {
+    if (categoryToDelete) {
+      deleteCategory.mutate(categoryToDelete, {
+        onSettled: () => setCategoryToDelete(null)
+      });
     }
   };
 
@@ -82,7 +91,7 @@ export default function CategoryPage() {
   const { data, isLoading: isGettingCategories } = getCategories;
 
   const categories = useMemo(() => {
-    const cats = data?.data?.results || data?.data?.data?.results || data?.results || [];
+    const cats = normalizeApiResponse(data) || [];
 
     // Check for exact "Electronics" category name (case-insensitive)
     const electronicsExact = cats.find(c =>
@@ -652,6 +661,16 @@ export default function CategoryPage() {
             </PaginationButton>
           </Pagination>
         )}
+
+      <ConfirmationModal
+        isOpen={!!categoryToDelete}
+        onClose={() => setCategoryToDelete(null)}
+        onConfirm={confirmDelete}
+        title="Delete Category"
+        message="Are you sure you want to delete this category?"
+        confirmText="Delete"
+        confirmColor="#dc2626"
+      />
     </Container>
   );
 }

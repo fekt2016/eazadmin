@@ -7,7 +7,7 @@ import {
   FaTruck,
   FaMapMarkerAlt,
 } from "react-icons/fa";
-import { PATHS } from "../../routes/routhPath";
+import { PATHS } from "../../routes/routePath";
 
 const DASHBOARD_BASE = "/dashboard";
 const basePath = `${DASHBOARD_BASE}/${PATHS.OFFICIAL_STORE}`;

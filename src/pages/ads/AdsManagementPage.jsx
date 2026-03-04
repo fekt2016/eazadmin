@@ -6,6 +6,7 @@ import { toast } from "react-toastify";
 import Button from "../../shared/components/Button";
 import LoadingSpinner from "../../shared/components/LoadingSpinner";
 import adApi from "../../shared/services/adApi";
+import { ConfirmationModal } from "../../shared/components/modal/ConfirmationModal";
 
 const AD_TYPES = [
   { value: "banner", label: "Homepage Banner" },
@@ -151,6 +152,7 @@ const AdsManagementPage = () => {
   const [formState, setFormState] = useState(initialFormState);
   const [editingAd, setEditingAd] = useState(null);
   const [imageFileName, setImageFileName] = useState("");
+  const [adToDelete, setAdToDelete] = useState(null);
 
   const {
     data: adsData,
@@ -182,8 +184,8 @@ const AdsManagementPage = () => {
     onError: (error) => {
       toast.error(
         error?.response?.data?.message ||
-          error?.message ||
-          "Failed to create advertisement",
+        error?.message ||
+        "Failed to create advertisement",
       );
     },
   });
@@ -198,8 +200,8 @@ const AdsManagementPage = () => {
     onError: (error) => {
       toast.error(
         error?.response?.data?.message ||
-          error?.message ||
-          "Failed to update advertisement",
+        error?.message ||
+        "Failed to update advertisement",
       );
     },
   });
@@ -213,8 +215,8 @@ const AdsManagementPage = () => {
     onError: (error) => {
       toast.error(
         error?.response?.data?.message ||
-          error?.message ||
-          "Failed to delete advertisement",
+        error?.message ||
+        "Failed to delete advertisement",
       );
     },
   });
@@ -265,8 +267,8 @@ const AdsManagementPage = () => {
     } catch (error) {
       toast.error(
         error?.response?.data?.message ||
-          error?.message ||
-          "Failed to upload image"
+        error?.message ||
+        "Failed to upload image"
       );
     }
   };
@@ -299,9 +301,15 @@ const AdsManagementPage = () => {
   const handleDelete = (ad) => {
     const id = ad?.id || ad?._id;
     if (!id) return;
+    setAdToDelete(ad);
+  };
 
-    if (window.confirm(`Delete advertisement "${ad.title}"?`)) {
-      deleteAdMutation.mutate(id);
+  const confirmDelete = () => {
+    if (adToDelete) {
+      const id = adToDelete?.id || adToDelete?._id;
+      deleteAdMutation.mutate(id, {
+        onSettled: () => setAdToDelete(null)
+      });
     }
   };
 
@@ -609,11 +617,11 @@ const AdsManagementPage = () => {
                       <Td>
                         {ad.discountType === "fixed"
                           ? (typeof ad.discountFixed === "number" && ad.discountFixed > 0
-                              ? `GH₵${Number(ad.discountFixed).toFixed(2)}`
-                              : "—")
+                            ? `GH₵${Number(ad.discountFixed).toFixed(2)}`
+                            : "—")
                           : (typeof ad.discountPercent === "number" && ad.discountPercent > 0
-                              ? `${ad.discountPercent}%`
-                              : "—")}
+                            ? `${ad.discountPercent}%`
+                            : "—")}
                       </Td>
                       <Td>
                         <LinkPreview href={ad.link} target="_blank" rel="noopener noreferrer">
@@ -658,6 +666,16 @@ const AdsManagementPage = () => {
           )}
         </Card>
       </GridLayout>
+
+      <ConfirmationModal
+        isOpen={!!adToDelete}
+        onClose={() => setAdToDelete(null)}
+        onConfirm={confirmDelete}
+        title="Delete Advertisement"
+        message={`Delete advertisement "${adToDelete?.title}"?`}
+        confirmText="Delete"
+        confirmColor="#dc2626"
+      />
     </PageWrapper>
   );
 };

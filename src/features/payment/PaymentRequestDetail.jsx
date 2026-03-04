@@ -21,7 +21,7 @@ import {
   FaDesktop,
 } from "react-icons/fa";
 import { useGetWithdrawalRequest, useVerifyPaystackOtp, useResendPaystackOtp } from "../../shared/hooks/usePayout";
-import { PATHS } from "../../routes/routhPath";
+import { PATHS } from "../../routes/routePath";
 import { LoadingSpinner } from "../../shared/components/LoadingSpinner";
 import { useApproveWithdrawalRequest, useRejectWithdrawalRequest, useVerifyTransferStatus } from "../../shared/hooks/usePayout";
 
@@ -34,6 +34,8 @@ const PaymentRequestDetail = () => {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [transactionId, setTransactionId] = useState("");
+  const [showApproveModal, setShowApproveModal] = useState(false);
+  const [approveConfirmText, setApproveConfirmText] = useState("");
   const [otpModalOpen, setOtpModalOpen] = useState(false);
   const [otpValue, setOtpValue] = useState("");
 
@@ -85,27 +87,38 @@ const PaymentRequestDetail = () => {
     return statusMap[status] || statusMap.pending;
   };
 
-  const handleApprove = () => {
+  const handleApproveClick = () => {
     if (!requestId) return;
-    if (window.confirm("Are you sure you want to approve this withdrawal request? This will initiate a Paystack transfer.")) {
-      approveWithdrawal.mutate(requestId, {
-        onSuccess: (data) => {
-          const balanceInfo = data?.data?.sellerBalance;
-          let message = "Withdrawal request approved and transfer initiated!";
-          if (balanceInfo) {
-            message += ` Seller's remaining available balance: ₵${balanceInfo.availableBalance.toFixed(2)}`;
-          }
-          setSuccessMessage(message);
-          setErrorMessage(null);
-          // Invalidate queries to refresh the withdrawal request data
-          queryClient.invalidateQueries(['withdrawalRequest', requestId]);
-        },
-        onError: (error) => {
-          setErrorMessage(error.response?.data?.message || "Failed to approve withdrawal request");
-          setSuccessMessage(null);
-        },
-      });
+    setShowApproveModal(true);
+    setApproveConfirmText("");
+  };
+
+  const handleConfirmApprove = () => {
+    if (approveConfirmText !== "APPROVE") {
+      setErrorMessage("Please type APPROVE to confirm");
+      return;
     }
+
+    approveWithdrawal.mutate(requestId, {
+      onSuccess: (data) => {
+        const balanceInfo = data?.data?.sellerBalance;
+        let message = "Withdrawal request approved and transfer initiated!";
+        if (balanceInfo) {
+          message += ` Seller's remaining available balance: ₵${balanceInfo.availableBalance.toFixed(2)}`;
+        }
+        setSuccessMessage(message);
+        setErrorMessage(null);
+        setShowApproveModal(false);
+        setApproveConfirmText("");
+        queryClient.invalidateQueries(['withdrawalRequest', requestId]);
+      },
+      onError: (error) => {
+        setErrorMessage(error.response?.data?.message || "Failed to approve withdrawal request");
+        setSuccessMessage(null);
+        setShowApproveModal(false);
+        setApproveConfirmText("");
+      },
+    });
   };
 
   const handleReject = () => {
@@ -154,18 +167,18 @@ const PaymentRequestDetail = () => {
 
   const handleSubmitOtp = () => {
     const trimmedOtp = otpValue.trim();
-    
+
     if (!trimmedOtp) {
       setErrorMessage("Please enter the Paystack OTP");
       return;
     }
-    
+
     // Validate OTP format (should be at least 4 characters, typically 6 digits)
     if (trimmedOtp.length < 4) {
       setErrorMessage("OTP must be at least 4 characters long");
       return;
     }
-    
+
     // Check if withdrawal is in correct status
     if (request?.status !== 'awaiting_paystack_otp') {
       setErrorMessage(
@@ -173,7 +186,7 @@ const PaymentRequestDetail = () => {
       );
       return;
     }
-    
+
     verifyPaystackOtp.mutate(
       { requestId, otp: trimmedOtp },
       {
@@ -192,25 +205,25 @@ const PaymentRequestDetail = () => {
         },
         onError: (error) => {
           // Extract error message from various possible response formats
-          let errorMessage = 
+          let errorMessage =
             error.response?.data?.message ||
             error.response?.data?.error?.message ||
             error.message ||
             "Failed to verify Paystack OTP";
-          
+
           console.error('[PaymentRequestDetail] OTP verification error:', {
             error,
             response: error.response?.data,
             status: error.response?.status,
           });
-          
+
           // If error indicates transfer is not awaiting OTP, suggest refreshing status
           if (errorMessage.toLowerCase().includes('not currently awaiting otp') ||
-              errorMessage.toLowerCase().includes('transfer is not') ||
-              errorMessage.toLowerCase().includes('not awaiting otp')) {
+            errorMessage.toLowerCase().includes('transfer is not') ||
+            errorMessage.toLowerCase().includes('not awaiting otp')) {
             errorMessage += " Please click 'Verify Transfer Status' to refresh the transfer status from Paystack.";
           }
-          
+
           setErrorMessage(errorMessage);
         },
       }
@@ -414,29 +427,29 @@ const PaymentRequestDetail = () => {
               {((request.payoutMethod === "mtn_momo" || request.paymentMethod === "mtn_momo") ||
                 (request.payoutMethod === "vodafone_cash" || request.paymentMethod === "vodafone_cash") ||
                 (request.payoutMethod === "airtel_tigo_money" || request.paymentMethod === "airtel_tigo_money")) && (
-                <>
-                  <DetailRow>
-                    <DetailLabel>
-                      <FaMobileAlt /> Network
-                    </DetailLabel>
-                    <DetailValue>{paymentDetails.network || "N/A"}</DetailValue>
-                  </DetailRow>
-                  <DetailRow>
-                    <DetailLabel>
-                      <FaPhone /> Phone Number
-                    </DetailLabel>
-                    <DetailValue>{paymentDetails.phone || "N/A"}</DetailValue>
-                  </DetailRow>
-                  {paymentDetails.accountName && (
+                  <>
                     <DetailRow>
                       <DetailLabel>
-                        <FaUser /> Account Name
+                        <FaMobileAlt /> Network
                       </DetailLabel>
-                      <DetailValue>{paymentDetails.accountName}</DetailValue>
+                      <DetailValue>{paymentDetails.network || "N/A"}</DetailValue>
                     </DetailRow>
-                  )}
-                </>
-              )}
+                    <DetailRow>
+                      <DetailLabel>
+                        <FaPhone /> Phone Number
+                      </DetailLabel>
+                      <DetailValue>{paymentDetails.phone || "N/A"}</DetailValue>
+                    </DetailRow>
+                    {paymentDetails.accountName && (
+                      <DetailRow>
+                        <DetailLabel>
+                          <FaUser /> Account Name
+                        </DetailLabel>
+                        <DetailValue>{paymentDetails.accountName}</DetailValue>
+                      </DetailRow>
+                    )}
+                  </>
+                )}
 
               {request.paymentMethod === "cash" && (
                 <>
@@ -497,7 +510,7 @@ const PaymentRequestDetail = () => {
                   </DetailValue>
                 </DetailRow>
                 <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: '#f1f5f9', borderRadius: '0.375rem', fontSize: '0.875rem', color: '#64748b' }}>
-                  <strong>Note:</strong> Available Balance = Total Revenue - Locked Balance - Pending Balance. 
+                  <strong>Note:</strong> Available Balance = Total Revenue - Locked Balance - Pending Balance.
                   {request.status === 'awaiting_paystack_otp' && ' Balance will be deducted when seller verifies OTP.'}
                 </div>
               </CardBody>
@@ -641,45 +654,45 @@ const PaymentRequestDetail = () => {
             </Card>
           )}
 
-          {request.status === "pending" && 
-           request.isActive !== false && 
-           !isTransferCompleted(request.status) && (
-            <ActionCard>
-              <ActionTitle>Actions</ActionTitle>
-              <ActionButtons>
-                <ApproveButton
-                  onClick={handleApprove}
-                  disabled={approveWithdrawal.isPending}
-                >
-                  {approveWithdrawal.isPending ? (
-                    <>
-                      <LoadingSpinner size="sm" />
-                      <span>Processing...</span>
-                    </>
-                  ) : (
-                    <>
-                      <FaCheck /> Approve & Transfer
-                    </>
-                  )}
-                </ApproveButton>
-                <RejectButton
-                  onClick={() => setShowRejectModal(true)}
-                  disabled={rejectWithdrawal.isPending}
-                >
-                  {rejectWithdrawal.isPending ? (
-                    <>
-                      <LoadingSpinner size="sm" />
-                      <span>Processing...</span>
-                    </>
-                  ) : (
-                    <>
-                      <FaTimes /> Reject
-                    </>
-                  )}
-                </RejectButton>
-              </ActionButtons>
-            </ActionCard>
-          )}
+          {request.status === "pending" &&
+            request.isActive !== false &&
+            !isTransferCompleted(request.status) && (
+              <ActionCard>
+                <ActionTitle>Actions</ActionTitle>
+                <ActionButtons>
+                  <ApproveButton
+                    onClick={handleApproveClick}
+                    disabled={approveWithdrawal.isPending}
+                  >
+                    {approveWithdrawal.isPending ? (
+                      <>
+                        <LoadingSpinner size="sm" />
+                        <span>Processing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FaCheck /> Approve & Transfer
+                      </>
+                    )}
+                  </ApproveButton>
+                  <RejectButton
+                    onClick={() => setShowRejectModal(true)}
+                    disabled={rejectWithdrawal.isPending}
+                  >
+                    {rejectWithdrawal.isPending ? (
+                      <>
+                        <LoadingSpinner size="sm" />
+                        <span>Processing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FaTimes /> Reject
+                      </>
+                    )}
+                  </RejectButton>
+                </ActionButtons>
+              </ActionCard>
+            )}
           {request.isActive === false && (
             <ActionCard>
               <ActionTitle>Status</ActionTitle>
@@ -716,47 +729,47 @@ const PaymentRequestDetail = () => {
               )}
             </ActionCard>
           )}
-          {(request.status === "processing" || request.status === "approved" || request.status === "awaiting_paystack_otp") && 
-           !isTransferCompleted(request.status) && (
-            <ActionCard>
-              <ActionTitle>Actions</ActionTitle>
-              <ActionButtons>
-                <ApproveButton
-                  onClick={handleVerify}
-                  disabled={verifyTransfer.isPending}
-                >
-                  {verifyTransfer.isPending ? (
+          {(request.status === "processing" || request.status === "approved" || request.status === "awaiting_paystack_otp") &&
+            !isTransferCompleted(request.status) && (
+              <ActionCard>
+                <ActionTitle>Actions</ActionTitle>
+                <ActionButtons>
+                  <ApproveButton
+                    onClick={handleVerify}
+                    disabled={verifyTransfer.isPending}
+                  >
+                    {verifyTransfer.isPending ? (
+                      <>
+                        <LoadingSpinner size="sm" />
+                        <span>Verifying...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FaCheck /> Verify Transfer Status
+                      </>
+                    )}
+                  </ApproveButton>
+                  {request.status === "awaiting_paystack_otp" && (
                     <>
-                      <LoadingSpinner size="sm" />
-                      <span>Verifying...</span>
-                    </>
-                  ) : (
-                    <>
-                      <FaCheck /> Verify Transfer Status
+                      <ApproveButton
+                        type="button"
+                        onClick={handleOpenOtpModal}
+                        disabled={verifyPaystackOtp.isPending}
+                      >
+                        <FaCheck /> Enter Paystack OTP
+                      </ApproveButton>
+                      <ApproveButton
+                        type="button"
+                        onClick={() => resendPaystackOtp.mutate(requestId)}
+                        disabled={resendPaystackOtp.isPending}
+                      >
+                        <FaCheck /> Resend Paystack OTP
+                      </ApproveButton>
                     </>
                   )}
-                </ApproveButton>
-                {request.status === "awaiting_paystack_otp" && (
-                  <>
-                    <ApproveButton
-                      type="button"
-                      onClick={handleOpenOtpModal}
-                      disabled={verifyPaystackOtp.isPending}
-                    >
-                      <FaCheck /> Enter Paystack OTP
-                    </ApproveButton>
-                    <ApproveButton
-                      type="button"
-                      onClick={() => resendPaystackOtp.mutate(requestId)}
-                      disabled={resendPaystackOtp.isPending}
-                    >
-                      <FaCheck /> Resend Paystack OTP
-                    </ApproveButton>
-                  </>
-                )}
-              </ActionButtons>
-            </ActionCard>
-          )}
+                </ActionButtons>
+              </ActionCard>
+            )}
         </RightColumn>
       </Content>
 
@@ -806,6 +819,55 @@ const PaymentRequestDetail = () => {
                 disabled={verifyPaystackOtp.isPending}
               >
                 {verifyPaystackOtp.isPending ? 'Verifying...' : 'Confirm OTP'}
+              </ModalButton>
+            </ModalFooter>
+          </ModalContent>
+        </ModalOverlay>
+      )}
+
+      {showApproveModal && (
+        <ModalOverlay onClick={() => setShowApproveModal(false)}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
+            <ModalHeader>
+              <ModalTitle>Confirm Approval</ModalTitle>
+              <CloseButton onClick={() => setShowApproveModal(false)}>
+                <FaTimes />
+              </CloseButton>
+            </ModalHeader>
+            <ModalBody>
+              <div style={{ marginBottom: '1.5rem', background: '#fee2e2', borderLeft: '4px solid #ef4444', color: '#b91c1c', padding: '1rem', borderRadius: '8px', display: 'flex', gap: '0.75rem' }}>
+                <FaShieldAlt style={{ fontSize: '1.5rem', marginTop: '0.1rem' }} />
+                <div>
+                  <strong style={{ display: 'block', marginBottom: '0.25rem' }}>High-Risk Action</strong>
+                  <p style={{ margin: 0, fontSize: '0.95rem' }}>This action will authorize a transfer of funds and cannot be undone.</p>
+                </div>
+              </div>
+              <ModalLabel>Type <strong style={{ color: '#ef4444' }}>APPROVE</strong> to confirm</ModalLabel>
+              <ModalInput
+                type="text"
+                value={approveConfirmText}
+                onChange={(e) => setApproveConfirmText(e.target.value)}
+                placeholder="APPROVE"
+              />
+            </ModalBody>
+            <ModalFooter>
+              <ModalButton $secondary onClick={() => setShowApproveModal(false)}>
+                Cancel
+              </ModalButton>
+              <ModalButton
+                $primary
+                onClick={handleConfirmApprove}
+                disabled={approveConfirmText !== "APPROVE" || approveWithdrawal.isPending}
+                style={{ background: approveConfirmText === "APPROVE" ? '#10b981' : '', color: approveConfirmText === "APPROVE" ? 'white' : '' }}
+              >
+                {approveWithdrawal.isPending ? (
+                  <>
+                    <LoadingSpinner size="sm" />
+                    <span>Approving...</span>
+                  </>
+                ) : (
+                  "Confirm Approval"
+                )}
               </ModalButton>
             </ModalFooter>
           </ModalContent>

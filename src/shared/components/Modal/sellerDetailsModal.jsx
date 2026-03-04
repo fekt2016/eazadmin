@@ -15,19 +15,19 @@ const SellerDetailsModal = ({ seller, onClose }) => {
   const [resetReason, setResetReason] = useState("");
   const [resetLockedReason, setResetLockedReason] = useState("");
   const [payoutRejectionReason, setPayoutRejectionReason] = useState("");
-  
+
   // Use seller?._id to safely get the ID, hook will handle undefined
   const { data: balanceData, isLoading: isBalanceLoading } = useGetSellerBalance(seller?._id);
   const resetBalanceMutation = useResetSellerBalance();
   const resetLockedBalanceMutation = useResetLockedBalance();
-  
+
   // Early return after all hooks are called
   if (!seller) {
     return null;
   }
-  
+
   const sellerBalance = balanceData?.data?.seller || balanceData?.data || seller;
-  
+
   // Debug: Log balance data
   console.log('[SellerDetailsModal] Balance data:', balanceData);
   console.log('[SellerDetailsModal] Seller balance:', sellerBalance);
@@ -36,29 +36,34 @@ const SellerDetailsModal = ({ seller, onClose }) => {
   // Check if seller has all required documents
   const hasAllRequiredDocuments = () => {
     const docs = seller.verificationDocuments || {};
-    
+
     // Check business certificate
-    const hasBusinessCert = docs.businessCert && 
+    const hasBusinessCertFormA = docs.businessCertFormA &&
+      (typeof docs.businessCertFormA === 'string' || (docs.businessCertFormA && docs.businessCertFormA.url));
+    const hasBusinessCert = docs.businessCert &&
       (typeof docs.businessCert === 'string' || (docs.businessCert && docs.businessCert.url));
-    
+
     // Check ID proof
-    const hasIdProof = docs.idProof && 
+    const hasIdProof = docs.idProof &&
       (typeof docs.idProof === 'string' || (docs.idProof && docs.idProof.url));
-    
+
     // Check address proof
-    const hasAddressProof = docs.addresProof && 
+    const hasAddressProof = docs.addresProof &&
       (typeof docs.addresProof === 'string' || (docs.addresProof && docs.addresProof.url));
-    
-    return hasBusinessCert && hasIdProof && hasAddressProof;
+
+    return hasBusinessCert && hasBusinessCertFormA && hasIdProof && hasAddressProof;
   };
 
   // Get missing documents list
   const getMissingDocuments = () => {
     const missing = [];
     const docs = seller.verificationDocuments || {};
-    
+
     if (!docs.businessCert || (typeof docs.businessCert !== 'string' && (!docs.businessCert || !docs.businessCert.url))) {
       missing.push('Business Certificate');
+    }
+    if (!docs.businessCertFormA || (typeof docs.businessCertFormA !== 'string' && (!docs.businessCertFormA || !docs.businessCertFormA.url))) {
+      missing.push('Business Certificate (Form A)');
     }
     if (!docs.idProof || (typeof docs.idProof !== 'string' && (!docs.idProof || !docs.idProof.url))) {
       missing.push('ID Proof');
@@ -66,7 +71,7 @@ const SellerDetailsModal = ({ seller, onClose }) => {
     if (!docs.addresProof || (typeof docs.addresProof !== 'string' && (!docs.addresProof || !docs.addresProof.url))) {
       missing.push('Address Proof');
     }
-    
+
     return missing;
   };
 
@@ -121,39 +126,85 @@ const SellerDetailsModal = ({ seller, onClose }) => {
             <Documents>
               {seller.verificationDocuments?.businessCert ? (
                 <DocumentLink
-                  href={typeof seller.verificationDocuments.businessCert === 'string' 
-                    ? seller.verificationDocuments.businessCert 
+                  href={typeof seller.verificationDocuments.businessCert === 'string'
+                    ? seller.verificationDocuments.businessCert
                     : seller.verificationDocuments.businessCert.url}
                   target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  Business Certificate ✓
+                  <DocumentIcon>
+                    <FaFileAlt />
+                  </DocumentIcon>
+                  <span>Business Certificate</span>
                 </DocumentLink>
               ) : (
-                <DocumentMissing>Business Certificate ✗ (Missing)</DocumentMissing>
+                <MissingDocument>
+                  <FaFileAlt />
+                  <span>Missing Business Certificate</span>
+                </MissingDocument>
               )}
+
+              {seller.verificationDocuments?.businessCertFormA ? (
+                <DocumentLink
+                  href={typeof seller.verificationDocuments.businessCertFormA === 'string'
+                    ? seller.verificationDocuments.businessCertFormA
+                    : seller.verificationDocuments.businessCertFormA.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <DocumentIcon>
+                    <FaFileAlt />
+                  </DocumentIcon>
+                  <span>Business Certificate (Form A)</span>
+                </DocumentLink>
+              ) : (
+                <MissingDocument>
+                  <FaFileAlt />
+                  <span>Missing Business Certificate (Form A)</span>
+                </MissingDocument>
+              )}
+
               {seller.verificationDocuments?.idProof ? (
                 <DocumentLink
-                  href={typeof seller.verificationDocuments.idProof === 'string' 
-                    ? seller.verificationDocuments.idProof 
+                  href={typeof seller.verificationDocuments.idProof === 'string'
+                    ? seller.verificationDocuments.idProof
                     : seller.verificationDocuments.idProof.url}
                   target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  ID Proof ✓
+                  <DocumentIcon>
+                    <FaIdCard />
+                  </DocumentIcon>
+                  <span>ID Proof</span>
                 </DocumentLink>
               ) : (
-                <DocumentMissing>ID Proof ✗ (Missing)</DocumentMissing>
+                <MissingDocument>
+                  <FaIdCard />
+                  <span>Missing ID Proof</span>
+                </MissingDocument>
               )}
               {seller.verificationDocuments?.addresProof ? (
                 <DocumentLink
-                  href={typeof seller.verificationDocuments.addresProof === 'string' 
-                    ? seller.verificationDocuments.addresProof 
+                  href={typeof seller.verificationDocuments.addresProof === 'string'
+                    ? seller.verificationDocuments.addresProof
                     : seller.verificationDocuments.addresProof.url}
                   target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  Address Proof ✓
+                  <DocumentIcon>
+                    <FaFileAlt />
+                  </DocumentIcon>
+                  <span>Address Proof</span>
                 </DocumentLink>
               ) : (
-                <DocumentMissing>Address Proof ✗ (Missing)</DocumentMissing>
+                <MissingDocument>
+                  <FaFileAlt />
+                  <span>Missing Address Proof</span>
+                </MissingDocument>
               )}
             </Documents>
             {!hasAllRequiredDocuments() && (
@@ -278,28 +329,28 @@ const SellerDetailsModal = ({ seller, onClose }) => {
           {/* Seller Document Verification - Approve/Reject buttons */}
           {/* This approves the seller after they've uploaded all required documents (businessCert, idProof, addresProof) */}
           {/* Backend will check: email verified + all documents uploaded before approving */}
-          {(seller.verificationStatus === 'pending' || !seller.verificationStatus || seller.verificationStatus === 'rejected') && 
-           (seller.onboardingStage !== 'verified') && (
-            <>
-              <ActionButton
-                variant="success"
-                onClick={handleApproveVerification}
-                disabled={approveVerification.isPending || !hasAllRequiredDocuments() || !seller.verification?.emailVerified}
-                title={!hasAllRequiredDocuments() ? `Missing documents: ${getMissingDocuments().join(', ')}` : !seller.verification?.emailVerified ? 'Email must be verified' : ''}
-              >
-                <FaCheckCircle style={{ marginRight: '0.5rem' }} />
-                {approveVerification.isPending ? 'Approving...' : 'Approve Verification'}
-              </ActionButton>
-              <ActionButton
-                variant="danger"
-                onClick={handleRejectVerification}
-                disabled={rejectVerification.isPending}
-              >
-                <FaTimesCircle style={{ marginRight: '0.5rem' }} />
-                Reject Verification
-              </ActionButton>
-            </>
-          )}
+          {(seller.verificationStatus === 'pending' || !seller.verificationStatus || seller.verificationStatus === 'rejected') &&
+            (seller.onboardingStage !== 'verified') && (
+              <>
+                <ActionButton
+                  variant="success"
+                  onClick={handleApproveVerification}
+                  disabled={approveVerification.isPending || !hasAllRequiredDocuments() || !seller.verification?.emailVerified}
+                  title={!hasAllRequiredDocuments() ? `Missing documents: ${getMissingDocuments().join(', ')}` : !seller.verification?.emailVerified ? 'Email must be verified' : ''}
+                >
+                  <FaCheckCircle style={{ marginRight: '0.5rem' }} />
+                  {approveVerification.isPending ? 'Approving...' : 'Approve Verification'}
+                </ActionButton>
+                <ActionButton
+                  variant="danger"
+                  onClick={handleRejectVerification}
+                  disabled={rejectVerification.isPending}
+                >
+                  <FaTimesCircle style={{ marginRight: '0.5rem' }} />
+                  Reject Verification
+                </ActionButton>
+              </>
+            )}
           <ActionButton
             variant="warning"
             onClick={() => setShowResetModal(true)}
@@ -317,7 +368,7 @@ const SellerDetailsModal = ({ seller, onClose }) => {
               Reset Locked Balance (GH₵{(sellerBalance?.lockedBalance || seller?.lockedBalance || 0).toFixed(2)})
             </ActionButton>
           )}
-          
+
           {/* Payout Verification Actions */}
           {seller.payoutStatus === 'pending' && (seller.paymentMethods?.bankAccount || seller.paymentMethods?.mobileMoney) && (
             <>
@@ -326,14 +377,14 @@ const SellerDetailsModal = ({ seller, onClose }) => {
                 onClick={async () => {
                   try {
                     // Determine payment method
-                    const paymentMethod = seller.paymentMethods?.bankAccount 
-                      ? 'bank' 
-                      : seller.paymentMethods?.mobileMoney?.network === 'MTN' 
+                    const paymentMethod = seller.paymentMethods?.bankAccount
+                      ? 'bank'
+                      : seller.paymentMethods?.mobileMoney?.network === 'MTN'
                         ? 'mtn_momo'
                         : seller.paymentMethods?.mobileMoney?.network === 'Vodafone'
                           ? 'vodafone_cash'
                           : 'airtel_tigo_money';
-                    
+
                     await approvePayout.mutateAsync({
                       sellerId: seller._id,
                       paymentMethod,
@@ -359,7 +410,7 @@ const SellerDetailsModal = ({ seller, onClose }) => {
               </ActionButton>
             </>
           )}
-          
+
           <ActionButton variant="secondary" onClick={onClose}>
             Cancel
           </ActionButton>
@@ -688,10 +739,10 @@ const ActionButton = styled.button`
     variant === "success"
       ? "#28a745"
       : variant === "danger"
-      ? "#dc3545"
-      : variant === "warning"
-      ? "#ffc107"
-      : "#6c757d"};
+        ? "#dc3545"
+        : variant === "warning"
+          ? "#ffc107"
+          : "#6c757d"};
   color: ${({ variant }) => (variant === "warning" ? "#000" : "white")};
   opacity: ${({ disabled }) => (disabled ? 0.6 : 1)};
   pointer-events: ${({ disabled }) => (disabled ? "none" : "auto")};
@@ -699,13 +750,13 @@ const ActionButton = styled.button`
 
   &:hover {
     background: ${({ variant }) =>
-      variant === "success"
-        ? "#218838"
-        : variant === "danger"
+    variant === "success"
+      ? "#218838"
+      : variant === "danger"
         ? "#c82333"
         : variant === "warning"
-        ? "#e0a800"
-        : "#5a6268"};
+          ? "#e0a800"
+          : "#5a6268"};
   }
 `;
 
@@ -829,14 +880,14 @@ const PayoutStatusBadge = styled.div`
     $status === 'verified'
       ? '#d1fae5'
       : $status === 'rejected'
-      ? '#fee2e2'
-      : '#fef3c7'};
+        ? '#fee2e2'
+        : '#fef3c7'};
   color: ${({ $status }) =>
     $status === 'verified'
       ? '#065f46'
       : $status === 'rejected'
-      ? '#991b1b'
-      : '#92400e'};
+        ? '#991b1b'
+        : '#92400e'};
 `;
 
 const PaymentMethodCard = styled.div`

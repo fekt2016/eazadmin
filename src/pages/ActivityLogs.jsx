@@ -17,6 +17,7 @@ import useActivityLogs from "../shared/hooks/useActivityLogs";
 import { toast } from "react-toastify";
 import { LoadingSpinner } from "../shared/components/LoadingSpinner";
 import DeviceSessionsPage from "../features/sessions/DeviceSessionsPage";
+import { ConfirmationModal } from "../shared/components/modal/ConfirmationModal";
 
 const Container = styled.div`
   padding: 2rem;
@@ -376,6 +377,18 @@ const LoadingContainer = styled.div`
   padding: 4rem;
 `;
 
+const formatDate = (dateString) => {
+  if (!dateString) return "N/A";
+  return new Date(dateString).toLocaleString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+};
+
 export default function ActivityLogs() {
   const [activeTab, setActiveTab] = useState('activity-logs'); // 'activity-logs' | 'device-sessions'
   const [page, setPage] = useState(1);
@@ -388,6 +401,7 @@ export default function ActivityLogs() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedLog, setSelectedLog] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [deleteModalState, setDeleteModalState] = useState({ isOpen: false, type: null, logId: null });
 
   const dateRange = useMemo(() => {
     if (startDate || endDate) {
@@ -419,24 +433,25 @@ export default function ActivityLogs() {
   });
 
   const handleDelete = (logId) => {
-    if (window.confirm("Are you sure you want to delete this log?")) {
-      deleteLog(logId, {
+    setDeleteModalState({ isOpen: true, type: 'single', logId });
+  };
+
+  const handleDeleteAll = () => {
+    setDeleteModalState({ isOpen: true, type: 'all', logId: null });
+  };
+
+  const confirmDelete = () => {
+    if (deleteModalState.type === 'single' && deleteModalState.logId) {
+      deleteLog(deleteModalState.logId, {
         onSuccess: () => {
           toast.success("Log deleted successfully");
         },
         onError: () => {
           toast.error("Failed to delete log");
         },
+        onSettled: () => setDeleteModalState({ isOpen: false, type: null, logId: null })
       });
-    }
-  };
-
-  const handleDeleteAll = () => {
-    if (
-      window.confirm(
-        "Are you sure you want to delete ALL activity logs? This action cannot be undone."
-      )
-    ) {
+    } else if (deleteModalState.type === 'all') {
       deleteAllLogs(undefined, {
         onSuccess: () => {
           toast.success("All logs deleted successfully");
@@ -444,6 +459,7 @@ export default function ActivityLogs() {
         onError: () => {
           toast.error("Failed to delete logs");
         },
+        onSettled: () => setDeleteModalState({ isOpen: false, type: null, logId: null })
       });
     }
   };
@@ -762,6 +778,18 @@ export default function ActivityLogs() {
       {activeTab === 'device-sessions' && (
         <DeviceSessionsPage embedded />
       )}
+
+      <ConfirmationModal
+        isOpen={deleteModalState.isOpen}
+        onClose={() => setDeleteModalState({ isOpen: false, type: null, logId: null })}
+        onConfirm={confirmDelete}
+        title={deleteModalState.type === 'all' ? "Delete All Logs" : "Delete Log"}
+        message={deleteModalState.type === 'all'
+          ? "Are you sure you want to delete ALL activity logs? This action cannot be undone."
+          : "Are you sure you want to delete this log?"}
+        confirmText="Delete"
+        confirmColor="#dc2626"
+      />
     </Container>
   );
 }

@@ -1,17 +1,17 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { 
-  FaBell, 
-  FaCheck, 
-  FaCheckDouble, 
-  FaTrash, 
-  FaShoppingCart, 
-  FaTruck, 
-  FaMoneyBillWave, 
-  FaHeadset, 
-  FaBox, 
-  FaCheckCircle, 
+import {
+  FaBell,
+  FaCheck,
+  FaCheckDouble,
+  FaTrash,
+  FaShoppingCart,
+  FaTruck,
+  FaMoneyBillWave,
+  FaHeadset,
+  FaBox,
+  FaCheckCircle,
   FaExclamationCircle,
   FaUsers,
   FaCog
@@ -20,6 +20,7 @@ import { useNotifications, useUnreadCount, useMarkAsRead, useMarkAllAsRead, useD
 import { LoadingSpinner } from '../../shared/components/LoadingSpinner';
 import Button from '../../shared/components/Button';
 import { PATHS } from '../../routes/routePaths';
+import { ConfirmationModal } from '../../shared/components/modal/ConfirmationModal';
 
 const Container = styled.div`
   padding: 2rem;
@@ -264,6 +265,7 @@ const AdminNotificationsPage = () => {
   const navigate = useNavigate();
   const [filter, setFilter] = useState('all'); // 'all', 'unread', 'read'
   const [categoryFilter, setCategoryFilter] = useState('all'); // 'all', 'seller', 'product', 'order', 'payout', 'support', 'system'
+  const [notificationToDelete, setNotificationToDelete] = useState(null);
 
   // Map category filter to notification type
   const getTypeFromCategory = (category) => {
@@ -397,8 +399,12 @@ const AdminNotificationsPage = () => {
 
   const handleDelete = (e, notificationId) => {
     e.stopPropagation();
-    if (window.confirm('Are you sure you want to delete this notification? This action cannot be undone.')) {
-      deleteNotification.mutate(notificationId, {
+    setNotificationToDelete(notificationId);
+  };
+
+  const confirmDelete = () => {
+    if (notificationToDelete) {
+      deleteNotification.mutate(notificationToDelete, {
         onSuccess: () => {
           console.log('Notification deleted successfully');
         },
@@ -406,6 +412,9 @@ const AdminNotificationsPage = () => {
           console.error('Error deleting notification:', error);
           alert('Failed to delete notification. Please try again.');
         },
+        onSettled: () => {
+          setNotificationToDelete(null);
+        }
       });
     }
   };
@@ -512,8 +521,8 @@ const AdminNotificationsPage = () => {
           <FaBell />
           <h3>No notifications</h3>
           <p>
-            {filter === 'unread' 
-              ? "You're all caught up! No unread notifications." 
+            {filter === 'unread'
+              ? "You're all caught up! No unread notifications."
               : "You don't have any notifications yet."}
           </p>
         </EmptyState>
@@ -562,6 +571,16 @@ const AdminNotificationsPage = () => {
           ))}
         </NotificationsList>
       )}
+
+      <ConfirmationModal
+        isOpen={!!notificationToDelete}
+        onClose={() => setNotificationToDelete(null)}
+        onConfirm={confirmDelete}
+        title="Delete Notification"
+        message="Are you sure you want to delete this notification? This action cannot be undone."
+        confirmText="Delete"
+        confirmColor="#dc2626"
+      />
     </Container>
   );
 };

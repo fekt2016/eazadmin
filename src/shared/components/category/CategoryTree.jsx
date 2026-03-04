@@ -6,6 +6,7 @@ import { useGetSubCategoryCount } from '../../hooks/useGetSubCategoryCount';
 import { FixedSizeList as List } from "react-window";
 import useProduct from '../../hooks/useProduct';
 import { LoadingSpinner } from '../LoadingSpinner';
+import { ConfirmationModal } from '../modal/ConfirmationModal';
 
 const CategoryTree = function ({
   categories,
@@ -25,6 +26,7 @@ const CategoryTree = function ({
   const [activeTab, setActiveTab] = useState(null);
   const [showSubcategoriesModal, setShowSubcategoriesModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [categoryToDelete, setCategoryToDelete] = useState(null);
   const productCounts = useMemo(
     () => productCountByCategory?.data?.productCounts || {},
     [productCountByCategory]
@@ -93,12 +95,17 @@ const CategoryTree = function ({
 
   const handleDelete = useCallback(
     (categoryId) => {
-      if (window.confirm("Are you sure you want to delete this category?")) {
-        onDeleteCategory(categoryId);
-      }
+      setCategoryToDelete(categoryId);
     },
-    [onDeleteCategory]
+    []
   );
+
+  const confirmDelete = () => {
+    if (categoryToDelete) {
+      onDeleteCategory(categoryToDelete);
+      setCategoryToDelete(null);
+    }
+  };
 
   const handleViewSubcategories = useCallback((category) => {
     setSelectedCategory(category);
@@ -478,6 +485,16 @@ const CategoryTree = function ({
           </ModalContent>
         </ModalOverlay>
       )}
+
+      <ConfirmationModal
+        isOpen={!!categoryToDelete}
+        onClose={() => setCategoryToDelete(null)}
+        onConfirm={confirmDelete}
+        title="Delete Category"
+        message="Are you sure you want to delete this category?"
+        confirmText="Delete"
+        confirmColor="#dc2626"
+      />
     </>
   );
 };

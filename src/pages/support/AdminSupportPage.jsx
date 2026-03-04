@@ -12,7 +12,7 @@ import {
   FaTicketAlt,
 } from 'react-icons/fa';
 import { Link, useNavigate } from 'react-router-dom';
-import { PATHS } from '../../routes/routhPath';
+import { PATHS } from '../../routes/routePath';
 import {
   SupportContainer,
   Breadcrumb,

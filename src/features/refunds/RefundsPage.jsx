@@ -16,7 +16,7 @@ import {
   FaFilter,
   FaMoneyBillWave,
 } from "react-icons/fa";
-import { PATHS } from '../../routes/routhPath';
+import { PATHS } from '../../routes/routePath';
 import RefundStatusBadge from './components/RefundStatusBadge';
 import { LoadingSpinner } from '../../shared/components/LoadingSpinner';
 

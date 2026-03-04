@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FaHeadset, FaBook, FaComments } from 'react-icons/fa';
 import useDynamicPageTitle from '../../shared/hooks/useDynamicPageTitle';
-import { PATHS } from '../../routes/routhPath';
+import { PATHS } from '../../routes/routePath';
 import {
   SitemapContainer,
   HeroSection,

@@ -21,6 +21,7 @@ import {
   FaBullhorn,
   FaFileInvoiceDollar,
 } from "react-icons/fa";
+import { PATHS } from "../../routes/routePath";
 import useAuth from '../hooks/useAuth';
 import Logo from '../components/Logo';
 
@@ -44,8 +45,8 @@ export default function Sidebar({ role }) {
       icon: <FaBoxes />,
     },
     {
-      path: `${DASHBOARD_BASE}/eazshop`,
-      label: "EazShop",
+      path: `${DASHBOARD_BASE}/${PATHS.OFFICIAL_STORE}`,
+      label: "Official Store",
       icon: <FaAward />,
     },
     {
@@ -95,7 +96,7 @@ export default function Sidebar({ role }) {
     },
     {
       path: `${DASHBOARD_BASE}/shipping-rates`,
-      label: "Shipping Rates",
+      label: "Shipping Activities",
       icon: <FaTruck />,
     },
     {

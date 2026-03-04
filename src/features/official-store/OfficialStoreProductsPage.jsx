@@ -4,15 +4,14 @@ import { useNavigate } from "react-router-dom";
 import { useOfficialStore } from "../../shared/hooks/useOfficialStore";
 import { useMemo, useState } from "react";
 import { LoadingSpinner } from "../../shared/components/LoadingSpinner";
-import { PATHS } from "../../routes/routhPath";
-import { toast } from "react-toastify";
-
-const EAZSHOP_SELLER_ID = "6970b22eaba06cadfd4b8035";
+import { PATHS } from "../../routes/routePath";
+import { EAZSHOP_SELLER_ID, PLATFORM_NAME } from "../../shared/constants/systemConstants";
+import { normalizeApiResponse } from "../../shared/utils/apiUtils";
 
 function getShopName(product) {
-  if (product.isEazShopProduct === true) return "Saiisai";
+  if (product.isEazShopProduct === true) return PLATFORM_NAME;
   const sellerId = product.seller?._id?.toString?.() ?? product.seller?.toString?.() ?? "";
-  if (sellerId === EAZSHOP_SELLER_ID) return "Saiisai";
+  if (sellerId === EAZSHOP_SELLER_ID) return PLATFORM_NAME;
   if (product.seller && typeof product.seller === "object") {
     return product.seller.shopName || product.seller.name || "—";
   }
@@ -27,26 +26,7 @@ export default function OfficialStoreProductsPage() {
 
   const products = useMemo(() => {
     console.log('📦 [EazShopProductsPage] Raw data from hook:', data);
-    if (!data) {
-      console.log('⚠️ [EazShopProductsPage] No data received');
-      return [];
-    }
-    // Data should already be an array from the hook, but handle edge cases
-    if (Array.isArray(data)) {
-      console.log('✅ [EazShopProductsPage] Data is array, length:', data.length);
-      return data;
-    }
-    // Fallback for different response structures
-    if (data?.data?.products && Array.isArray(data.data.products)) {
-      console.log('✅ [EazShopProductsPage] Found products at data.data.products:', data.data.products.length);
-      return data.data.products;
-    }
-    if (data?.products && Array.isArray(data.products)) {
-      console.log('✅ [EazShopProductsPage] Found products at data.products:', data.products.length);
-      return data.products;
-    }
-    console.warn('⚠️ [EazShopProductsPage] Could not extract products from data:', data);
-    return [];
+    return normalizeApiResponse(data, 'products') || [];
   }, [data]);
 
   const [searchTerm, setSearchTerm] = useState("");

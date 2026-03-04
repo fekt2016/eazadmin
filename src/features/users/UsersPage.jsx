@@ -13,7 +13,7 @@ import styled from "styled-components";
 import useSellerAdmin from '../../shared/hooks/useSellerAdmin';
 import useUserAdmin from '../../shared/hooks/useUsersAdmin';
 import useAdminsAdmin from '../../shared/hooks/useAdminsAdmin';
-import { PATHS } from '../../routes/routhPath';
+import { PATHS } from '../../routes/routePath';
 import {
   Table,
   RoleCell,
@@ -27,9 +27,9 @@ import {
 import { FaCheckCircle, FaTimesCircle, FaUndo, FaClock, FaEye, FaWallet } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import EditUserModal from '../../shared/components/Modal/EditUserModal';
-import AddUserModal from '../../shared/components/Modal/AddUserModal';
 import PayoutVerificationModal from '../../shared/components/Modal/payoutVerificationModal';
 import { useResetSellerBalance } from '../../shared/hooks/useSellerBalance';
+import { ConfirmationModal } from '../../shared/components/modal/ConfirmationModal';
 
 // Dynamic Table Component
 
@@ -40,6 +40,7 @@ export default function UsersPage() {
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [verificationStatusFilter, setVerificationStatusFilter] = useState("all"); // For sellers tab
   const [actionMenu, setActionMenu] = useState(null);
+  const [userToDelete, setUserToDelete] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [userToEdit, setUserToEdit] = useState(null);
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
@@ -54,7 +55,7 @@ export default function UsersPage() {
   const [sellerToRejectPayout, setSellerToRejectPayout] = useState(null);
   const [payoutRejectionReason, setPayoutRejectionReason] = useState("");
   const [selectedSellerForPayout, setSelectedSellerForPayout] = useState(null); // For PayoutVerificationModal
-  
+
   // Reset balance mutation
   const resetBalanceMutation = useResetSellerBalance();
 
@@ -67,9 +68,9 @@ export default function UsersPage() {
 
   // New state for setIsAddUserModalOpen
   // Update hooks to accept pagination parameters
-  const { 
-    sellers, 
-    isSellerLoading, 
+  const {
+    sellers,
+    isSellerLoading,
     totalSellers,
     approveVerification,
     rejectVerification,
@@ -127,10 +128,10 @@ export default function UsersPage() {
         sellers: { ...prev.sellers, page },
       }));
     } else {
-    setPagination((prev) => ({
-      ...prev,
-      [activeTab]: { ...prev[activeTab], page },
-    }));
+      setPagination((prev) => ({
+        ...prev,
+        [activeTab]: { ...prev[activeTab], page },
+      }));
     }
   };
   const handleItemsPerPageChange = (limit) => {
@@ -259,10 +260,10 @@ export default function UsersPage() {
           id: user._id || user.id,
           registration: user.createdAt
             ? new Date(user.createdAt).toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "short",
-                day: "numeric",
-              })
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            })
             : "-",
           lastLogin: user.lastLogin || generateLastLogin(user.createdAt),
         })),
@@ -304,12 +305,12 @@ export default function UsersPage() {
 
   // Current pagination settings
   // For sellers tab, use sellerMeta from hook; otherwise use local pagination
-  const currentPagination = activeTab === "sellers" && sellerMeta 
-    ? { 
-        page: sellerPage, 
-        limit: pagination.sellers.limit, 
-        total: sellerMeta.total || 0 
-      }
+  const currentPagination = activeTab === "sellers" && sellerMeta
+    ? {
+      page: sellerPage,
+      limit: pagination.sellers.limit,
+      total: sellerMeta.total || 0
+    }
     : pagination[activeTab];
   const totalPages = Math.ceil(
     currentPagination.total / currentPagination.limit
@@ -323,19 +324,24 @@ export default function UsersPage() {
   };
 
   const handleDelete = (item) => {
-    if (window.confirm(`Delete ${item.name}?`)) {
+    setUserToDelete(item);
+  };
+
+  const confirmDelete = () => {
+    if (userToDelete) {
       setActionMenu(null);
+      setUserToDelete(null);
     }
   };
 
   const handleViewDetails = (item) => {
     console.log('[handleViewDetails] Called with item:', item);
     console.log('[handleViewDetails] Active tab:', activeTab);
-    
+
     // Navigate to detail page based on active tab
     const userId = item._id || item.id;
     console.log('[handleViewDetails] User ID:', userId);
-    
+
     if (userId) {
       // Validate that it's not a simple sequential number (like 1, 2, 3)
       const isNumericId = !isNaN(userId) && parseInt(userId) < 1000;
@@ -506,18 +512,18 @@ export default function UsersPage() {
 
       {/* Tab-specific Stats Cards */}
       {activeTab === "users" && (
-      <StatsSummary>
-        <StatCard>
-          <StatIcon style={{ background: "#4361EE20", color: "#4361EE" }}>
-            <FaUserAlt />
-          </StatIcon>
-          <StatInfo>
+        <StatsSummary>
+          <StatCard>
+            <StatIcon style={{ background: "#4361EE20", color: "#4361EE" }}>
+              <FaUserAlt />
+            </StatIcon>
+            <StatInfo>
               <StatValue>{tabStats.total || 0}</StatValue>
-            <StatLabel>Total Users</StatLabel>
-          </StatInfo>
-        </StatCard>
+              <StatLabel>Total Users</StatLabel>
+            </StatInfo>
+          </StatCard>
 
-        <StatCard>
+          <StatCard>
             <StatIcon style={{ background: "#10B98120", color: "#10B981" }}>
               <FaCheckCircle />
             </StatIcon>
@@ -563,9 +569,9 @@ export default function UsersPage() {
         <StatsSummary>
           <StatCard>
             <StatIcon style={{ background: "#4361EE20", color: "#4361EE" }}>
-            <FaStore />
-          </StatIcon>
-          <StatInfo>
+              <FaStore />
+            </StatIcon>
+            <StatInfo>
               <StatValue>{tabStats.total || 0}</StatValue>
               <StatLabel>Total Sellers</StatLabel>
             </StatInfo>
@@ -607,29 +613,29 @@ export default function UsersPage() {
             </StatIcon>
             <StatInfo>
               <StatValue>{tabStats.active || 0}</StatValue>
-            <StatLabel>Active Sellers</StatLabel>
-          </StatInfo>
-        </StatCard>
+              <StatLabel>Active Sellers</StatLabel>
+            </StatInfo>
+          </StatCard>
         </StatsSummary>
       )}
 
       {activeTab === "admins" && (
         <StatsSummary>
-        <StatCard>
+          <StatCard>
             <StatIcon style={{ background: "#4361EE20", color: "#4361EE" }}>
-            <FaUserShield />
-          </StatIcon>
-          <StatInfo>
+              <FaUserShield />
+            </StatIcon>
+            <StatInfo>
               <StatValue>{tabStats.total || 0}</StatValue>
               <StatLabel>Total Admins</StatLabel>
-          </StatInfo>
-        </StatCard>
+            </StatInfo>
+          </StatCard>
 
-        <StatCard>
+          <StatCard>
             <StatIcon style={{ background: "#10B98120", color: "#10B981" }}>
               <FaCheckCircle />
-          </StatIcon>
-          <StatInfo>
+            </StatIcon>
+            <StatInfo>
               <StatValue>{tabStats.active || 0}</StatValue>
               <StatLabel>Active Admins</StatLabel>
             </StatInfo>
@@ -652,9 +658,9 @@ export default function UsersPage() {
             <StatInfo>
               <StatValue>{tabStats.superAdmins || 0}</StatValue>
               <StatLabel>Super Admins</StatLabel>
-          </StatInfo>
-        </StatCard>
-      </StatsSummary>
+            </StatInfo>
+          </StatCard>
+        </StatsSummary>
       )}
 
       {/* Dynamic Table */}
@@ -961,17 +967,17 @@ export default function UsersPage() {
           const maxPagesToShow = 5;
           let startPage = Math.max(1, currentPagination.page - Math.floor(maxPagesToShow / 2));
           let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
-          
+
           // Adjust start if we're near the end
           if (endPage - startPage < maxPagesToShow - 1) {
             startPage = Math.max(1, endPage - maxPagesToShow + 1);
           }
-          
+
           const pagesToShow = [];
           for (let i = startPage; i <= endPage; i++) {
             pagesToShow.push(i);
           }
-          
+
           return pagesToShow.map((pageNum) => (
             <PaginationButton
               key={pageNum}

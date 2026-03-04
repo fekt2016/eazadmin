@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { 
-  useCreateNeighborhood, 
+import {
+  useCreateNeighborhood,
   useUpdateNeighborhood,
   useRefreshCoordinates,
   useRecalculateNeighborhood,
@@ -9,6 +9,7 @@ import {
 } from '../../shared/hooks/useNeighborhoods';
 import { FaTimes, FaMapMarkerAlt, FaSyncAlt, FaCalculator, FaSave, FaMap } from 'react-icons/fa';
 import ButtonSpinner from '../../shared/components/ButtonSpinner';
+import { toast } from 'react-toastify';
 
 const NeighborhoodModal = ({ isOpen, onClose, neighborhood = null }) => {
   const isEditMode = !!neighborhood;
@@ -25,7 +26,7 @@ const NeighborhoodModal = ({ isOpen, onClose, neighborhood = null }) => {
     lng: '',
     isActive: true,
   });
-  
+
   // Get map URL when neighborhood has coordinates (must be after formData state)
   const { data: mapData, isLoading: mapLoading } = useGetMapUrl(
     neighborhood?._id,
@@ -136,13 +137,13 @@ const NeighborhoodModal = ({ isOpen, onClose, neighborhood = null }) => {
       onClose();
     } catch (error) {
       console.error('Error saving neighborhood:', error);
-      alert(error.response?.data?.message || 'Failed to save neighborhood');
+      toast.error(error.response?.data?.message || 'Failed to save neighborhood');
     }
   };
 
   const handleRefreshCoordinates = async () => {
     if (!isEditMode || !neighborhood?._id) {
-      alert('Please save the neighborhood first before fetching coordinates');
+      toast.error('Please save the neighborhood first before fetching coordinates');
       return;
     }
 
@@ -160,21 +161,21 @@ const NeighborhoodModal = ({ isOpen, onClose, neighborhood = null }) => {
           assignedZone: updated.assignedZone || updated.zone || null,
           formattedAddress: updated.formattedAddress || null,
         });
-        alert('Coordinates refreshed successfully!');
+        toast.success('Coordinates refreshed successfully!');
       }
     } catch (error) {
-      alert(error.response?.data?.message || 'Failed to refresh coordinates');
+      toast.error(error.response?.data?.message || 'Failed to refresh coordinates');
     }
   };
 
   const handleRecalculate = async () => {
     if (!isEditMode || !neighborhood?._id) {
-      alert('Please save the neighborhood first before recalculating');
+      toast.error('Please save the neighborhood first before recalculating');
       return;
     }
 
     if (!formData.lat || !formData.lng) {
-      alert('Coordinates are required. Please fetch coordinates first.');
+      toast.error('Coordinates are required. Please fetch coordinates first.');
       return;
     }
 
@@ -187,10 +188,10 @@ const NeighborhoodModal = ({ isOpen, onClose, neighborhood = null }) => {
           assignedZone: updated.assignedZone || updated.zone || null,
           formattedAddress: updated.formattedAddress || null,
         });
-        alert('Distance and zone recalculated successfully!');
+        toast.success('Distance and zone recalculated successfully!');
       }
     } catch (error) {
-      alert(error.response?.data?.message || 'Failed to recalculate');
+      toast.error(error.response?.data?.message || 'Failed to recalculate');
     }
   };
 
@@ -242,7 +243,7 @@ const NeighborhoodModal = ({ isOpen, onClose, neighborhood = null }) => {
           {/* Basic Information Section */}
           <Section>
             <SectionTitle>Basic Information</SectionTitle>
-            
+
             <FormGroup>
               <Label htmlFor="name">
                 Neighborhood Name <Required>*</Required>
@@ -301,7 +302,7 @@ const NeighborhoodModal = ({ isOpen, onClose, neighborhood = null }) => {
           {/* Coordinates Section */}
           <Section>
             <SectionTitle>Coordinates & Location</SectionTitle>
-            
+
             <FormRow>
               <FormGroup>
                 <Label htmlFor="lat">Latitude</Label>
@@ -391,7 +392,7 @@ const NeighborhoodModal = ({ isOpen, onClose, neighborhood = null }) => {
           {isEditMode && (displayData.distanceFromHQ !== null || displayData.assignedZone) && (
             <Section>
               <SectionTitle>Zoning Information</SectionTitle>
-              
+
               <InfoGrid>
                 {displayData.distanceFromHQ !== null && (
                   <InfoCard>
@@ -399,7 +400,7 @@ const NeighborhoodModal = ({ isOpen, onClose, neighborhood = null }) => {
                     <InfoValue>{displayData.distanceFromHQ.toFixed(2)} km</InfoValue>
                   </InfoCard>
                 )}
-                
+
                 {displayData.assignedZone && (
                   <InfoCard>
                     <InfoLabel>Assigned Zone</InfoLabel>
@@ -747,10 +748,10 @@ const ActionButton = styled.button`
     transform: translateY(-1px);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     background: ${(props) => {
-      if (props.$primary) return '#bbdefb';
-      if (props.$secondary) return '#e1bee7';
-      return '#e0e0e0';
-    }};
+    if (props.$primary) return '#bbdefb';
+    if (props.$secondary) return '#e1bee7';
+    return '#e0e0e0';
+  }};
   }
 
   &:disabled {

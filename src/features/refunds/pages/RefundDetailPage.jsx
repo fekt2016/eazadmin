@@ -5,7 +5,7 @@ import { useAdminRefund } from '../hooks/useAdminRefunds';
 import RefundStatusBadge from '../components/RefundStatusBadge';
 import RefundActionPanel from '../components/RefundActionPanel';
 import RefundTimeline from '../components/RefundTimeline';
-import { PATHS } from '../../../routes/routhPath';
+import { PATHS } from '../../../routes/routePath';
 import { formatDate } from '../../../shared/utils/helpers';
 import { LoadingSpinner } from '../../../shared/components/LoadingSpinner';
 

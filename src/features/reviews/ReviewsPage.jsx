@@ -4,10 +4,11 @@ import { useMemo, useState } from "react";
 import { LoadingSpinner } from "../../shared/components/LoadingSpinner";
 import useReview from "../../shared/hooks/useReview";
 import { toast } from "react-toastify";
+import { ConfirmationModal } from "../../shared/components/modal/ConfirmationModal";
 
 export default function ReviewsPage() {
-  const { 
-    useGetAllReviews, 
+  const {
+    useGetAllReviews,
     useDeleteReview,
     useApproveReview,
     useRejectReview,
@@ -24,6 +25,7 @@ export default function ReviewsPage() {
   const [moderationAction, setModerationAction] = useState(null);
   const [moderationNotes, setModerationNotes] = useState("");
   const [flaggedReason, setFlaggedReason] = useState("");
+  const [reviewToDelete, setReviewToDelete] = useState(null);
   const [sortConfig, setSortConfig] = useState({
     key: null,
     direction: "ascending",
@@ -108,11 +110,17 @@ export default function ReviewsPage() {
   const totalPages = Math.ceil(filteredReviews.length / itemsPerPage);
 
   const handleDelete = async (reviewId) => {
-    if (window.confirm("Are you sure you want to delete this review? This action cannot be undone.")) {
+    setReviewToDelete(reviewId);
+  };
+
+  const confirmDelete = async () => {
+    if (reviewToDelete) {
       try {
-        await deleteReviewMutation.mutateAsync(reviewId);
+        await deleteReviewMutation.mutateAsync(reviewToDelete);
       } catch (error) {
         console.error("Failed to delete review:", error);
+      } finally {
+        setReviewToDelete(null);
       }
     }
   };
@@ -359,7 +367,7 @@ export default function ReviewsPage() {
                   <DateText>{formatDate(review.reviewDate || review.createdAt)}</DateText>
                 </TableCell>
                 <TableCell>
-                  <StatusBadge 
+                  <StatusBadge
                     $bg={getStatusBadgeColor(review.status || "pending").bg}
                     $color={getStatusBadgeColor(review.status || "pending").color}
                   >
@@ -493,7 +501,7 @@ export default function ReviewsPage() {
                 setModerationAction(null);
               }}>×</CloseButton>
             </ModalHeader>
-            
+
             {moderationAction === "view" ? (
               <ModalBody>
                 <ReviewDetailSection>
@@ -518,7 +526,7 @@ export default function ReviewsPage() {
                 </ReviewDetailSection>
                 <ReviewDetailSection>
                   <DetailLabel>Status:</DetailLabel>
-                  <StatusBadge 
+                  <StatusBadge
                     $bg={getStatusBadgeColor(selectedReview.status || "pending").bg}
                     $color={getStatusBadgeColor(selectedReview.status || "pending").color}
                   >
@@ -593,6 +601,16 @@ export default function ReviewsPage() {
           </ModalContent>
         </ModalOverlay>
       )}
+
+      <ConfirmationModal
+        isOpen={!!reviewToDelete}
+        onClose={() => setReviewToDelete(null)}
+        onConfirm={confirmDelete}
+        title="Delete Review"
+        message="Are you sure you want to delete this review? This action cannot be undone."
+        confirmText="Delete"
+        confirmColor="#dc2626"
+      />
     </DashboardContainer>
   );
 }
@@ -868,26 +886,26 @@ const ActionButton = styled.button`
   padding: 0.5rem;
   border: none;
   border-radius: 6px;
-  background: ${({ danger, $success, $warning }) => 
-    danger ? "#fee2e2" : 
-    $success ? "#dcfce7" : 
-    $warning ? "#fef3c7" : 
-    "#f1f5f9"};
-  color: ${({ danger, $success, $warning }) => 
-    danger ? "#dc2626" : 
-    $success ? "#166534" : 
-    $warning ? "#92400e" : 
-    "#475569"};
+  background: ${({ danger, $success, $warning }) =>
+    danger ? "#fee2e2" :
+      $success ? "#dcfce7" :
+        $warning ? "#fef3c7" :
+          "#f1f5f9"};
+  color: ${({ danger, $success, $warning }) =>
+    danger ? "#dc2626" :
+      $success ? "#166534" :
+        $warning ? "#92400e" :
+          "#475569"};
   cursor: pointer;
   transition: all 0.2s ease;
   font-size: 1rem;
 
   &:hover:not(:disabled) {
-    background: ${({ danger, $success, $warning }) => 
-      danger ? "#fecaca" : 
-      $success ? "#bbf7d0" : 
-      $warning ? "#fde68a" : 
-      "#e2e8f0"};
+    background: ${({ danger, $success, $warning }) =>
+    danger ? "#fecaca" :
+      $success ? "#bbf7d0" :
+        $warning ? "#fde68a" :
+          "#e2e8f0"};
     transform: translateY(-1px);
   }
 

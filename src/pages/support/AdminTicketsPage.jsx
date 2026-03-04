@@ -5,7 +5,7 @@ import { FaSearch, FaFilter, FaTicketAlt, FaUser, FaStore, FaShieldAlt } from 'r
 import styled from 'styled-components';
 import { useAdminTickets } from '../../shared/hooks/useSupport';
 import { STATUS_COLORS, PRIORITY_COLORS } from '../../features/support/supportTypes';
-import { PATHS } from '../../routes/routhPath';
+import { PATHS } from '../../routes/routePath';
 
 const Container = styled.div`
   max-width: 160rem;

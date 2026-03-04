@@ -2,6 +2,8 @@ import { useState } from 'react';
 import styled from 'styled-components';
 import { FaCheckCircle, FaTimesCircle, FaPercent } from 'react-icons/fa';
 import { useApproveRefund, useApprovePartialRefund, useRejectRefund } from '../hooks/useAdminRefunds';
+import { ConfirmationModal } from '../../../shared/components/modal/ConfirmationModal';
+import { toast } from 'react-toastify';
 
 const ActionPanelContainer = styled.div`
   background: white;
@@ -130,12 +132,13 @@ export default function RefundActionPanel({ refund }) {
   const approveRefund = useApproveRefund();
   const approvePartialRefund = useApprovePartialRefund();
   const rejectRefund = useRejectRefund();
+  const [showRejectModal, setShowRejectModal] = useState(false);
 
   const isPending = refund?.status === 'pending' || refund?.status === 'seller_review' || refund?.status === 'admin_review';
   const isApproved = refund?.status === 'approved' || refund?.status === 'completed';
   const isRejected = refund?.status === 'rejected';
   const requestedAmount = refund?.totalRefundAmount || refund?.refundAmount || refund?.totalPrice || 0;
-  
+
   // Check prerequisites for admin approval
   const sellerApproved = refund?.sellerReviewed && refund?.sellerDecision === 'approve_return';
   const sellerRejected = refund?.sellerReviewed && refund?.sellerDecision === 'reject_return';
@@ -154,7 +157,7 @@ export default function RefundActionPanel({ refund }) {
 
   const handleApprovePartial = () => {
     if (finalAmount <= 0 || finalAmount > requestedAmount) {
-      alert('Invalid refund amount. Must be between 0 and requested amount.');
+      toast.error('Invalid refund amount. Must be between 0 and requested amount.');
       return;
     }
     approvePartialRefund.mutate({
@@ -169,12 +172,13 @@ export default function RefundActionPanel({ refund }) {
 
   const handleReject = () => {
     if (!adminNotes.trim()) {
-      alert('Please provide a reason for rejection');
+      toast.error('Please provide a reason for rejection');
       return;
     }
-    if (!window.confirm('Are you sure you want to reject this refund request?')) {
-      return;
-    }
+    setShowRejectModal(true);
+  };
+
+  const confirmReject = () => {
     rejectRefund.mutate({
       refundId: refund._id || refund.orderId,
       data: {
@@ -182,6 +186,7 @@ export default function RefundActionPanel({ refund }) {
         notes: adminNotes,
       },
     });
+    setShowRejectModal(false);
   };
 
   return (
@@ -226,9 +231,9 @@ export default function RefundActionPanel({ refund }) {
 
       {/* Prerequisites Check */}
       {isPending && (
-        <div style={{ 
-          padding: '1rem', 
-          borderRadius: '0.6rem', 
+        <div style={{
+          padding: '1rem',
+          borderRadius: '0.6rem',
           marginBottom: '1.5rem',
           background: sellerRejected ? '#fee2e2' : !sellerApproved ? '#fef3c7' : !canApprove ? '#dbeafe' : '#d1fae5',
           border: `1px solid ${sellerRejected ? '#fecaca' : !sellerApproved ? '#fde68a' : !canApprove ? '#bfdbfe' : '#a7f3d0'}`,
@@ -278,6 +283,16 @@ export default function RefundActionPanel({ refund }) {
           {rejectRefund.isPending ? 'Rejecting...' : 'Reject Refund'}
         </Button>
       </ButtonGroup>
+
+      <ConfirmationModal
+        isOpen={showRejectModal}
+        onClose={() => setShowRejectModal(false)}
+        onConfirm={confirmReject}
+        title="Reject Refund Request"
+        message="Are you sure you want to reject this refund request?"
+        confirmText="Reject"
+        confirmColor="#dc2626"
+      />
     </ActionPanelContainer>
   );
 }

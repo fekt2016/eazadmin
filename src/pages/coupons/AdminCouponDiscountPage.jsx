@@ -18,6 +18,7 @@ import { useGetAllDiscounts, useDeleteDiscount } from '../../shared/hooks/useAdm
 import { LoadingSpinner } from '../../shared/components/LoadingSpinner';
 import Button from '../../shared/components/Button';
 import { formatDate } from '../../shared/utils/helpers';
+import { ConfirmationModal } from '../../shared/components/modal/ConfirmationModal';
 
 const statusOptions = [
   { id: "all", label: "All" },
@@ -31,6 +32,7 @@ export const AdminCouponDiscountPage = () => {
   const [activeStatus, setActiveStatus] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [sellerFilter, setSellerFilter] = useState("all");
+  const [itemToDelete, setItemToDelete] = useState({ isOpen: false, type: null, id: null });
 
   const { data: couponsData, isLoading: couponsLoading } = useGetAllCoupons({
     status: activeStatus === "all" ? undefined : activeStatus,
@@ -114,14 +116,22 @@ export const AdminCouponDiscountPage = () => {
   }, [discounts, activeStatus, searchTerm]);
 
   const handleDeactivateCoupon = (batchId) => {
-    if (window.confirm("Are you sure you want to deactivate this coupon batch?")) {
-      deactivateCoupon(batchId);
-    }
+    setItemToDelete({ isOpen: true, type: 'coupon', id: batchId });
   };
 
   const handleDeleteDiscount = (discountId) => {
-    if (window.confirm("Are you sure you want to delete this discount? This action cannot be undone.")) {
-      deleteDiscount(discountId);
+    setItemToDelete({ isOpen: true, type: 'discount', id: discountId });
+  };
+
+  const confirmDelete = () => {
+    if (itemToDelete.type === 'coupon') {
+      deactivateCoupon(itemToDelete.id, {
+        onSettled: () => setItemToDelete({ isOpen: false, type: null, id: null })
+      });
+    } else if (itemToDelete.type === 'discount') {
+      deleteDiscount(itemToDelete.id, {
+        onSettled: () => setItemToDelete({ isOpen: false, type: null, id: null })
+      });
     }
   };
 
@@ -354,6 +364,18 @@ export const AdminCouponDiscountPage = () => {
           )}
         </>
       )}
+
+      <ConfirmationModal
+        isOpen={itemToDelete.isOpen}
+        onClose={() => setItemToDelete({ isOpen: false, type: null, id: null })}
+        onConfirm={confirmDelete}
+        title={itemToDelete.type === 'coupon' ? "Deactivate Coupon Batch" : "Delete Discount"}
+        message={itemToDelete.type === 'coupon'
+          ? "Are you sure you want to deactivate this coupon batch?"
+          : "Are you sure you want to delete this discount? This action cannot be undone."}
+        confirmText={itemToDelete.type === 'coupon' ? "Deactivate" : "Delete"}
+        confirmColor="#dc2626"
+      />
     </Container>
   );
 };

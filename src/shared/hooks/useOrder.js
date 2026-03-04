@@ -132,11 +132,11 @@ export const getOrderStructure = (orderData) => {
 //   });
 // };
 
-export const useGetAllOrders = () =>
+export const useGetAllOrders = (params = {}) =>
   useQuery({
-    queryKey: ["orders"],
+    queryKey: ["orders", params],
     queryFn: async () => {
-      const response = await orderService.getAllOrders();
+      const response = await orderService.getAllOrders(params);
       console.log("hook Response - getAllOrders:", response);
       return response;
     },
@@ -181,7 +181,7 @@ export const useGetOrderByTrackingNumber = (trackingNumber) => {
       if (!trackingNumber) {
         throw new Error("Tracking number is required");
       }
-      
+
       try {
         const response = await orderService.getOrderByTrackingNumber(trackingNumber);
         // Service returns response.data, extract order from it
@@ -229,22 +229,22 @@ export const useAddTrackingUpdate = () => {
       if (!trackingData?.status || !trackingData?.message?.trim()) {
         throw new Error("Status and message are required");
       }
-      
+
       return await orderService.addTrackingUpdate(orderId, trackingData);
     },
     onSuccess: (data, variables) => {
       // Invalidate tracking query to refetch updated data
       if (variables.trackingNumber) {
-        queryClient.invalidateQueries({ 
-          queryKey: ["order", "tracking", variables.trackingNumber] 
+        queryClient.invalidateQueries({
+          queryKey: ["order", "tracking", variables.trackingNumber]
         });
       }
       // Also invalidate order queries
-      queryClient.invalidateQueries({ 
-        queryKey: ["order", variables.orderId] 
+      queryClient.invalidateQueries({
+        queryKey: ["order", variables.orderId]
       });
-      queryClient.invalidateQueries({ 
-        queryKey: ["orders"] 
+      queryClient.invalidateQueries({
+        queryKey: ["orders"]
       });
     },
     onError: (error) => {
@@ -361,11 +361,11 @@ export const useConfirmPayment = () => {
     },
     onSuccess: (data, orderId) => {
       // Invalidate order queries to refresh data
-      queryClient.invalidateQueries({ 
-        queryKey: ["order", orderId] 
+      queryClient.invalidateQueries({
+        queryKey: ["order", orderId]
       });
-      queryClient.invalidateQueries({ 
-        queryKey: ["orders"] 
+      queryClient.invalidateQueries({
+        queryKey: ["orders"]
       });
       console.log("Payment confirmed successfully:", data);
     },

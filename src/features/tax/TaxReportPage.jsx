@@ -22,6 +22,7 @@ const formatCurrency = (amount) =>
 const formatPercentage = (value) => ((value || 0) * 100).toFixed(2);
 
 const TaxReportPage = () => {
+  const [activeTab, setActiveTab] = useState("report");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [settingsPage, setSettingsPage] = useState(1);
@@ -132,345 +133,366 @@ const TaxReportPage = () => {
         </Subtitle>
       </PageHeader>
 
+      <TabsContainer>
+        <Tab
+          active={activeTab === "report"}
+          onClick={() => setActiveTab("report")}
+        >
+          <FaFileInvoiceDollar /> Tax Tracking
+        </Tab>
+        <Tab
+          active={activeTab === "settings"}
+          onClick={() => setActiveTab("settings")}
+        >
+          <FaCog /> Settings
+        </Tab>
+      </TabsContainer>
+
       {/* ---------- Platform settings (rates) ---------- */}
-      {settingsError ? (
-        <ErrorMessage>Failed to load settings. Please try again.</ErrorMessage>
-      ) : (
+      {activeTab === "settings" && (
         <>
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                <FaCog /> VAT Settings
-              </CardTitle>
-              <CardDescription>
-                VAT, NHIL & GETFund rates (Ghana GRA). Used for product prices and orders.
-              </CardDescription>
-            </CardHeader>
-            <CardBody>
-              <RatesTable>
-                <thead>
-                  <tr>
-                    <th>Tax</th>
-                    <th>Rate (decimal)</th>
-                    <th>Rate (%)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>VAT</td>
-                    <td>{formData.vatRate}</td>
-                    <td>{formatPercentage(formData.vatRate)}%</td>
-                  </tr>
-                  <tr>
-                    <td>NHIL</td>
-                    <td>{formData.nhilRate}</td>
-                    <td>{formatPercentage(formData.nhilRate)}%</td>
-                  </tr>
-                  <tr>
-                    <td>GETFund</td>
-                    <td>{formData.getfundRate}</td>
-                    <td>{formatPercentage(formData.getfundRate)}%</td>
-                  </tr>
-                </tbody>
-              </RatesTable>
-              <FormGrid>
-                <FormGroup>
-                  <Label>VAT Rate <Required>*</Required></Label>
-                  <InputGroup>
-                    <Input
-                      type="number"
-                      step="0.001"
-                      min="0"
-                      max="1"
-                      value={formData.vatRate}
-                      onChange={(e) => handleInputChange("vatRate", e.target.value)}
-                    />
-                    <Suffix>% ({formatPercentage(formData.vatRate)}%)</Suffix>
-                  </InputGroup>
-                </FormGroup>
-                <FormGroup>
-                  <Label>NHIL Rate <Required>*</Required></Label>
-                  <InputGroup>
-                    <Input
-                      type="number"
-                      step="0.001"
-                      min="0"
-                      max="1"
-                      value={formData.nhilRate}
-                      onChange={(e) => handleInputChange("nhilRate", e.target.value)}
-                    />
-                    <Suffix>% ({formatPercentage(formData.nhilRate)}%)</Suffix>
-                  </InputGroup>
-                </FormGroup>
-                <FormGroup>
-                  <Label>GETFund Rate <Required>*</Required></Label>
-                  <InputGroup>
-                    <Input
-                      type="number"
-                      step="0.001"
-                      min="0"
-                      max="1"
-                      value={formData.getfundRate}
-                      onChange={(e) => handleInputChange("getfundRate", e.target.value)}
-                    />
-                    <Suffix>% ({formatPercentage(formData.getfundRate)}%)</Suffix>
-                  </InputGroup>
-                </FormGroup>
-              </FormGrid>
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Platform Fees</CardTitle>
-              <CardDescription>
-                Commission rate applied to seller earnings.
-              </CardDescription>
-            </CardHeader>
-            <CardBody>
-              <FormGroup>
-                <Label>Platform Commission Rate <Required>*</Required></Label>
-                <InputGroup>
-                  <Input
-                    type="number"
-                    step="0.001"
-                    min="0"
-                    max="1"
-                    value={formData.platformCommissionRate}
-                    onChange={(e) => handleInputChange("platformCommissionRate", e.target.value)}
-                  />
-                  <Suffix>% ({formatPercentage(formData.platformCommissionRate)}%)</Suffix>
-                </InputGroup>
-              </FormGroup>
-            </CardBody>
-          </Card>
-
-          <ActionBar>
-            <SaveButton
-              onClick={() => setShowConfirmModal(true)}
-              disabled={!hasChanges || updateMutation.isPending}
-            >
-              {updateMutation.isPending ? (
-                <>
-                  <LoadingSpinner size="sm" color="white" />
-                  <span>Saving...</span>
-                </>
-              ) : (
-                <>
-                  <FaSave />
-                  <span>Save Changes</span>
-                </>
-              )}
-            </SaveButton>
-            {hasChanges && (
-              <WarningText>You have unsaved changes. Click Save to apply.</WarningText>
-            )}
-          </ActionBar>
-
-          <Card>
-            <CardHeader>
-              <CardTitle><FaHistory /> Change History</CardTitle>
-              <CardDescription>Audit log of tax and platform settings changes.</CardDescription>
-            </CardHeader>
-            <CardBody>
-              {isLoadingLogs ? (
-                <LoadingSpinner />
-              ) : auditLogs.length === 0 ? (
-                <EmptyState>No changes recorded yet.</EmptyState>
-              ) : (
-                <>
-                  <AuditTable>
+          {settingsError ? (
+            <ErrorMessage>Failed to load settings. Please try again.</ErrorMessage>
+          ) : (
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle>
+                    <FaCog /> VAT Settings
+                  </CardTitle>
+                  <CardDescription>
+                    VAT, NHIL & GETFund rates (Ghana GRA). Used for product prices and orders.
+                  </CardDescription>
+                </CardHeader>
+                <CardBody>
+                  <RatesTable>
                     <thead>
                       <tr>
-                        <th>Field</th>
-                        <th>Before</th>
-                        <th>After</th>
-                        <th>Admin</th>
-                        <th>Date</th>
+                        <th>Tax</th>
+                        <th>Rate (decimal)</th>
+                        <th>Rate (%)</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {auditLogs.map((log) => (
-                        <tr key={log._id}>
-                          <td><FieldName>{log.fieldUpdated}</FieldName></td>
-                          <td>
-                            {typeof log.beforeValue === "number"
-                              ? `${formatPercentage(log.beforeValue)}%`
-                              : log.beforeValue}
-                          </td>
-                          <td>
-                            {typeof log.afterValue === "number"
-                              ? `${formatPercentage(log.afterValue)}%`
-                              : log.afterValue}
-                          </td>
-                          <td>{log.adminId?.name || log.adminId?.email || "N/A"}</td>
-                          <td>{new Date(log.createdAt).toLocaleString()}</td>
-                        </tr>
-                      ))}
+                      <tr>
+                        <td>VAT</td>
+                        <td>{formData.vatRate}</td>
+                        <td>{formatPercentage(formData.vatRate)}%</td>
+                      </tr>
+                      <tr>
+                        <td>NHIL</td>
+                        <td>{formData.nhilRate}</td>
+                        <td>{formatPercentage(formData.nhilRate)}%</td>
+                      </tr>
+                      <tr>
+                        <td>GETFund</td>
+                        <td>{formData.getfundRate}</td>
+                        <td>{formatPercentage(formData.getfundRate)}%</td>
+                      </tr>
                     </tbody>
-                  </AuditTable>
-                  {pagination.totalPages > 1 && (
-                    <Pagination>
-                      <PaginationButton
-                        onClick={() => setSettingsPage((p) => Math.max(1, p - 1))}
-                        disabled={settingsPage === 1}
-                      >
-                        Previous
-                      </PaginationButton>
-                      <PageInfo>
-                        Page {pagination.currentPage || settingsPage} of {pagination.totalPages}
-                      </PageInfo>
-                      <PaginationButton
-                        onClick={() =>
-                          setSettingsPage((p) => Math.min(pagination.totalPages, p + 1))
-                        }
-                        disabled={settingsPage >= pagination.totalPages}
-                      >
-                        Next
-                      </PaginationButton>
-                    </Pagination>
+                  </RatesTable>
+                  <FormGrid>
+                    <FormGroup>
+                      <Label>VAT Rate <Required>*</Required></Label>
+                      <InputGroup>
+                        <Input
+                          type="number"
+                          step="0.001"
+                          min="0"
+                          max="1"
+                          value={formData.vatRate}
+                          onChange={(e) => handleInputChange("vatRate", e.target.value)}
+                        />
+                        <Suffix>% ({formatPercentage(formData.vatRate)}%)</Suffix>
+                      </InputGroup>
+                    </FormGroup>
+                    <FormGroup>
+                      <Label>NHIL Rate <Required>*</Required></Label>
+                      <InputGroup>
+                        <Input
+                          type="number"
+                          step="0.001"
+                          min="0"
+                          max="1"
+                          value={formData.nhilRate}
+                          onChange={(e) => handleInputChange("nhilRate", e.target.value)}
+                        />
+                        <Suffix>% ({formatPercentage(formData.nhilRate)}%)</Suffix>
+                      </InputGroup>
+                    </FormGroup>
+                    <FormGroup>
+                      <Label>GETFund Rate <Required>*</Required></Label>
+                      <InputGroup>
+                        <Input
+                          type="number"
+                          step="0.001"
+                          min="0"
+                          max="1"
+                          value={formData.getfundRate}
+                          onChange={(e) => handleInputChange("getfundRate", e.target.value)}
+                        />
+                        <Suffix>% ({formatPercentage(formData.getfundRate)}%)</Suffix>
+                      </InputGroup>
+                    </FormGroup>
+                  </FormGrid>
+                </CardBody>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Platform Fees</CardTitle>
+                  <CardDescription>
+                    Commission rate applied to seller earnings.
+                  </CardDescription>
+                </CardHeader>
+                <CardBody>
+                  <FormGroup>
+                    <Label>Platform Commission Rate <Required>*</Required></Label>
+                    <InputGroup>
+                      <Input
+                        type="number"
+                        step="0.001"
+                        min="0"
+                        max="1"
+                        value={formData.platformCommissionRate}
+                        onChange={(e) => handleInputChange("platformCommissionRate", e.target.value)}
+                      />
+                      <Suffix>% ({formatPercentage(formData.platformCommissionRate)}%)</Suffix>
+                    </InputGroup>
+                  </FormGroup>
+                </CardBody>
+              </Card>
+
+              <ActionBar>
+                <SaveButton
+                  onClick={() => setShowConfirmModal(true)}
+                  disabled={!hasChanges || updateMutation.isPending}
+                >
+                  {updateMutation.isPending ? (
+                    <>
+                      <LoadingSpinner size="sm" color="white" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FaSave />
+                      <span>Save Changes</span>
+                    </>
                   )}
-                </>
-              )}
-            </CardBody>
-          </Card>
+                </SaveButton>
+                {hasChanges && (
+                  <WarningText>You have unsaved changes. Click Save to apply.</WarningText>
+                )}
+              </ActionBar>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle><FaHistory /> Change History</CardTitle>
+                  <CardDescription>Audit log of tax and platform settings changes.</CardDescription>
+                </CardHeader>
+                <CardBody>
+                  {isLoadingLogs ? (
+                    <LoadingSpinner />
+                  ) : auditLogs.length === 0 ? (
+                    <EmptyState>No changes recorded yet.</EmptyState>
+                  ) : (
+                    <>
+                      <AuditTable>
+                        <thead>
+                          <tr>
+                            <th>Field</th>
+                            <th>Before</th>
+                            <th>After</th>
+                            <th>Admin</th>
+                            <th>Date</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {auditLogs.map((log) => (
+                            <tr key={log._id}>
+                              <td><FieldName>{log.fieldUpdated}</FieldName></td>
+                              <td>
+                                {typeof log.beforeValue === "number"
+                                  ? `${formatPercentage(log.beforeValue)}%`
+                                  : log.beforeValue}
+                              </td>
+                              <td>
+                                {typeof log.afterValue === "number"
+                                  ? `${formatPercentage(log.afterValue)}%`
+                                  : log.afterValue}
+                              </td>
+                              <td>{log.adminId?.name || log.adminId?.email || "N/A"}</td>
+                              <td>{new Date(log.createdAt).toLocaleString()}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </AuditTable>
+                      {pagination.totalPages > 1 && (
+                        <Pagination>
+                          <PaginationButton
+                            onClick={() => setSettingsPage((p) => Math.max(1, p - 1))}
+                            disabled={settingsPage === 1}
+                          >
+                            Previous
+                          </PaginationButton>
+                          <PageInfo>
+                            Page {pagination.currentPage || settingsPage} of {pagination.totalPages}
+                          </PageInfo>
+                          <PaginationButton
+                            onClick={() =>
+                              setSettingsPage((p) => Math.min(pagination.totalPages, p + 1))
+                            }
+                            disabled={settingsPage >= pagination.totalPages}
+                          >
+                            Next
+                          </PaginationButton>
+                        </Pagination>
+                      )}
+                    </>
+                  )}
+                </CardBody>
+              </Card>
+            </>
+          )}
         </>
       )}
 
       {/* ---------- VAT Report ---------- */}
-      <ReportSection>
-        <SectionTitle>VAT Report</SectionTitle>
-        <Toolbar>
-          <Filters>
-            <FilterGroup>
-              <label>From</label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
-            </FilterGroup>
-            <FilterGroup>
-              <label>To</label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
-            </FilterGroup>
-          </Filters>
-          <RefreshButton onClick={() => refetch()} disabled={isFetching} title="Refresh">
-            <FaSync className={isFetching ? "spin" : ""} />
-            Refresh
-          </RefreshButton>
-        </Toolbar>
+      {activeTab === "report" && (
+        <ReportSection>
+          <SectionTitle>VAT Report</SectionTitle>
+          <Toolbar>
+            <Filters>
+              <FilterGroup>
+                <label>From</label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              </FilterGroup>
+              <FilterGroup>
+                <label>To</label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
+              </FilterGroup>
+            </Filters>
+            <RefreshButton onClick={() => refetch()} disabled={isFetching} title="Refresh">
+              <FaSync className={isFetching ? "spin" : ""} />
+              Refresh
+            </RefreshButton>
+          </Toolbar>
 
-        {summaryLoading ? (
-          <LoadingSpinner />
-        ) : showReport ? (
-          <>
-            <SummaryGrid>
-              <SummaryCard>
-                <SummaryLabel>Total sales (VAT inclusive)</SummaryLabel>
-                <SummaryValue>{formatCurrency(summary.totalSales)}</SummaryValue>
-              </SummaryCard>
-              <SummaryCard>
-                <SummaryLabel>Total base (excl. VAT)</SummaryLabel>
-                <SummaryValue>{formatCurrency(summary.totalBasePrice)}</SummaryValue>
-              </SummaryCard>
-              <SummaryCard>
-                <SummaryLabel>Total VAT</SummaryLabel>
-                <SummaryValue>{formatCurrency(summary.totalVAT)}</SummaryValue>
-              </SummaryCard>
-              <SummaryCard highlight>
-                <SummaryLabel>VAT withheld by platform</SummaryLabel>
-                <SummaryValue>{formatCurrency(summary.vatWithheldByPlatform)}</SummaryValue>
-                <SummaryHint>From non–VAT-registered sellers (deducted from payouts)</SummaryHint>
-              </SummaryCard>
-              <SummaryCard>
-                <SummaryLabel>NHIL</SummaryLabel>
-                <SummaryValue>{formatCurrency(summary.totalNHIL)}</SummaryValue>
-              </SummaryCard>
-              <SummaryCard>
-                <SummaryLabel>GETFund</SummaryLabel>
-                <SummaryValue>{formatCurrency(summary.totalGETFund)}</SummaryValue>
-              </SummaryCard>
-              <SummaryCard>
-                <SummaryLabel>Total tax</SummaryLabel>
-                <SummaryValue>{formatCurrency(summary.totalTax)}</SummaryValue>
-              </SummaryCard>
-              <SummaryCard>
-                <SummaryLabel>Orders</SummaryLabel>
-                <SummaryValue>{summary.orderCount ?? 0}</SummaryValue>
-              </SummaryCard>
-            </SummaryGrid>
+          {summaryLoading ? (
+            <LoadingSpinner />
+          ) : showReport ? (
+            <>
+              <SummaryGrid>
+                <SummaryCard>
+                  <SummaryLabel>Total sales (VAT inclusive)</SummaryLabel>
+                  <SummaryValue>{formatCurrency(summary.totalSales)}</SummaryValue>
+                </SummaryCard>
+                <SummaryCard>
+                  <SummaryLabel>Total base (excl. VAT)</SummaryLabel>
+                  <SummaryValue>{formatCurrency(summary.totalBasePrice)}</SummaryValue>
+                </SummaryCard>
+                <SummaryCard>
+                  <SummaryLabel>Total VAT</SummaryLabel>
+                  <SummaryValue>{formatCurrency(summary.totalVAT)}</SummaryValue>
+                </SummaryCard>
+                <SummaryCard highlight>
+                  <SummaryLabel>VAT withheld by platform</SummaryLabel>
+                  <SummaryValue>{formatCurrency(summary.vatWithheldByPlatform)}</SummaryValue>
+                  <SummaryHint>From non–VAT-registered sellers (deducted from payouts)</SummaryHint>
+                </SummaryCard>
+                <SummaryCard>
+                  <SummaryLabel>NHIL</SummaryLabel>
+                  <SummaryValue>{formatCurrency(summary.totalNHIL)}</SummaryValue>
+                </SummaryCard>
+                <SummaryCard>
+                  <SummaryLabel>GETFund</SummaryLabel>
+                  <SummaryValue>{formatCurrency(summary.totalGETFund)}</SummaryValue>
+                </SummaryCard>
+                <SummaryCard>
+                  <SummaryLabel>Total tax</SummaryLabel>
+                  <SummaryValue>{formatCurrency(summary.totalTax)}</SummaryValue>
+                </SummaryCard>
+                <SummaryCard>
+                  <SummaryLabel>Orders</SummaryLabel>
+                  <SummaryValue>{summary.orderCount ?? 0}</SummaryValue>
+                </SummaryCard>
+              </SummaryGrid>
 
-            {summary.totalWithholdingCollected != null && (
-              <WithholdingSection>
-                <SectionTitle>Withholding tax (withdrawals)</SectionTitle>
-                <WithholdingRow>
-                  <span>Collected</span>
-                  <strong>{formatCurrency(summary.totalWithholdingCollected)}</strong>
-                </WithholdingRow>
-                <WithholdingRow>
-                  <span>Remitted</span>
-                  <strong>{formatCurrency(summary.totalWithholdingRemitted)}</strong>
-                </WithholdingRow>
-                <WithholdingRow>
-                  <span>Unremitted</span>
-                  <strong>{formatCurrency(summary.totalWithholdingUnremitted)}</strong>
-                </WithholdingRow>
-              </WithholdingSection>
-            )}
+              {summary.totalWithholdingCollected != null && (
+                <WithholdingSection>
+                  <SectionTitle>Withholding tax (withdrawals)</SectionTitle>
+                  <WithholdingRow>
+                    <span>Collected</span>
+                    <strong>{formatCurrency(summary.totalWithholdingCollected)}</strong>
+                  </WithholdingRow>
+                  <WithholdingRow>
+                    <span>Remitted</span>
+                    <strong>{formatCurrency(summary.totalWithholdingRemitted)}</strong>
+                  </WithholdingRow>
+                  <WithholdingRow>
+                    <span>Unremitted</span>
+                    <strong>{formatCurrency(summary.totalWithholdingUnremitted)}</strong>
+                  </WithholdingRow>
+                </WithholdingSection>
+              )}
 
-            {bySeller.length > 0 && (
-              <Section>
-                <SectionTitle>By seller</SectionTitle>
-                <TableWrap>
-                  <Table>
-                    <thead>
-                      <tr>
-                        <th>Seller</th>
-                        <th>Sales</th>
-                        <th>VAT</th>
-                        <th>VAT collected by</th>
-                        <th>VAT withheld</th>
-                        <th>Orders</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {bySeller.map((s) => (
-                        <tr key={s.sellerId}>
-                          <td>{s.sellerName || s.sellerId}</td>
-                          <td>{formatCurrency(s.totalSales)}</td>
-                          <td>{formatCurrency(s.totalVAT)}</td>
-                          <td>
-                            <VatBadge $by={s.vatCollectedBy || "platform"}>
-                              {s.vatCollectedBy === "seller" ? "Seller" : "Platform"}
-                            </VatBadge>
-                          </td>
-                          <td>{formatCurrency(s.vatWithheld)}</td>
-                          <td>{s.orderCount ?? 0}</td>
+              {bySeller.length > 0 && (
+                <Section>
+                  <SectionTitle>By seller</SectionTitle>
+                  <TableWrap>
+                    <Table>
+                      <thead>
+                        <tr>
+                          <th>Seller</th>
+                          <th>Sales</th>
+                          <th>VAT</th>
+                          <th>VAT collected by</th>
+                          <th>VAT withheld</th>
+                          <th>Orders</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </Table>
-                </TableWrap>
-              </Section>
-            )}
+                      </thead>
+                      <tbody>
+                        {bySeller.map((s) => (
+                          <tr key={s.sellerId}>
+                            <td>{s.sellerName || s.sellerId}</td>
+                            <td>{formatCurrency(s.totalSales)}</td>
+                            <td>{formatCurrency(s.totalVAT)}</td>
+                            <td>
+                              <VatBadge $by={s.vatCollectedBy || "platform"}>
+                                {s.vatCollectedBy === "seller" ? "Seller" : "Platform"}
+                              </VatBadge>
+                            </td>
+                            <td>{formatCurrency(s.vatWithheld)}</td>
+                            <td>{s.orderCount ?? 0}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </Table>
+                  </TableWrap>
+                </Section>
+              )}
 
-            {(period.startDate || period.endDate) && (
-              <PeriodNote>
-                Period:{" "}
-                {period.startDate ? new Date(period.startDate).toLocaleDateString() : "—"} to{" "}
-                {period.endDate ? new Date(period.endDate).toLocaleDateString() : "—"}
-              </PeriodNote>
-            )}
-          </>
-        ) : (
-          <EmptyState>No tax data for the selected period.</EmptyState>
-        )}
-      </ReportSection>
+              {(period.startDate || period.endDate) && (
+                <PeriodNote>
+                  Period:{" "}
+                  {period.startDate ? new Date(period.startDate).toLocaleDateString() : "—"} to{" "}
+                  {period.endDate ? new Date(period.endDate).toLocaleDateString() : "—"}
+                </PeriodNote>
+              )}
+            </>
+          ) : (
+            <EmptyState>No tax data for the selected period.</EmptyState>
+          )}
+        </ReportSection>
+      )}
 
       {showConfirmModal && (
         <ModalOverlay onClick={() => setShowConfirmModal(false)}>
@@ -518,6 +540,30 @@ const Subtitle = styled.p`
   color: #6b7280;
   margin-top: 0.25rem;
   font-size: 0.9375rem;
+`;
+
+const TabsContainer = styled.div`
+  display: flex;
+  border-bottom: 1px solid #e9ecef;
+  margin-bottom: 25px;
+  padding: 0 5px;
+`;
+
+const Tab = styled.div`
+  padding: 12px 25px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  border-bottom: 3px solid transparent;
+  color: ${({ active }) => (active ? "#4361EE" : "#8D99AE")};
+  border-bottom-color: ${({ active }) => (active ? "#4361EE" : "transparent")};
+  transition: all 0.3s;
+
+  &:hover {
+    color: #4361ee;
+  }
 `;
 
 const Card = styled.div`

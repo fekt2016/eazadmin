@@ -10,7 +10,12 @@ const getBaseURL = () => {
     const hostParts = window.location.hostname.split(".");
 
     // Local development
-    if (hostParts.includes("localhost")) {
+    if (
+      hostParts.includes("localhost") ||
+      window.location.hostname === "127.0.0.1" ||
+      window.location.hostname.startsWith("192.168.") ||
+      window.location.hostname.startsWith("10.")
+    ) {
       return "http://localhost:4000/api/v1";
     }
 
@@ -83,13 +88,13 @@ api.interceptors.request.use((config) => {
   const isPublicRoute = PUBLIC_ROUTES.some(
     (route) => normalizedPath === normalizePath(route)
   );
-  
+
   // Increase timeout for auth endpoints (they may take longer due to middleware)
-  const isAuthEndpoint = normalizedPath === '/admin/me' || 
-                         normalizedPath === '/admin/login' ||
-                         normalizedPath === '/seller/me' ||
-                         normalizedPath === '/user/me';
-  
+  const isAuthEndpoint = normalizedPath === '/admin/me' ||
+    normalizedPath === '/admin/login' ||
+    normalizedPath === '/seller/me' ||
+    normalizedPath === '/user/me';
+
   if (isAuthEndpoint && !config.timeout) {
     config.timeout = 30000; // 30 seconds for auth endpoints
   }
@@ -97,16 +102,16 @@ api.interceptors.request.use((config) => {
   // SECURITY: Cookie-only authentication - no token storage
   // Cookies are automatically sent via withCredentials: true
   // Backend reads from req.cookies.admin_jwt (or seller_jwt/main_jwt based on route)
-  
+
   // Add platform header (non-sensitive metadata)
   config.headers["x-platform"] = "eazadmin";
-  
+
   // Add subdomain information for admin context (non-sensitive metadata)
   if (typeof window !== "undefined") {
     config.headers["X-admin-Subdomain"] =
       window.location.hostname.split(".")[0] || "default";
   }
-  
+
   // CSRF token handling for state-changing requests (POST, PATCH, PUT, DELETE)
   const method = config.method?.toUpperCase();
   if (method && ['POST', 'PATCH', 'PUT', 'DELETE'].includes(method) && !isPublicRoute) {
@@ -121,13 +126,13 @@ api.interceptors.request.use((config) => {
       };
       csrfToken = getCookie('csrf-token');
     }
-    
+
     // If token not found in cookie, try to get it from localStorage (fallback)
     // This handles cases where cookie isn't readable due to domain/cross-origin issues
     if (!csrfToken && typeof window !== "undefined") {
       csrfToken = localStorage.getItem('csrf-token');
     }
-    
+
     if (csrfToken) {
       config.headers['X-CSRF-Token'] = csrfToken;
       if (import.meta.env.DEV) {
@@ -142,10 +147,10 @@ api.interceptors.request.use((config) => {
       }
     }
   }
-  
+
   // Use Vite's import.meta.env.DEV or fallback to __DEV__ if polyfilled
   const isDev = import.meta.env.DEV || (typeof __DEV__ !== "undefined" && __DEV__);
-  
+
   if (isPublicRoute) {
     if (isDev) {
       console.log(`Public route: ${normalizedPath}, cookie will be sent automatically if available`);
@@ -182,7 +187,7 @@ api.interceptors.response.use(
     if (error.response?.status === 403) {
       const errorCode = error.response?.data?.code;
       const errorMessage = error.response?.data?.message || "Invalid security token";
-      
+
       // Try to fetch CSRF token from endpoint as fallback
       if (errorCode === 'CSRF_TOKEN_MISSING' || errorCode === 'CSRF_TOKEN_MISMATCH') {
         try {
@@ -194,20 +199,20 @@ api.interceptors.response.use(
               'Content-Type': 'application/json',
             },
           });
-          
+
           if (tokenResponse.ok) {
             const tokenData = await tokenResponse.json();
-            
+
             if (tokenData?.csrfToken) {
               // Store token in localStorage as fallback
               if (typeof window !== "undefined") {
                 localStorage.setItem('csrf-token', tokenData.csrfToken);
               }
-              
+
               // Retry the original request with new token
               const originalRequest = error.config;
               originalRequest.headers['X-CSRF-Token'] = tokenData.csrfToken;
-              
+
               console.log("[API] CSRF token refreshed, retrying request");
               return api(originalRequest);
             }
@@ -217,7 +222,7 @@ api.interceptors.response.use(
           // Continue with original error handling
         }
       }
-      
+
       // If session expired (cookie missing), suggest re-login
       if (errorCode === 'SESSION_EXPIRED') {
         console.warn("[API] CSRF token expired - session may have expired");
@@ -232,7 +237,7 @@ api.interceptors.response.use(
           message: errorMessage,
         });
       }
-      
+
       // If CSRF token is missing or mismatched, suggest refresh
       if (errorCode === 'CSRF_TOKEN_MISSING' || errorCode === 'CSRF_TOKEN_MISMATCH') {
         console.warn("[API] CSRF token issue - user should refresh page");
@@ -251,7 +256,7 @@ api.interceptors.response.use(
         }
       }
     }
-    
+
     // Handle admin session required (401) or wrong role (403) – redirect to admin login
     const status = error.response?.status;
     const message = error.response?.data?.message || "";
@@ -269,11 +274,6 @@ api.interceptors.response.use(
     const shouldRedirect =
       isAdminSessionRequired || isWrongRole || (isUnauthenticatedAdmin && !isAuthCheckRequest);
 
-    // #region agent log (dev only – do not call 127.0.0.1 in production)
-    if (import.meta.env.DEV && typeof window !== "undefined" && (status === 401 || status === 403)) {
-      fetch("http://127.0.0.1:7242/ingest/8853a92f-8faa-4d51-b197-e8e74c838dc7", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ location: "api.js:interceptor", message: "401/403 auth decision", data: { status, requestUrl, isAuthCheckRequest, pathname: window.location.pathname, willRedirect: !!shouldRedirect }, timestamp: Date.now(), sessionId: "debug-session", hypothesisId: "H3" }) }).catch(() => {});
-    }
-    // #endregion
 
     if (shouldRedirect) {
       const isLoginPage = window.location.pathname === "/" || window.location.pathname === "/login";
@@ -312,12 +312,12 @@ api.interceptors.response.use(
 
     // Handle timeout errors with better messaging
     if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-      const isAuthEndpoint = error.config?.url?.includes('/me') || 
-                            error.config?.url?.includes('/login');
+      const isAuthEndpoint = error.config?.url?.includes('/me') ||
+        error.config?.url?.includes('/login');
       const errorMessage = isAuthEndpoint
         ? 'Authentication request timed out. The server may be slow or unreachable. Please try again.'
-        : error.response?.data?.message || 
-          'Request timed out. Please check your connection and try again.';
+        : error.response?.data?.message ||
+        'Request timed out. Please check your connection and try again.';
       const timeoutError = new Error(errorMessage);
       timeoutError.isTimeout = true;
       timeoutError.status = 408;
@@ -328,7 +328,7 @@ api.interceptors.response.use(
       console.error(`[API] Timeout error on ${error.config?.url}:`, errorMessage);
       return Promise.reject(timeoutError);
     }
-    
+
     // Handle other errors
     const errorMessage =
       error.response?.data?.message || error.message || "Request failed";

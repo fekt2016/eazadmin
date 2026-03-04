@@ -10,6 +10,8 @@ import {
 import { FaMapMarkerAlt, FaCheckCircle, FaTimesCircle, FaSearch, FaSort, FaPlus, FaEdit, FaSyncAlt, FaCalculator, FaPowerOff } from 'react-icons/fa';
 import NeighborhoodModal from './NeighborhoodModal';
 import ButtonSpinner from '../../shared/components/ButtonSpinner';
+import { ConfirmationModal } from '../../shared/components/modal/ConfirmationModal';
+import { toast } from 'react-toastify';
 
 const DistanceOverviewPage = ({ embedded = false }) => {
   const [selectedZone, setSelectedZone] = useState('all');
@@ -21,6 +23,7 @@ const DistanceOverviewPage = ({ embedded = false }) => {
   const [pageSize] = useState(50);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingNeighborhood, setEditingNeighborhood] = useState(null);
+  const [actionModalConfig, setActionModalConfig] = useState({ isOpen: false, type: null, payload: null });
 
   // Fetch neighborhoods with filters
   const { data: neighborhoodsResponse, isLoading, refetch } = useGetNeighborhoods({
@@ -82,40 +85,40 @@ const DistanceOverviewPage = ({ embedded = false }) => {
     refetch(); // Refresh the list after adding/updating
   };
 
-  const handleRefreshCoordinates = async (id) => {
-    if (window.confirm('Are you sure you want to refresh coordinates for this neighborhood?')) {
-      try {
-        await refreshCoordinatesMutation.mutateAsync(id);
-        alert('Coordinates refreshed successfully!');
-        refetch();
-      } catch (error) {
-        alert(`Failed to refresh coordinates: ${error.response?.data?.message || error.message}`);
-      }
-    }
+  const handleRefreshCoordinates = (id) => {
+    setActionModalConfig({ isOpen: true, type: 'refresh', payload: id });
   };
 
-  const handleRecalculate = async (id) => {
-    if (window.confirm('Are you sure you want to recalculate distance and zone for this neighborhood?')) {
-      try {
-        await recalculateMutation.mutateAsync(id);
-        alert('Neighborhood recalculated successfully!');
-        refetch();
-      } catch (error) {
-        alert(`Failed to recalculate: ${error.response?.data?.message || error.message}`);
-      }
-    }
+  const handleRecalculate = (id) => {
+    setActionModalConfig({ isOpen: true, type: 'recalculate', payload: id });
   };
 
-  const handleToggleActive = async (id, currentStatus) => {
-    const action = currentStatus ? 'deactivate' : 'activate';
-    if (window.confirm(`Are you sure you want to ${action} this neighborhood?`)) {
-      try {
+  const handleToggleActive = (id, currentStatus) => {
+    setActionModalConfig({ isOpen: true, type: 'toggle', payload: { id, currentStatus } });
+  };
+
+  const confirmAction = async () => {
+    const { type, payload } = actionModalConfig;
+    if (!type || !payload) return;
+
+    try {
+      if (type === 'refresh') {
+        await refreshCoordinatesMutation.mutateAsync(payload);
+        toast.success('Coordinates refreshed successfully!');
+      } else if (type === 'recalculate') {
+        await recalculateMutation.mutateAsync(payload);
+        toast.success('Neighborhood recalculated successfully!');
+      } else if (type === 'toggle') {
+        const { id, currentStatus } = payload;
+        const action = currentStatus ? 'deactivate' : 'activate';
         await toggleActiveMutation.mutateAsync(id);
-        alert(`Neighborhood ${action}d successfully!`);
-        refetch();
-      } catch (error) {
-        alert(`Failed to ${action} neighborhood: ${error.response?.data?.message || error.message}`);
+        toast.success(`Neighborhood ${action}d successfully!`);
       }
+      refetch();
+    } catch (error) {
+      toast.error(`Failed: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setActionModalConfig({ isOpen: false, type: null, payload: null });
     }
   };
 
@@ -443,6 +446,24 @@ const DistanceOverviewPage = ({ embedded = false }) => {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         neighborhood={editingNeighborhood}
+      />
+
+      <ConfirmationModal
+        isOpen={actionModalConfig.isOpen}
+        onClose={() => setActionModalConfig({ isOpen: false, type: null, payload: null })}
+        onConfirm={confirmAction}
+        title={
+          actionModalConfig.type === 'refresh' ? 'Refresh Coordinates' :
+            actionModalConfig.type === 'recalculate' ? 'Recalculate Distance & Zone' :
+              'Toggle Neighborhood Status'
+        }
+        message={
+          actionModalConfig.type === 'refresh' ? 'Are you sure you want to refresh coordinates for this neighborhood?' :
+            actionModalConfig.type === 'recalculate' ? 'Are you sure you want to recalculate distance and zone for this neighborhood?' :
+              `Are you sure you want to ${actionModalConfig.payload?.currentStatus ? 'deactivate' : 'activate'} this neighborhood?`
+        }
+        confirmText="Confirm"
+        confirmColor={actionModalConfig.type === 'toggle' && actionModalConfig.payload?.currentStatus ? '#e74c3c' : '#4361EE'}
       />
     </Container>
   );

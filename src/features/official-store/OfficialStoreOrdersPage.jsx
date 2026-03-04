@@ -4,7 +4,7 @@ import { FaEye, FaExclamationCircle, FaShoppingCart } from "react-icons/fa";
 import { useOfficialStore } from "../../shared/hooks/useOfficialStore";
 import { LoadingSpinner } from "../../shared/components/LoadingSpinner";
 import { formatDate } from "../../shared/utils/helpers";
-import { PATHS } from "../../routes/routhPath";
+import { PATHS } from "../../routes/routePath";
 
 const DASHBOARD_BASE = "/dashboard";
 
