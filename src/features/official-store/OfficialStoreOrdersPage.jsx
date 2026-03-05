@@ -11,13 +11,11 @@ const DASHBOARD_BASE = "/dashboard";
 function getOrderDisplay(sellerOrder) {
   const order = sellerOrder?.order;
   if (!order) return null;
+  const customerName = order.user?.name || order.user?.email || order.shippingAddress?.fullName || order.shippingAddress?.name || "—";
   return {
     _id: order._id ?? order.id,
     orderNumber: order.orderNumber ?? order._id ?? "—",
-    order.shippingAddress?.fullName ??
-      order.shippingAddress?.name ??
-      "—",
-    customer: (typeof (order.user?.name ?? order.user?.email ?? order.shippingAddress?.fullName ?? order.shippingAddress?.name) === 'object' ? "Unknown Customer" : (order.user?.name ?? order.user?.email ?? order.shippingAddress?.fullName ?? order.shippingAddress?.name ?? "—")),
+    customer: typeof customerName === 'object' ? "Unknown Customer" : String(customerName),
     date: order.createdAt,
     total: order.totalPrice ?? order.total ?? sellerOrder.subtotal ?? 0,
     status: order.currentStatus ?? order.orderStatus ?? order.status ?? "—",
