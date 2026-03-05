@@ -42,7 +42,7 @@ const getStatusColor = (status) => {
 // Helper function to format status for display
 const formatStatus = (status) => {
   if (!status) return "Unknown";
-  
+
   // Map status values to user-friendly names
   const statusMap = {
     pending_payment: "Pending Payment",
@@ -57,7 +57,7 @@ const formatStatus = (status) => {
     returned: "Returned",
     paid: "Confirmed", // Map paid to confirmed for display
   };
-  
+
   const normalizedStatus = status.toLowerCase();
   return statusMap[normalizedStatus] || status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, " ");
 };
@@ -190,7 +190,7 @@ export default function AdminDashboard() {
       return {
         id: id?.toString?.() ?? id,
         orderNumber: order.orderNumber ?? order.order_number ?? "—",
-        customer: customerName !== "—" ? customerName : "Unknown Customer",
+        customer: (typeof customerName === 'string' ? customerName : 'Unknown Customer'),
         date: formatDate(order.createdAt || order.created_at),
         amount: `GH₵${(order.totalPrice || order.total_price || order.total || 0).toFixed(2)}`,
         status: order.orderStatus ?? order.currentStatus ?? order.status ?? "pending",
@@ -203,7 +203,7 @@ export default function AdminDashboard() {
   // Process sellers data
   const vendors = useMemo(() => {
     if (!sellersData?.data?.results) return [];
-    
+
     return sellersData.data.results.map((seller) => ({
       id: seller._id || seller.id,
       name: seller.name || seller.shopName || "Unknown Seller",
@@ -281,7 +281,7 @@ export default function AdminDashboard() {
               </ul>
             </BackfillSkipReasons>
           )}
-          
+
           <CardsContainer>
             {metrics.map((metric, index) => (
               <Card key={index}>
@@ -296,7 +296,7 @@ export default function AdminDashboard() {
               </Card>
             ))}
           </CardsContainer>
-          
+
           <ChartsContainer>
             <ChartCard>
               <ChartHeader>
@@ -322,7 +322,7 @@ export default function AdminDashboard() {
                 <ChartPlaceholder>No revenue data available</ChartPlaceholder>
               )}
             </ChartCard>
-            
+
             <ChartCard>
               <ChartHeader>
                 <h3>Top Sellers</h3>
@@ -330,7 +330,7 @@ export default function AdminDashboard() {
               {vendors.length > 0 ? (
                 <VendorsList>
                   {vendors.map((vendor) => (
-                    <VendorCard 
+                    <VendorCard
                       key={vendor.id}
                       onClick={() => navigate(`/dashboard/sellers/detail/${vendor.id}`)}
                     >
@@ -355,7 +355,7 @@ export default function AdminDashboard() {
               )}
             </ChartCard>
           </ChartsContainer>
-          
+
           <ChartCard>
             <ChartHeader>
               <h3>Recent Orders</h3>

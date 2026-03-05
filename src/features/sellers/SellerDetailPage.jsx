@@ -668,8 +668,8 @@ const SellerDetailPage = () => {
 
   return (
     <Container>
-      <BackButton onClick={() => navigate(`/dashboard/${PATHS.SELLERS}`)}>
-        <FaArrowLeft /> Back to Sellers
+      <BackButton onClick={() => navigate(`/dashboard/users`)}>
+        <FaArrowLeft /> Back to Users
       </BackButton>
 
       <PageHeader>

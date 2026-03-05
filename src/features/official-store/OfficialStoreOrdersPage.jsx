@@ -14,12 +14,10 @@ function getOrderDisplay(sellerOrder) {
   return {
     _id: order._id ?? order.id,
     orderNumber: order.orderNumber ?? order._id ?? "—",
-    customer:
-      order.user?.name ??
-      order.user?.email ??
-      order.shippingAddress?.fullName ??
+    order.shippingAddress?.fullName ??
       order.shippingAddress?.name ??
       "—",
+    customer: (typeof (order.user?.name ?? order.user?.email ?? order.shippingAddress?.fullName ?? order.shippingAddress?.name) === 'object' ? "Unknown Customer" : (order.user?.name ?? order.user?.email ?? order.shippingAddress?.fullName ?? order.shippingAddress?.name ?? "—")),
     date: order.createdAt,
     total: order.totalPrice ?? order.total ?? sellerOrder.subtotal ?? 0,
     status: order.currentStatus ?? order.orderStatus ?? order.status ?? "—",

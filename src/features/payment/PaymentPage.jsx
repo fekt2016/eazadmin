@@ -449,7 +449,7 @@ export default function PaymentPage() {
                 return (
                   <TableRow key={request.id}>
                     <TableCell>#{request.id?.slice(-8) || request.id || "N/A"}</TableCell>
-                    <TableCell>{request.seller}</TableCell>
+                    <TableCell>{request.seller?.name || request.seller?.shopName || (typeof request.seller === 'string' ? request.seller : "N/A")}</TableCell>
                     <TableCell>₵{request.amount.toFixed(2)}</TableCell>
                     <TableCell>
                       {new Date(request.date).toLocaleDateString()}

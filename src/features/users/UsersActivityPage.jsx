@@ -200,14 +200,14 @@ export default function UsersActivityPage() {
             currentLogs.map((log) => (
               <TableRow key={log.id}>
                 <TableCell>{formatDate(log.timestamp)}</TableCell>
-                <TableCell>{log.user}</TableCell>
+                <TableCell>{log.user?.name || log.user?.email || (typeof log.user === 'string' ? log.user : 'Unknown User')}</TableCell>
                 <TableCell>
                   <ActionBadge action={log.action}>
                     {getActionLabel(log.action)}
                   </ActionBadge>
                 </TableCell>
                 <TableCell>{log.target}</TableCell>
-                <TableCell>{log.vendor}</TableCell>
+                <TableCell>{log.vendor?.name || log.vendor?.shopName || (typeof log.vendor === 'string' ? log.vendor : 'Unknown Vendor')}</TableCell>
                 <TableCell>{log.ip}</TableCell>
               </TableRow>
             ))
