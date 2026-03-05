@@ -477,8 +477,14 @@ const BalanceHistoryPage = () => {
                   {activeTab === 'wallet' && (
                     <td>
                       <UserCell>
-                        <strong>{item.userId?.name || 'N/A'}</strong>
-                        <span>{item.userId?.email || ''}</span>
+                        <strong>
+                          {typeof item.userId === 'string'
+                            ? item.userId
+                            : (item.userId?.name || item.userId?.shopName || 'N/A')}
+                        </strong>
+                        <span>
+                          {typeof item.userId === 'object' ? item.userId?.email : ''}
+                        </span>
                       </UserCell>
                     </td>
                   )}
@@ -486,16 +492,18 @@ const BalanceHistoryPage = () => {
                     <td>
                       <UserCell>
                         <strong>
-                          {item.sellerId?.shopName ||
-                            item.sellerId?.name ||
-                            item.seller?.shopName ||
-                            item.seller?.name ||
-                            'N/A'}
+                          {(() => {
+                            const seller = item.sellerId || item.seller;
+                            if (typeof seller === 'string') return seller;
+                            return seller?.shopName || seller?.name || 'N/A';
+                          })()}
                         </strong>
                         <span>
-                          {item.sellerId?.email ||
-                            item.seller?.email ||
-                            ''}
+                          {(() => {
+                            const seller = item.sellerId || item.seller;
+                            if (typeof seller === 'object') return seller?.email;
+                            return '';
+                          })()}
                         </span>
                       </UserCell>
                     </td>

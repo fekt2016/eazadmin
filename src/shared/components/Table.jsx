@@ -63,9 +63,9 @@ export const Table = ({
                   <TableCell key={`${item.id}-${column.accessor}`}>
                     {column.Cell
                       ? column.Cell({
-                          value: item[column.accessor],
-                          row: item, // Pass full row data for access to all fields
-                        })
+                        value: item[column.accessor],
+                        row: item, // Pass full row data for access to all fields
+                      })
                       : item[column.accessor]}
                   </TableCell>
                 ))}
@@ -91,7 +91,7 @@ export const Table = ({
                       </ActionButton>
 
                       {actionMenu === item.id && (
-                        <ActionMenu 
+                        <ActionMenu
                           data-action-menu
                           ref={(el) => {
                             if (el) {
@@ -103,16 +103,16 @@ export const Table = ({
                                   const viewportHeight = window.innerHeight;
                                   const spaceBelow = viewportHeight - buttonRect.bottom;
                                   const menuHeight = el.scrollHeight || 200;
-                                  
+
                                   // Calculate position
                                   let top = buttonRect.bottom + 5;
                                   let left = buttonRect.right - el.offsetWidth;
-                                  
+
                                   // Ensure menu doesn't go off-screen horizontally
                                   if (left < 10) {
                                     left = 10;
                                   }
-                                  
+
                                   // Position above if not enough space below
                                   if (spaceBelow < menuHeight + 10) {
                                     top = buttonRect.top - menuHeight - 5;
@@ -120,7 +120,7 @@ export const Table = ({
                                   } else {
                                     el.setAttribute('data-position', 'below');
                                   }
-                                  
+
                                   // Set fixed position with calculated coordinates
                                   el.style.position = 'fixed';
                                   el.style.top = `${Math.max(10, top)}px`;
@@ -134,7 +134,7 @@ export const Table = ({
                           }}
                         >
                           {onViewDetails && (
-                            <ActionMenuItem 
+                            <ActionMenuItem
                               onClick={(e) => {
                                 e.stopPropagation();
                                 if (onViewDetails) {
@@ -144,10 +144,10 @@ export const Table = ({
                               }}
                             >
                               <FaEye /> View Details
-                          </ActionMenuItem>
+                            </ActionMenuItem>
                           )}
                           {onEdit && (
-                            <ActionMenuItem 
+                            <ActionMenuItem
                               onClick={(e) => {
                                 e.stopPropagation();
                                 if (onEdit) {
@@ -156,11 +156,11 @@ export const Table = ({
                                 setActionMenu(null);
                               }}
                             >
-                            <FaEdit /> Edit
-                          </ActionMenuItem>
+                              <FaEdit /> Edit
+                            </ActionMenuItem>
                           )}
                           {onDelete && (
-                            <ActionMenuItem 
+                            <ActionMenuItem
                               onClick={(e) => {
                                 e.stopPropagation();
                                 if (onDelete) {
@@ -169,8 +169,8 @@ export const Table = ({
                                 setActionMenu(null);
                               }}
                             >
-                            <FaTrash /> Delete
-                          </ActionMenuItem>
+                              <FaTrash /> Delete
+                            </ActionMenuItem>
                           )}
                         </ActionMenu>
                       )}
@@ -219,13 +219,17 @@ export const StatusCell = ({ value }) => {
 };
 
 export const UserCell = ({ value, row }) => {
+  const name = typeof value === 'string' ? value : (value?.name || row?.name || row?.shopName || '—');
+  const email = row?.email || (typeof value === 'object' ? value?.email : '');
+  const shopName = row?.shopName || (typeof value === 'object' ? value?.shopName : '');
+
   return (
     <UserInfo>
-      <UserAvatar>{value.charAt(0)}</UserAvatar>
+      <UserAvatar>{name ? name.charAt(0).toUpperCase() : '?'}</UserAvatar>
       <UserDetails>
-        <UserName>{value}</UserName>
-        <UserEmail>{row.email}</UserEmail>
-        {row.shopName && <VendorTag>{row.shopName}</VendorTag>}
+        <UserName>{name}</UserName>
+        {email && <UserEmail>{email}</UserEmail>}
+        {shopName && <VendorTag>{shopName}</VendorTag>}
       </UserDetails>
     </UserInfo>
   );
@@ -265,7 +269,7 @@ export const DateCell = ({ value }) => {
 export const VerificationStatusCell = ({ value, row }) => {
   // Use verificationStatus from row data, fallback to value
   const verificationStatus = row?.verificationStatus || value || 'pending';
-  
+
   const getStatusConfig = (status) => {
     switch (status) {
       case 'verified':
@@ -306,7 +310,7 @@ export const VerificationStatusCell = ({ value, row }) => {
 export const PayoutStatusCell = ({ value, row }) => {
   // Use payoutStatus from row data, fallback to value
   const payoutStatus = row?.payoutStatus || value || 'pending';
-  
+
   const getStatusConfig = (status) => {
     switch (status) {
       case 'verified':
@@ -347,7 +351,7 @@ export const PayoutStatusCell = ({ value, row }) => {
 export const OrderCountCell = ({ value, row }) => {
   // Use orderCount from row data, fallback to value
   const orderCount = row?.orderCount ?? value ?? 0;
-  
+
   return (
     <OrderCountBadge>
       <span>{orderCount.toLocaleString()}</span>
@@ -537,14 +541,14 @@ const StatusBadge = styled.div`
     status === "active"
       ? "#4CC9F020"
       : status === "pending"
-      ? "#F8961E20"
-      : "#F7258520"};
+        ? "#F8961E20"
+        : "#F7258520"};
   color: ${({ status }) =>
     status === "active"
       ? "#4CC9F0"
       : status === "pending"
-      ? "#F8961E"
-      : "#F72585"};
+        ? "#F8961E"
+        : "#F72585"};
   padding: 8px 15px;
   border-radius: 20px;
   font-size: 14px;
