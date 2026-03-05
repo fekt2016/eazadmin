@@ -108,7 +108,7 @@ export default function AdminLogin() {
         </LogoContainer>
 
         <WelcomeSection>
-          <Title>EazAdmin Login</Title>
+          <Title>Login</Title>
           <Subtitle>Sign in to manage your platform</Subtitle>
         </WelcomeSection>
 
