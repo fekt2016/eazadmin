@@ -72,9 +72,9 @@ const CategoryCardComponent = ({
       </CategoryImageContainer>
       <CategoryHeader>
         <CategoryName>{category.name}</CategoryName>
-        <StatusBadge $status={category.status}>
-          {category.status.charAt(0).toUpperCase() +
-            category.status.slice(1)}
+        <StatusBadge $status={category.status || "active"}>
+          {(category.status || "active").charAt(0).toUpperCase() +
+            (category.status || "active").slice(1)}
         </StatusBadge>
       </CategoryHeader>
 
@@ -117,7 +117,7 @@ const CategoryCardComponent = ({
         <MetaItem>
           <MetaLabel>Created:</MetaLabel>
           <MetaValue>
-            {new Date(category.createdAt).toLocaleDateString()}
+            {new Date(category.createdAt || Date.now()).toLocaleDateString()}
           </MetaValue>
         </MetaItem>
       </CategoryMeta>

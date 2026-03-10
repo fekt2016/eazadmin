@@ -1,35 +1,11 @@
-
-// const size = {
-//   xs: '400px', // for small screen mobile
-//   sm: '600px', // for mobile screen
-//   md: '900px', // for tablets
-//   lg: '1280px', // for laptops
-//   xl: '1440px', // for desktop / monitors
-//   xxl: '1920px', // for big screens
-// }
-
-// export const device = {
-//   xs: `(max-width: ${size.xs})`,
-//   sm: `(max-width: ${size.sm})`,
-//   md: `(max-width: ${size.md})`,
-//   lg: `(max-width: ${size.lg})`,
-//   xl: `(max-width: ${size.xl})`,
-//   xxl: `(max-width: ${size.xxl})`,
-// }
-
-// @media ${device.sm} {
-//   display: none;
-// }
-
-
 const breakpoints = {
-  xs: "320px",
-  sm: "640px",
-  md: "768px",
-  lg: "1024px",
-  xl: "1280px",
-  "2xl": "1536px",
-}
+  xs: "32rem", // 512px
+  sm: "64rem", // 1024px
+  md: "76.8rem", // 1228.8px
+  lg: "102.4rem", // 1638.4px
+  xl: "128rem", // 2048px
+  "2xl": "153.6rem", // 2457.6px
+};
 
 export const devicesMax = {
   xs: `(max-width: ${breakpoints.xs})`,
@@ -38,7 +14,7 @@ export const devicesMax = {
   lg: `(max-width: ${breakpoints.lg})`,
   xl: `(max-width: ${breakpoints.xl})`,
   "2xl": `(max-width: ${breakpoints["2xl"]})`,
-}
+};
 
 export const devicesMin = {
   xs: `(min-width: ${breakpoints.xs})`,
@@ -47,4 +23,17 @@ export const devicesMin = {
   lg: `(min-width: ${breakpoints.lg})`,
   xl: `(min-width: ${breakpoints.xl})`,
   "2xl": `(min-width: ${breakpoints["2xl"]})`,
-}
+};
+
+// Also export breakpoints for direct access
+export const devices = {
+  xs: `(min-width: ${breakpoints.xs})`,
+  sm: `(min-width: ${breakpoints.sm})`,
+  md: `(min-width: ${breakpoints.md})`,
+  lg: `(min-width: ${breakpoints.lg})`,
+  xl: `(min-width: ${breakpoints.xl})`,
+  "2xl": `(min-width: ${breakpoints["2xl"]})`,
+};
+
+export default { devicesMax, devicesMin, devices, breakpoints };
+

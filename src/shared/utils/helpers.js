@@ -74,21 +74,22 @@ export function formatTime(date) {
   }).format(new Date(date));
 }
 
+/**
+ * @deprecated LEGACY: Not used anywhere. Auth is cookie-only (admin_jwt);
+ * do not use JWT in localStorage. Kept only for reference; safe to remove.
+ */
 export function returnRole(token) {
   if (token) {
     const decodeToken = jwtDecode(token);
     const expireTime = new Date(decodeToken.exp) * 1000;
-    console.log("expireTime", expireTime);
 
     if (new Date(Date.now()) > expireTime) {
       localStorage.removeItem("token");
       return "";
-    } else {
-      return decodeToken;
     }
-  } else {
-    return "";
+    return decodeToken;
   }
+  return "";
 }
 
 // export const generateSKU = ({ productName, index }) => {

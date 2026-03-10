@@ -13,6 +13,7 @@ import {
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import styled from "styled-components";
+import { getOptimizedImageUrl, IMAGE_SLOTS } from "../utils/cloudinaryConfig";
 
 // Dynamic Table Component
 export const Table = ({
@@ -225,7 +226,17 @@ export const UserCell = ({ value, row }) => {
 
   return (
     <UserInfo>
-      <UserAvatar>{name ? name.charAt(0).toUpperCase() : '?'}</UserAvatar>
+      <UserAvatar className="avatar-container">
+        {row?.avatar || row?.photo ? (
+          <AvatarImage
+            src={getOptimizedImageUrl(row.avatar || row.photo, IMAGE_SLOTS.AVATAR)}
+            alt={name}
+            loading="lazy"
+          />
+        ) : (
+          name ? name.charAt(0).toUpperCase() : '?'
+        )}
+      </UserAvatar>
       <UserDetails>
         <UserName>{name}</UserName>
         {email && <UserEmail>{email}</UserEmail>}
@@ -501,6 +512,13 @@ const UserAvatar = styled.div`
   justify-content: center;
   font-weight: 600;
   font-size: 14px;
+  overflow: hidden;
+`;
+
+const AvatarImage = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 `;
 
 const UserDetails = styled.div``;

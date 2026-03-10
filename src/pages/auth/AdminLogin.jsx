@@ -170,7 +170,7 @@ export default function AdminLogin() {
               />
               <CheckboxLabel htmlFor="remember">Remember me</CheckboxLabel>
             </CheckboxGroup>
-            <ForgotPasswordLink href="#" onClick={(e) => e.preventDefault()}>
+            <ForgotPasswordLink as={Link} to="/forgot-password">
               Forgot password?
             </ForgotPasswordLink>
           </OptionsRow>

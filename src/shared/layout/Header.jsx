@@ -1,4 +1,5 @@
 import styled from "styled-components";
+import { getOptimizedImageUrl, IMAGE_SLOTS } from '../utils/cloudinaryConfig';
 
 const Header = ({ user }) => {
   return (
@@ -17,9 +18,9 @@ const Header = ({ user }) => {
           <UserProfile>
             <UserAvatar>
               {user.avatar ? (
-                <img 
-                  src={user.avatar} 
-                  alt={user.name || 'Admin'} 
+                <img
+                  src={getOptimizedImageUrl(user.avatar, IMAGE_SLOTS.AVATAR)}
+                  alt={user.name || 'Admin'}
                   style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
                 />
               ) : (

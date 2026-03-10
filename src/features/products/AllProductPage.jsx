@@ -4,12 +4,14 @@ import { FiEdit, FiEye, FiSearch, FiTrash2, FiCheck, FiX } from "react-icons/fi"
 import { useNavigate } from "react-router-dom";
 import useProduct from "../../shared/hooks/useProduct";
 import { useEazShop } from "../../shared/hooks/useEazShop";
-import { useMemo, useState } from "react";
 import { LoadingSpinner } from "../../shared/components/LoadingSpinner";
 import { PATHS } from "../../routes/routePath";
 import { toast } from "react-toastify";
 import { FaAward } from "react-icons/fa";
 import { ConfirmationModal } from "../../shared/components/Modal/ConfirmationModal";
+import { getOptimizedImageUrl, IMAGE_SLOTS } from "../../shared/utils/cloudinaryConfig";
+import OptimizedImage from "../../shared/components/OptimizedImage";
+import React, { memo, useCallback, useMemo, useState } from "react";
 
 // Helper function to calculate total stock from variants
 const calculateTotalStock = (product) => {
@@ -23,6 +25,135 @@ const calculateTotalStock = (product) => {
   }
   return 0;
 };
+
+// Memoized Product Row Component
+const ProductRow = memo(({
+  product,
+  onApprove,
+  onReject,
+  onView,
+  onEdit,
+  onMarkEazShop,
+  onDelete,
+  approvePending,
+  rejectPending,
+  markEazShopPending,
+  deletePending
+}) => {
+  const productId = product.id || product._id;
+
+  return (
+    <TableRow key={productId}>
+      <TableCell>
+        <div className="table-thumb-container" style={{ width: '50px' }}>
+          <OptimizedImage
+            src={product.imageCover || (product.images && product.images[0])}
+            slot={IMAGE_SLOTS.TABLE_THUMB}
+            aspectRatio="1/1"
+            alt={product.name}
+            radius="8px"
+          />
+        </div>
+      </TableCell>
+      <TableCell>
+        <ProductName>{product.name}</ProductName>
+      </TableCell>
+      <TableCell>
+        <SellerInfo>{product.seller?.shopName || product.seller?.name || "N/A"}</SellerInfo>
+      </TableCell>
+      <TableCell>
+        <PriceInfo>₵{product.price?.toFixed(2) || "0.00"}</PriceInfo>
+      </TableCell>
+      <TableCell>
+        <StockIndicator stock={product.totalStock || calculateTotalStock(product)}>
+          {(product.totalStock || calculateTotalStock(product)) > 0
+            ? (product.totalStock || calculateTotalStock(product))
+            : "Out of stock"}
+        </StockIndicator>
+      </TableCell>
+      <TableCell>
+        <CategoryInfo>
+          {product.parentCategory?.name ||
+            product.subCategory?.name ||
+            "Uncategorized"}
+        </CategoryInfo>
+      </TableCell>
+      <TableCell>
+        <StatusPill status={product.status}>
+          {product.status?.replace("-", " ") || "active"}
+        </StatusPill>
+      </TableCell>
+      <TableCell>
+        {product.isPreOrder ? (
+          <PreOrderBadge>
+            {product.preOrderOriginCountry ? `Pre-Order (${product.preOrderOriginCountry})` : 'Pre-Order'}
+          </PreOrderBadge>
+        ) : (
+          <span style={{ color: '#94a3b8' }}>Regular</span>
+        )}
+      </TableCell>
+      <TableCell>
+        <ModerationPill status={product.moderationStatus || "pending"}>
+          {product.moderationStatus || "pending"}
+        </ModerationPill>
+      </TableCell>
+      <TableCell>
+        <ActionButtons>
+          {product.moderationStatus === "pending" && (
+            <>
+              <ActionButton
+                title="Approve Product"
+                $approve
+                onClick={() => onApprove(product.id || product._id, product.name)}
+                disabled={approvePending}
+              >
+                <FiCheck />
+              </ActionButton>
+              <ActionButton
+                title="Reject Product"
+                $reject
+                onClick={() => onReject(product.id || product._id, product.name)}
+                disabled={rejectPending}
+              >
+                <FiX />
+              </ActionButton>
+            </>
+          )}
+          <ActionButton
+            title="View"
+            onClick={() => onView(product.id || product._id)}
+          >
+            <FiEye />
+          </ActionButton>
+          <ActionButton
+            title="Edit"
+            onClick={() => onEdit(product.id || product._id)}
+          >
+            <FiEdit />
+          </ActionButton>
+          {!product.isEazShopProduct && (
+            <ActionButton
+              title="Mark as Saiisai Product"
+              onClick={() => onMarkEazShop(product.id || product._id)}
+              $eazshop
+              disabled={markEazShopPending}
+            >
+              <FaAward />
+            </ActionButton>
+          )}
+          <ActionButton
+            title="Delete"
+            danger
+            onClick={() => onDelete(product.id || product._id)}
+            disabled={deletePending}
+          >
+            {deletePending ? "..." : <FiTrash2 />}
+          </ActionButton>
+        </ActionButtons>
+      </TableCell>
+    </TableRow>
+  );
+});
 
 export default function AllProductPage() {
   const navigate = useNavigate();
@@ -186,21 +317,21 @@ export default function AllProductPage() {
   );
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
 
-  const handleDelete = (productId) => {
+  const handleDelete = useCallback((productId) => {
     if (!productId) {
       toast.error("Product ID is missing");
       return;
     }
     setActionModalConfig({ isOpen: true, type: 'delete', payload: productId });
-  };
+  }, []);
 
-  const handleMarkAsEazShop = (productId) => {
+  const handleMarkAsEazShop = useCallback((productId) => {
     setActionModalConfig({ isOpen: true, type: 'markEazShop', payload: productId });
-  };
+  }, []);
 
-  const handleApproveProduct = (productId, productName) => {
+  const handleApproveProduct = useCallback((productId, productName) => {
     setActionModalConfig({ isOpen: true, type: 'approve', payload: { id: productId, name: productName } });
-  };
+  }, []);
 
   const confirmAction = async () => {
     const { type, payload } = actionModalConfig;
@@ -257,9 +388,9 @@ export default function AllProductPage() {
     setRejectReason("");
   };
 
-  const handlePageChange = (newPage) => {
+  const handlePageChange = useCallback((newPage) => {
     setPage(newPage);
-  };
+  }, []);
 
   if (productLoading) return <LoadingSpinner />;
   if (productError) {
@@ -385,112 +516,22 @@ export default function AllProductPage() {
               </TableCell>
             </TableRow>
           ) : (
-            currentProducts.map((product) => {
-              const productId = product.id || product._id;
-              return (
-                <TableRow key={productId}>
-                  <TableCell>
-                    <ProductImage src={product.imageCover} alt={product.name} />
-                  </TableCell>
-                  <TableCell>
-                    <ProductName>{product.name}</ProductName>
-                  </TableCell>
-                  <TableCell>
-                    <SellerInfo>{product.seller?.shopName || product.seller?.name || "N/A"}</SellerInfo>
-                  </TableCell>
-                  <TableCell>
-                    <PriceInfo>₵{product.price?.toFixed(2) || "0.00"}</PriceInfo>
-                  </TableCell>
-                  <TableCell>
-                    <StockIndicator stock={product.totalStock || calculateTotalStock(product)}>
-                      {(product.totalStock || calculateTotalStock(product)) > 0
-                        ? (product.totalStock || calculateTotalStock(product))
-                        : "Out of stock"}
-                    </StockIndicator>
-                  </TableCell>
-                  <TableCell>
-                    <CategoryInfo>
-                      {product.parentCategory?.name ||
-                        product.subCategory?.name ||
-                        "Uncategorized"}
-                    </CategoryInfo>
-                  </TableCell>
-                  <TableCell>
-                    <StatusPill status={product.status}>
-                      {product.status.replace("-", " ")}
-                    </StatusPill>
-                  </TableCell>
-                  <TableCell>
-                    {product.isPreOrder ? (
-                      <PreOrderBadge>
-                        {product.preOrderOriginCountry ? `Pre-Order (${product.preOrderOriginCountry})` : 'Pre-Order'}
-                      </PreOrderBadge>
-                    ) : (
-                      <span style={{ color: '#94a3b8' }}>Regular</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <ModerationPill status={product.moderationStatus || "pending"}>
-                      {product.moderationStatus || "pending"}
-                    </ModerationPill>
-                  </TableCell>
-                  <TableCell>
-                    <ActionButtons>
-                      {product.moderationStatus === "pending" && (
-                        <>
-                          <ActionButton
-                            title="Approve Product"
-                            $approve
-                            onClick={() => handleApproveProduct(product.id || product._id, product.name)}
-                            disabled={approveProduct.isPending}
-                          >
-                            <FiCheck />
-                          </ActionButton>
-                          <ActionButton
-                            title="Reject Product"
-                            $reject
-                            onClick={() => openRejectModal(product.id || product._id, product.name)}
-                            disabled={rejectProduct.isPending}
-                          >
-                            <FiX />
-                          </ActionButton>
-                        </>
-                      )}
-                      <ActionButton
-                        title="View"
-                        onClick={() => navigate(`/dashboard/${PATHS.PRODUCTDETAILS.replace(':id', product.id || product._id)}`)}
-                      >
-                        <FiEye />
-                      </ActionButton>
-                      <ActionButton
-                        title="Edit"
-                        onClick={() => navigate(`/dashboard/${PATHS.PRODUCTDETAILS.replace(':id', product.id || product._id)}`)}
-                      >
-                        <FiEdit />
-                      </ActionButton>
-                      {!product.isEazShopProduct && (
-                        <ActionButton
-                          title="Mark as Saiisai Product"
-                          onClick={() => handleMarkAsEazShop(product.id || product._id)}
-                          $eazshop
-                          disabled={markAsEazShopMutation.isPending}
-                        >
-                          <FaAward />
-                        </ActionButton>
-                      )}
-                      <ActionButton
-                        title="Delete"
-                        danger
-                        onClick={() => handleDelete(product.id || product._id)}
-                        disabled={deleteProduct.isPending}
-                      >
-                        {deleteProduct.isPending ? "..." : <FiTrash2 />}
-                      </ActionButton>
-                    </ActionButtons>
-                  </TableCell>
-                </TableRow>
-              );
-            })
+            currentProducts.map((product) => (
+              <ProductRow
+                key={product.id || product._id}
+                product={product}
+                onApprove={handleApproveProduct}
+                onReject={openRejectModal}
+                onView={(id) => navigate(`/dashboard/${PATHS.PRODUCTDETAILS.replace(':id', id)}`)}
+                onEdit={(id) => navigate(`/dashboard/${PATHS.PRODUCTDETAILS.replace(':id', id)}`)}
+                onMarkEazShop={handleMarkAsEazShop}
+                onDelete={handleDelete}
+                approvePending={approveProduct.isPending}
+                rejectPending={rejectProduct.isPending}
+                markEazShopPending={markAsEazShopMutation.isPending}
+                deletePending={deleteProduct.isPending}
+              />
+            ))
           )}
         </TableBody>
       </ProductTable>
@@ -1066,12 +1107,10 @@ const PageButton = styled.button`
   }
 `;
 
-const ProductImage = styled.img`
+/* ProductImage styled component replaced by OptimizedImage */
+const ProductImage = styled.div`
   width: 50px;
   height: 50px;
-  border-radius: 8px;
-  object-fit: cover;
-  border: 1px solid #e2e8f0;
 `;
 
 const SellerInfo = styled.div`

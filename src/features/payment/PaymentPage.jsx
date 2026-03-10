@@ -152,7 +152,7 @@ export default function PaymentPage() {
         req.isActive === false ? STATUS.DEACTIVATED : rawStatus;
       return {
         id: req._id || req.id,
-        seller: req.seller?.shopName || req.seller?.name || "Unknown Seller",
+        seller: req.seller?.shopName || req.seller?.name || req.paymentDetails?.accountName || "Unknown Seller",
         sellerId: req.seller?._id || req.seller?.id,
         amount: req.amount || 0,
         date: req.createdAt || req.paymentDate || req.date,

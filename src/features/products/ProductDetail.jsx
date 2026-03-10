@@ -21,6 +21,8 @@ import { LoadingSpinner } from "../../shared/components/LoadingSpinner";
 import { PATHS } from "../../routes/routePath";
 import { toast } from "react-toastify";
 import { ConfirmationModal } from "../../shared/components/Modal/ConfirmationModal";
+import { getOptimizedImageUrl, IMAGE_SLOTS } from "../../shared/utils/cloudinaryConfig";
+import OptimizedImage from "../../shared/components/OptimizedImage";
 
 const getPromotionKeyFromLink = (link) => {
   if (!link || typeof link !== "string") return "";
@@ -286,21 +288,28 @@ export default function ProductDetail() {
         {/* Left Column - Images */}
         <ImageSection>
           <MainImageContainer>
-            <MainImage
-              src={images[selectedImage] || images[0] || "/api/placeholder/600/600"}
+            <OptimizedImage
+              src={images[selectedImage] || images[0]}
+              slot={IMAGE_SLOTS.PRODUCT_DETAIL}
+              aspectRatio="1/1"
               alt={product.name}
+              objectFit="contain"
             />
           </MainImageContainer>
           {images.length > 1 && (
             <ThumbnailGrid>
               {images.map((img, index) => (
-                <Thumbnail
-                  key={index}
-                  src={img}
-                  alt={`${product.name} - Image ${index + 1}`}
-                  $active={selectedImage === index}
-                  onClick={() => setSelectedImage(index)}
-                />
+                <div key={index} style={{ cursor: 'pointer' }} onClick={() => setSelectedImage(index)}>
+                  <OptimizedImage
+                    src={img}
+                    slot={IMAGE_SLOTS.PRODUCT_THUMB}
+                    aspectRatio="1/1"
+                    alt={`${product.name} - Image ${index + 1}`}
+                    objectFit="contain"
+                    radius="8px"
+                    style={{ border: selectedImage === index ? "3px solid #667eea" : "3px solid transparent" }}
+                  />
+                </div>
               ))}
             </ThumbnailGrid>
           )}
@@ -878,11 +887,10 @@ const MainImageContainer = styled.div`
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 `;
 
-const MainImage = styled.img`
+/* MainImage styled component replaced by OptimizedImage */
+const MainImage = styled.div`
   width: 100%;
   height: 100%;
-  object-fit: contain;
-  background-color: #f8fafc;
 `;
 
 const ThumbnailGrid = styled.div`
@@ -891,20 +899,10 @@ const ThumbnailGrid = styled.div`
   gap: 0.75rem;
 `;
 
-const Thumbnail = styled.img`
+/* Thumbnail styled component replaced by OptimizedImage */
+const Thumbnail = styled.div`
   width: 100%;
   aspect-ratio: 1;
-  border-radius: 8px;
-  cursor: pointer;
-  border: 3px solid ${(props) => (props.$active ? "#667eea" : "transparent")};
-  transition: all 0.2s;
-  object-fit: contain;
-  background-color: #f8fafc;
-
-  &:hover {
-    border-color: #667eea;
-    opacity: 0.8;
-  }
 `;
 
 const InfoSection = styled.div`

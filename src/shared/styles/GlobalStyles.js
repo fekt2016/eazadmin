@@ -264,12 +264,20 @@ h6 {
   hyphens: auto;
 }
 
-img {
-  max-width: 100%;
+  img {
+    max-width: 100%;
+    display: block;
+    /* Removed height: auto to prevent object-fit stretching issues */
+    object-fit: inherit;
+    /* For dark mode */
+    filter: grayscale(var(--image-grayscale)) opacity(var(--image-opacity));
+  }
 
-  /* For dark mode */
-  filter: grayscale(var(--image-grayscale)) opacity(var(--image-opacity));
-}
+  .avatar-container img {
+    object-fit: cover;
+    width: 100%;
+    height: 100%;
+  }
 
 
 

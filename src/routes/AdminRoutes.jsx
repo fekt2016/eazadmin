@@ -1,7 +1,7 @@
 import { Route, Routes, Navigate } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { PATHS } from "./routePath";
-import { LoadingSpinner } from '../shared/components/LoadingSpinner';
+import PageSpinner from '../components/common/PageSpinner';
 import ProtectedRoute from "../routes/protectedRoute";
 
 const ProductDetail = lazy(() => import("../features/products/ProductDetail"));
@@ -50,7 +50,6 @@ const AdminCouponDiscountPage = lazy(() => import("../pages/coupons/AdminCouponD
 const AdsManagementPage = lazy(() => import("../pages/ads/AdsManagementPage"));
 const TaxReportPage = lazy(() => import("../features/tax/TaxReportPage"));
 
-
 const AdminCatchAll = () => {
   const currentPath = window.location.pathname;
 
@@ -88,403 +87,219 @@ const UnauthorizedPage = () => (
 );
 
 export default function AdminRoutes() {
-
-
   return (
-    <Routes>
-      {/* Admin login route - both / and /login so /login does not 404 */}
-      <Route path={PATHS.LOGIN} element={<AdminLogin />} />
-      <Route path="/login" element={<AdminLogin />} />
-      <Route path={PATHS.REGISTER} element={
-        <Suspense fallback={<LoadingSpinner />}>
-          <AdminRegister />
-        </Suspense>
-      } />
-      <Route path="/register" element={
-        <Suspense fallback={<LoadingSpinner />}>
-          <AdminRegister />
-        </Suspense>
-      } />
+    <Suspense fallback={<PageSpinner />}>
+      <Routes>
+        {/* Admin login route - both / and /login so /login does not 404 */}
+        <Route path={PATHS.LOGIN} element={<AdminLogin />} />
+        <Route path="/login" element={<AdminLogin />} />
+        <Route path={PATHS.REGISTER} element={<AdminRegister />} />
+        <Route path="/register" element={<AdminRegister />} />
 
-      {/* Password reset routes */}
-      <Route path="/forgot-password" element={
-        <Suspense fallback={<LoadingSpinner />}>
-          <ForgotPasswordPage />
-        </Suspense>
-      } />
-      <Route path="/reset-password" element={
-        <Suspense fallback={<LoadingSpinner />}>
-          <ResetPasswordPage />
-        </Suspense>
-      } />
+        {/* Password reset routes */}
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-      {/* ProtectedRoute status pages */}
-      <Route path="/account-pending" element={<AccountPendingPage />} />
-      <Route path="/account-inactive" element={<AccountInactivePage />} />
-      <Route path="/unauthorized" element={<UnauthorizedPage />} />
+        {/* ProtectedRoute status pages */}
+        <Route path="/account-pending" element={<AccountPendingPage />} />
+        <Route path="/account-inactive" element={<AccountInactivePage />} />
+        <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
-      {/* Tracking detail page - accessible at /tracking/:trackingNumber */}
-      <Route
-        path={PATHS.TRACKING_REDIRECT}
-        element={
-          <ProtectedRoute>
-            <Suspense fallback={<LoadingSpinner />}>
+        {/* Tracking detail page - accessible at /tracking/:trackingNumber */}
+        <Route
+          path={PATHS.TRACKING_REDIRECT}
+          element={
+            <ProtectedRoute>
               <TrackingPage />
-            </Suspense>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path={PATHS.DASHBOARD}
-        element={
-          <ProtectedRoute>
-            <Suspense fallback={<LoadingSpinner />}>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path={PATHS.DASHBOARD}
+          element={
+            <ProtectedRoute>
               <DashboardLayout />
-            </Suspense>
-          </ProtectedRoute>
-        }
-      >
-        <Route
-          index
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <Dashboard />
-            </Suspense>
-          }
-        />
-        {/* Order detail routes - more specific routes must come first */}
-        <Route
-          path={PATHS.ORDERDETAILS}
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <OrderDetail />
-            </Suspense>
-          }
-        />
-        <Route
-          path={PATHS.ORDER_DETAIL}
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <OrderDetail />
-            </Suspense>
-          }
-        />
-        <Route
-          path={PATHS.ORDERS}
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <OrdersPage />
-            </Suspense>
-          }
-        />
-        <Route
-          path={PATHS.ORDER_DETAIL}
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <OrderDetail />
-            </Suspense>
-          }
-        />
-        <Route
-          path={PATHS.PRODUCTS}
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <AllProductPage />
-            </Suspense>
-          }
-        />
-        <Route
-          path={PATHS.PRODUCTDETAILS}
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <ProductDetail />
-            </Suspense>
-          }
-        />
-        <Route
-          path={PATHS.CATEGORY}
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <CategoryPage />
-            </Suspense>
-          }
-        />
-        <Route
-          path={PATHS.ADS}
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <AdsManagementPage />
-            </Suspense>
-          }
-        />
-        {/* Redirect category/:id to categories page */}
-        <Route
-          path="category/:id"
-          element={<Navigate to={`/dashboard/${PATHS.CATEGORY}`} replace />}
-        />
-        <Route
-          path={PATHS.USERS}
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <UsersPage />
-            </Suspense>
-          }
-        />
-        <Route
-          path={PATHS.USERDETAIL}
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <UserDetail />
-            </Suspense>
-          }
-        />
-        <Route
-          path="/dashboard/sellers/balances"
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <SellerBalancesPage />
-            </Suspense>
-          }
-        />
-        <Route
-          path={PATHS.SELLERDETAIL}
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <SellerDetailPage />
-            </Suspense>
-          }
-        />
-        <Route
-          path={PATHS.ADMINDETAIL}
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <UserDetail />
-            </Suspense>
-          }
-        />
-        <Route
-          path={PATHS.PAYMENTS}
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <PaymentPage />
-            </Suspense>
-          }
-        />
-        <Route
-          path={PATHS.PAYMENTDETAIL}
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <PaymentRequestDetail />
-            </Suspense>
-          }
-        />
-        <Route
-          path={PATHS.ACTIVITY}
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <UsersActivityPage />
-            </Suspense>
-          }
-        />
-        <Route
-          path={PATHS.SHIPPING_RATES}
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <ShippingRatesPage />
-            </Suspense>
-          }
-        />
-        <Route
-          path={PATHS.ORDER_STATUS}
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <AdminOrderStatusPage />
-            </Suspense>
-          }
-        />
-        <Route
-          path={PATHS.DISTANCE_OVERVIEW}
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <DistanceOverviewPage />
-            </Suspense>
-          }
-        />
-        {/* EazShop: single section for products, orders, shipping, pickup */}
-        <Route
-          path={PATHS.OFFICIAL_STORE}
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <EazShopLayout />
-            </Suspense>
+            </ProtectedRoute>
           }
         >
           <Route
             index
-            element={
-              <Suspense fallback={<LoadingSpinner />}>
-                <EazShopOverviewPage />
-              </Suspense>
-            }
+            element={<Dashboard />}
+          />
+          {/* Order detail routes - more specific routes must come first */}
+          <Route
+            path={PATHS.ORDERDETAILS}
+            element={<OrderDetail />}
           />
           <Route
-            path="products"
-            element={
-              <Suspense fallback={<LoadingSpinner />}>
-                <EazShopProductsPage />
-              </Suspense>
-            }
+            path={PATHS.ORDER_DETAIL}
+            element={<OrderDetail />}
           />
           <Route
-            path="products/new"
-            element={
-              <Suspense fallback={<LoadingSpinner />}>
-                <EazShopCreateProductPage />
-              </Suspense>
-            }
+            path={PATHS.ORDERS}
+            element={<OrdersPage />}
           />
           <Route
-            path="orders"
-            element={
-              <Suspense fallback={<LoadingSpinner />}>
-                <EazShopOrdersPage />
-              </Suspense>
-            }
+            path={PATHS.ORDER_DETAIL}
+            element={<OrderDetail />}
           />
           <Route
-            path="shipping-fees"
-            element={
-              <Suspense fallback={<LoadingSpinner />}>
-                <EazShopShippingFeesPage />
-              </Suspense>
-            }
+            path={PATHS.PRODUCTS}
+            element={<AllProductPage />}
           />
           <Route
-            path="pickup-centers"
-            element={
-              <Suspense fallback={<LoadingSpinner />}>
-                <PickupCentersPage />
-              </Suspense>
-            }
+            path={PATHS.PRODUCTDETAILS}
+            element={<ProductDetail />}
           />
           <Route
-            path="transactions"
-            element={
-              <Suspense fallback={<LoadingSpinner />}>
-                <EazShopTransactionsPage />
-              </Suspense>
-            }
+            path={PATHS.CATEGORY}
+            element={<CategoryPage />}
+          />
+          <Route
+            path={PATHS.ADS}
+            element={<AdsManagementPage />}
+          />
+          {/* Redirect category/:id to categories page */}
+          <Route
+            path="category/:id"
+            element={<Navigate to={`/dashboard/${PATHS.CATEGORY}`} replace />}
+          />
+          <Route
+            path={PATHS.USERS}
+            element={<UsersPage />}
+          />
+          <Route
+            path={PATHS.USERDETAIL}
+            element={<UserDetail />}
+          />
+          <Route
+            path="/dashboard/sellers/balances"
+            element={<SellerBalancesPage />}
+          />
+          <Route
+            path={PATHS.SELLERDETAIL}
+            element={<SellerDetailPage />}
+          />
+          <Route
+            path={PATHS.ADMINDETAIL}
+            element={<UserDetail />}
+          />
+          <Route
+            path={PATHS.PAYMENTS}
+            element={<PaymentPage />}
+          />
+          <Route
+            path={PATHS.PAYMENTDETAIL}
+            element={<PaymentRequestDetail />}
+          />
+          <Route
+            path={PATHS.ACTIVITY}
+            element={<UsersActivityPage />}
+          />
+          <Route
+            path={PATHS.SHIPPING_RATES}
+            element={<ShippingRatesPage />}
+          />
+          <Route
+            path={PATHS.ORDER_STATUS}
+            element={<AdminOrderStatusPage />}
+          />
+          <Route
+            path={PATHS.DISTANCE_OVERVIEW}
+            element={<DistanceOverviewPage />}
+          />
+          {/* EazShop: single section for products, orders, shipping, pickup */}
+          <Route
+            path={PATHS.OFFICIAL_STORE}
+            element={<EazShopLayout />}
+          >
+            <Route
+              index
+              element={<EazShopOverviewPage />}
+            />
+            <Route
+              path="products"
+              element={<EazShopProductsPage />}
+            />
+            <Route
+              path="products/new"
+              element={<EazShopCreateProductPage />}
+            />
+            <Route
+              path="orders"
+              element={<EazShopOrdersPage />}
+            />
+            <Route
+              path="shipping-fees"
+              element={<EazShopShippingFeesPage />}
+            />
+            <Route
+              path="pickup-centers"
+              element={<PickupCentersPage />}
+            />
+            <Route
+              path="transactions"
+              element={<EazShopTransactionsPage />}
+            />
+          </Route>
+          <Route
+            path={PATHS.REVIEWS}
+            element={<ReviewsPage />}
+          />
+          <Route
+            path={PATHS.ACTIVITY_LOGS}
+            element={<ActivityLogs />}
+          />
+          <Route
+            path={PATHS.TRACKING}
+            element={<TrackingPage />}
+          />
+          <Route
+            path={PATHS.REFUNDS}
+            element={<RefundsPage />}
+          />
+          <Route
+            path={PATHS.REFUND_DETAIL}
+            element={<RefundDetailPage />}
+          />
+          <Route
+            path={PATHS.BALANCE_HISTORY}
+            element={<BalanceHistoryPage />}
+          />
+          <Route
+            path={PATHS.SUPPORT}
+            element={<AdminSupportPage />}
+          />
+          <Route
+            path={PATHS.SUPPORT_TICKETS}
+            element={<AdminTicketsPage />}
+          />
+          <Route
+            path={PATHS.TICKET_DETAIL}
+            element={<AdminTicketDetailPage />}
+          />
+          <Route
+            path={PATHS.SITEMAP}
+            element={<SitemapPage />}
+          />
+          <Route
+            path={PATHS.NOTIFICATIONS}
+            element={<AdminNotificationsPage />}
+          />
+          <Route
+            path={PATHS.COUPONS}
+            element={<AdminCouponDiscountPage />}
+          />
+          <Route
+            path={PATHS.TAX}
+            element={<TaxReportPage />}
           />
         </Route>
         <Route
-          path={PATHS.REVIEWS}
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <ReviewsPage />
-            </Suspense>
-          }
+          path="*"
+          element={<AdminCatchAll />}
         />
-        <Route
-          path={PATHS.ACTIVITY_LOGS}
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <ActivityLogs />
-            </Suspense>
-          }
-        />
-        <Route
-          path={PATHS.TRACKING}
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <TrackingPage />
-            </Suspense>
-          }
-        />
-        <Route
-          path={PATHS.REFUNDS}
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <RefundsPage />
-            </Suspense>
-          }
-        />
-        <Route
-          path={PATHS.REFUND_DETAIL}
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <RefundDetailPage />
-            </Suspense>
-          }
-        />
-        <Route
-          path={PATHS.BALANCE_HISTORY}
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <BalanceHistoryPage />
-            </Suspense>
-          }
-        />
-        <Route
-          path={PATHS.SUPPORT}
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <AdminSupportPage />
-            </Suspense>
-          }
-        />
-        <Route
-          path={PATHS.SUPPORT_TICKETS}
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <AdminTicketsPage />
-            </Suspense>
-          }
-        />
-        <Route
-          path={PATHS.TICKET_DETAIL}
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <AdminTicketDetailPage />
-            </Suspense>
-          }
-        />
-        <Route
-          path={PATHS.SITEMAP}
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <SitemapPage />
-            </Suspense>
-          }
-        />
-        <Route
-          path={PATHS.NOTIFICATIONS}
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <AdminNotificationsPage />
-            </Suspense>
-          }
-        />
-        <Route
-          path={PATHS.COUPONS}
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <AdminCouponDiscountPage />
-            </Suspense>
-          }
-        />
-        <Route
-          path={PATHS.TAX}
-          element={
-            <Suspense fallback={<LoadingSpinner />}>
-              <TaxReportPage />
-            </Suspense>
-          }
-        />
-      </Route>
-      <Route
-        path="*"
-        element={<AdminCatchAll />}
-      />
-    </Routes>
+      </Routes>
+    </Suspense>
   );
 }

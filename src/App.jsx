@@ -1,27 +1,14 @@
-import { useMemo } from "react";
 import { BrowserRouter } from "react-router-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import GlobalStyles from "./shared/styles/GlobalStyles";
 import AdminRoutes from "./routes/AdminRoutes";
 import ScrollToTop from "./shared/ScrollToTop";
+import queryClient from "./api/queryClient";
+
 function App() {
-  // Use useMemo to prevent creating new QueryClient on every render
-  const queryClient = useMemo(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: {
-            refetchOnWindowFocus: false,
-            retry: 1,
-            gcTime: 1000 * 60 * 5, // 5 minutes garbage collection time
-          },
-        },
-      }),
-    []
-  );
   return (
     <QueryClientProvider client={queryClient}>
       <GlobalStyles />

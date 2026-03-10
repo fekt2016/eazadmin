@@ -27,6 +27,7 @@ import {
 import { FaCheckCircle, FaTimesCircle, FaUndo, FaClock, FaEye, FaWallet } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import EditUserModal from '../../shared/components/Modal/EditUserModal';
+import AddUserModal from '../../shared/components/Modal/AddUserModal';
 import PayoutVerificationModal from '../../shared/components/Modal/payoutVerificationModal';
 import { useResetSellerBalance } from '../../shared/hooks/useSellerBalance';
 import { ConfirmationModal } from '../../shared/components/Modal/ConfirmationModal';

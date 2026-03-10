@@ -2,6 +2,8 @@ import styled from "styled-components";
 import { useEffect, useState, useRef } from "react";
 import { useFormContext } from "react-hook-form";
 import { FiUploadCloud, FiX } from "react-icons/fi";
+import { IMAGE_SLOTS } from "../../../../shared/utils/cloudinaryConfig";
+import OptimizedImage from "../../../../shared/components/OptimizedImage";
 
 // Styled components - defined before component to ensure they're available
 const ImageSectionContainer = styled.div`
@@ -154,10 +156,10 @@ const ImagePreview = styled.div`
   aspect-ratio: 1/1;
 `;
 
-const PreviewImage = styled.img`
+/* PreviewImage styled component replaced by OptimizedImage */
+const PreviewImage = styled.div`
   width: 100%;
   height: 100%;
-  object-fit: cover;
 `;
 
 const RemoveButton = styled.button`
@@ -216,17 +218,17 @@ const CoverPreview = styled.div`
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 `;
 
-const CoverImage = styled.img`
+/* CoverImage styled component replaced by OptimizedImage */
+const CoverImage = styled.div`
   width: 100%;
-  max-height: 300px;
-  object-fit: cover;
+  height: 100%;
 `;
 
 export default function ImageSection({ isSubmitting }) {
   const { watch, setValue, register, trigger, formState: { errors } } = useFormContext();
   const [coverPreview, setCoverPreview] = useState("");
   const [imagePreviews, setImagePreviews] = useState([]);
-  
+
   // Use ref to track cover image to prevent it from being cleared
   const coverImageRef = useRef(null);
 
@@ -234,14 +236,14 @@ export default function ImageSection({ isSubmitting }) {
   const imageCover = watch("imageCover");
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const images = watch("images") || [];
-  
+
   // Update ref when imageCover changes
   useEffect(() => {
     if (imageCover) {
       coverImageRef.current = imageCover;
     }
   }, [imageCover]);
-  
+
   // Register imageCover for validation
   useEffect(() => {
     register("imageCover", {
@@ -314,35 +316,35 @@ export default function ImageSection({ isSubmitting }) {
 
     // Get current images to preserve them - use the watched value directly
     const currentImages = images || [];
-    
+
     // Get the cover image from ref (most reliable) or current value
     const currentImageCover = coverImageRef.current || imageCover;
-    
+
     // Set the new images array
-    setValue("images", [...currentImages, ...files], { 
+    setValue("images", [...currentImages, ...files], {
       shouldDirty: true,
-      shouldValidate: false 
+      shouldValidate: false
     });
-    
+
     // Ensure imageCover is preserved - restore it immediately if needed
     if (currentImageCover) {
       // Check if imageCover was cleared and restore it
       const checkAndRestore = () => {
         const currentCover = watch("imageCover");
         if (!currentCover && currentImageCover) {
-          setValue("imageCover", currentImageCover, { 
+          setValue("imageCover", currentImageCover, {
             shouldValidate: true,
-            shouldDirty: true 
+            shouldDirty: true
           });
           coverImageRef.current = currentImageCover;
         }
       };
-      
+
       // Check immediately and also after a brief delay to catch any async clearing
       checkAndRestore();
       setTimeout(checkAndRestore, 10);
     }
-    
+
     // Clear the input value to allow re-selecting the same files
     e.target.value = '';
   };
@@ -386,7 +388,13 @@ export default function ImageSection({ isSubmitting }) {
           <PreviewContainer>
             <PreviewTitle>Cover Preview</PreviewTitle>
             <CoverPreview>
-              <CoverImage src={coverPreview} alt="Cover preview" />
+              <OptimizedImage
+                src={coverPreview}
+                slot={IMAGE_SLOTS.FORM_PREVIEW}
+                aspectRatio="1/1"
+                alt="Cover preview"
+                objectFit="contain"
+              />
             </CoverPreview>
           </PreviewContainer>
         )}
@@ -422,7 +430,13 @@ export default function ImageSection({ isSubmitting }) {
             <PreviewGrid>
               {imagePreviews.map((preview, index) => (
                 <ImagePreview key={index}>
-                  <PreviewImage src={preview} alt={`Product ${index + 1}`} />
+                  <OptimizedImage
+                    src={preview}
+                    slot={IMAGE_SLOTS.FORM_PREVIEW}
+                    aspectRatio="1/1"
+                    alt={`Product ${index + 1}`}
+                    objectFit="cover"
+                  />
                   <RemoveButton
                     type="button"
                     onClick={() => handleRemoveImage(index)}
