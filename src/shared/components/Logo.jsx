@@ -2,41 +2,33 @@ import React from "react";
 import styled from "styled-components";
 import { Link } from "react-router-dom";
 
+/** Served from `eazadmin/public/newSaiisaiLogo.png` */
+const WORDMARK_SRC = "/newSaiisaiLogo.png";
+
 /**
- * Saiisai Logo Component
- * Can be used as a standalone logo or as a link to home
+ * Saiisai brand wordmark (PNG includes logotype + mark — no separate text).
+ * Variants control display size only.
  */
 const Logo = ({
   variant = "default", // "default" | "compact" | "icon"
-  to = null, // If provided, wraps logo in Link
+  to = null,
   className = "",
   ...props
 }) => {
   const logoContent = (
     <LogoContainer className={className} $variant={variant} {...props}>
-      <LogoIcon $variant={variant}>
-        {/* Use shared PNG logo from public folder */}
-        <img
-          src="/saiisailogo.png"
-          alt="Saiisai logo"
-          style={{ width: "100%", height: "100%", objectFit: "contain" }}
-        />
-      </LogoIcon>
-      {variant !== "icon" && (
-        <LogoText>
-          <LogoTextPrimary $variant={variant}>Sai</LogoTextPrimary>
-          <LogoTextSecondary $variant={variant}>isai</LogoTextSecondary>
-        </LogoText>
-      )}
+      <WordmarkImg
+        src={WORDMARK_SRC}
+        alt="Saiisai"
+        $variant={variant}
+        decoding="async"
+        fetchPriority={variant === "default" ? "high" : "auto"}
+      />
     </LogoContainer>
   );
 
   if (to) {
-    return (
-      <LogoLink to={to}>
-        {logoContent}
-      </LogoLink>
-    );
+    return <LogoLink to={to}>{logoContent}</LogoLink>;
   }
 
   return logoContent;
@@ -45,12 +37,12 @@ const Logo = ({
 const LogoContainer = styled.div`
   display: flex;
   align-items: center;
-  gap: ${(props) => (props.$variant === "compact" ? "0.5rem" : "0.75rem")};
+  justify-content: center;
   cursor: ${(props) => (props.onClick || props.to ? "pointer" : "default")};
   transition: opacity 0.2s ease;
 
   &:hover {
-    opacity: ${(props) => (props.onClick || props.to ? 0.8 : 1)};
+    opacity: ${(props) => (props.onClick || props.to ? 0.92 : 1)};
   }
 `;
 
@@ -59,56 +51,31 @@ const LogoLink = styled(Link)`
   display: inline-flex;
 `;
 
-const LogoIcon = styled.div`
-  /* Make the logo more prominent in the buyer app header */
-  width: ${(props) => {
-    if (props.$variant === "compact") return "32px";
-    if (props.$variant === "icon") return "40px";
-    return "36px";
-  }};
-  height: ${(props) => {
-    if (props.$variant === "compact") return "32px";
-    if (props.$variant === "icon") return "40px";
-    return "36px";
-  }};
-  color: #ffc400;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+const WordmarkImg = styled.img`
+  display: block;
+  width: auto;
+  height: auto;
+  object-fit: contain;
 
-  svg {
-    width: 100%;
-    height: 100%;
-  }
-`;
-
-const LogoText = styled.div`
-  display: flex;
-  align-items: baseline;
-  gap: 0.125rem;
-  line-height: 1;
-`;
-
-const LogoTextPrimary = styled.span`
-  font-size: ${(props) => {
-    if (props.$variant === "compact") return "0.85rem";
-    return "1rem";
-  }};
-  font-weight: 700;
-  color: #1e293b;
-  letter-spacing: -0.5px;
-`;
-
-const LogoTextSecondary = styled.span`
-  font-size: ${(props) => {
-    if (props.$variant === "compact") return "0.85rem";
-    return "1rem";
-  }};
-  font-weight: 700;
-  color: #ffc400;
-  letter-spacing: -0.5px;
+  ${(props) => {
+    switch (props.$variant) {
+      case "compact":
+        return `
+          max-width: 168px;
+          max-height: 52px;
+        `;
+      case "icon":
+        return `
+          max-width: 44px;
+          max-height: 44px;
+        `;
+      default:
+        return `
+          max-width: 260px;
+          max-height: 80px;
+        `;
+    }
+  }}
 `;
 
 export default Logo;
-

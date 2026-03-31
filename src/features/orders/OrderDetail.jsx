@@ -633,12 +633,20 @@ const OrderDetail = () => {
             {order.sellers.map((seller) => {
               const sellerIdStr = seller.sellerId ? String(seller.sellerId) : null;
               const isEazShopStore = sellerIdStr === EAZSHOP_SELLER_ID;
+              const isMainEazShopOrder =
+                isEazShopStore || seller.sellerType === 'eazshop';
               const fetched = sellerIdStr ? sellerById[sellerIdStr] : null;
               const queryIndex = sellerIdStr ? sellerIdsToFetch.indexOf(sellerIdStr) : -1;
               const isLoadingSeller = queryIndex >= 0 && sellerQueries[queryIndex]?.isLoading;
-              const name = isEazShopStore ? PLATFORM_STORE_NAME : (fetched?.name ?? seller.name ?? "—");
-              const shopName = isEazShopStore ? PLATFORM_STORE_NAME : (fetched?.shopName ?? seller.shopName ?? "—");
-              const email = isEazShopStore ? "Platform store" : (fetched?.email ?? seller.email ?? "—");
+              const name = isMainEazShopOrder
+                ? PLATFORM_STORE_NAME
+                : (fetched?.name ?? seller.name ?? "—");
+              const shopName = isMainEazShopOrder
+                ? PLATFORM_STORE_NAME
+                : (fetched?.shopName ?? seller.shopName ?? "—");
+              const email = isMainEazShopOrder
+                ? "Platform store"
+                : (fetched?.email ?? seller.email ?? "—");
               const isInactive = fetched && (fetched.active === false || fetched.status !== "active");
               const fetchFailed = sellerIdStr && !isEazShopStore && !fetched && !isLoadingSeller;
               return (
@@ -673,7 +681,12 @@ const OrderDetail = () => {
                         Account or status not active — set to active in Seller detail to enable full access.
                       </SellerContact>
                     )}
-                    {sellerIdStr && !isEazShopStore && (
+                    {isMainEazShopOrder ? (
+                      <SellerTypeBadge $type="eazshop">
+                        Main EazShop order
+                      </SellerTypeBadge>
+                    ) : null}
+                    {sellerIdStr && !isMainEazShopOrder && (
                       <SellerContact style={{ marginTop: "0.25rem" }}>
                         <Link
                           to={`/dashboard/${PATHS.SELLERDETAIL.replace(":id", sellerIdStr)}`}
@@ -903,27 +916,29 @@ const StatusBadge = styled.span`
   font-size: 0.9rem;
   font-weight: 600;
 
-  background-color: ${(props) =>
-    props.status === "processing"
-      ? "#fef9c3"
-      : props.status === "shipped"
-        ? "#dbeafe"
-        : props.status === "delivered"
-          ? "#dcfce7"
-          : props.status === "cancelled"
-            ? "#fee2e2"
-            : "#e0f2fe"};
+  background-color: ${(props) => {
+    const status = (props.status || '').toString().toLowerCase();
+    if (status === 'pending' || status === 'pending_payment') return '#fef3c7';
+    if (status === 'processing' || status === 'preparing' || status === 'ready_for_dispatch') return '#e0f2fe';
+    if (status === 'confirmed') return '#f3e8ff';
+    if (status === 'shipped' || status === 'out_for_delivery') return '#fce7f3';
+    if (status === 'delivery_attempted') return '#ffe4e6';
+    if (status === 'delivered') return '#dcfce7';
+    if (status === 'cancelled') return '#fee2e2';
+    return '#e2e8f0';
+  }};
 
-  color: ${(props) =>
-    props.status === "processing"
-      ? "#ca8a04"
-      : props.status === "shipped"
-        ? "#2563eb"
-        : props.status === "delivered"
-          ? "#16a34a"
-          : props.status === "cancelled"
-            ? "#dc2626"
-            : "#0ea5e9"};
+  color: ${(props) => {
+    const status = (props.status || '').toString().toLowerCase();
+    if (status === 'pending' || status === 'pending_payment') return '#b45309';
+    if (status === 'processing' || status === 'preparing' || status === 'ready_for_dispatch') return '#0369a1';
+    if (status === 'confirmed') return '#7e22ce';
+    if (status === 'shipped' || status === 'out_for_delivery') return '#be185d';
+    if (status === 'delivery_attempted') return '#be123c';
+    if (status === 'delivered') return '#15803d';
+    if (status === 'cancelled') return '#b91c1c';
+    return '#475569';
+  }};
 `;
 
 const DeliveryInfo = styled.div`
@@ -1337,6 +1352,19 @@ const SellerContact = styled.div`
   color: #64748b;
   display: flex;
   align-items: center;
+`;
+
+const SellerTypeBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin-top: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: ${(p) => (p.$type === 'eazshop' ? '#dbeafe' : '#f1f5f9')};
+  color: ${(p) => (p.$type === 'eazshop' ? '#1d4ed8' : '#475569')};
 `;
 
 const SellerAmounts = styled.div`

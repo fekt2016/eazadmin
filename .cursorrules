@@ -1,0 +1,8 @@
+# Eazadmin Web App Cursor Rules
+
+## Mobile/Web Component Separation (Required)
+
+- This web app must not import or reuse UI components from mobile apps.
+- Never import from `saiisai` or `saiisaiseller` component paths.
+- If a feature exists on mobile and web, implement separate components for web.
+- Do not create cross-platform shared frontend component folders/packages.

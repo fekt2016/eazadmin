@@ -32,9 +32,6 @@ export default defineConfig({
           'vendor-icons': [
             'react-icons',
           ],
-          'vendor-icons': [
-            'react-icons',
-          ],
         },
       },
     },

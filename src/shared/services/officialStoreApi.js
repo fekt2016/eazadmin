@@ -121,5 +121,21 @@ export const officialStoreService = {
       throw error;
     }
   },
+
+  // Official Store analytics (credits split)
+  getOfficialStoreAnalytics: async ({ range = 30, page = 1, limit = 10 } = {}) => {
+    try {
+      const params = new URLSearchParams({
+        range: String(range),
+        page: String(page),
+        limit: String(limit),
+      });
+      const response = await api.get(`/eazshop/analytics?${params.toString()}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching Official Store analytics:', error);
+      throw error;
+    }
+  },
 };
 

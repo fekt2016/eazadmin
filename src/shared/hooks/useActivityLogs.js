@@ -64,6 +64,30 @@ const useActivityLogs = ({
     retry: 2,
   });
 
+  const {
+    data: homepageExperimentStatsData,
+    isLoading: isHomepageExperimentStatsLoading,
+  } = useQuery({
+    queryKey: [
+      'activityLogs',
+      'homepage-experiment-stats',
+      role,
+      platform,
+      dateRange,
+      appliedSearch,
+    ],
+    queryFn: () => {
+      const params = {};
+      if (role) params.role = role;
+      if (platform) params.platform = platform;
+      if (dateRange?.startDate) params.startDate = dateRange.startDate;
+      if (dateRange?.endDate) params.endDate = dateRange.endDate;
+      if (appliedSearch) params.search = appliedSearch;
+      return activityLogApi.getHomepageExperimentStats(params);
+    },
+    retry: 2,
+  });
+
   // Delete single log mutation
   const deleteLogMutation = useMutation({
     mutationFn: (id) => activityLogApi.deleteActivityLog(id),
@@ -93,6 +117,8 @@ const useActivityLogs = ({
   const total = logsData?.data?.total || 0;
   const totalPages = logsData?.data?.totalPages || 1;
   const stats = statsData?.data?.data || null;
+  const homepageExperimentStats =
+    homepageExperimentStatsData?.data?.data || null;
 
   return {
     logs,
@@ -102,8 +128,10 @@ const useActivityLogs = ({
     limit,
     isLoading,
     isStatsLoading,
+    isHomepageExperimentStatsLoading,
     error,
     stats,
+    homepageExperimentStats,
     refetch,
     deleteLog: deleteLogMutation.mutate,
     deleteAllLogs: deleteAllLogsMutation.mutate,

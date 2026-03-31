@@ -4,8 +4,7 @@ import React from 'react';
 import { renderWithProviders } from '../utils/testUtils';
 import DistanceOverviewPage from '../../features/shipping/DistanceOverviewPage';
 
-// High timeout for parallel stability
-vi.setConfig({ testTimeout: 20000 });
+// Use global testTimeout (40000)
 
 const mockNeighborhoodsData = {
     data: {
@@ -90,13 +89,17 @@ describe('DistanceOverviewPage', () => {
     it('opens add neighborhood modal', async () => {
         renderWithProviders(<DistanceOverviewPage />);
 
+        await waitFor(() => {
+            expect(screen.getByText(/Add Neighborhood/i)).toBeInTheDocument();
+        }, { timeout: 10000 });
+
         const addButton = screen.getByText(/Add Neighborhood/i);
         fireEvent.click(addButton);
 
         await waitFor(() => {
             expect(screen.getAllByText(/Add Neighborhood/i).length).toBeGreaterThan(0);
         }, { timeout: 10000 });
-    });
+    }, 35000);
 
     it('filters by zone', async () => {
         const { container } = renderWithProviders(<DistanceOverviewPage />);

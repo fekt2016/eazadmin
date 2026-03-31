@@ -5,6 +5,7 @@ import { useOfficialStore } from "../../shared/hooks/useOfficialStore";
 import { LoadingSpinner } from "../../shared/components/LoadingSpinner";
 import { formatDate } from "../../shared/utils/helpers";
 import { PATHS } from "../../routes/routePath";
+import { EAZSHOP_SELLER_ID, PLATFORM_NAME } from "../../shared/constants/systemConstants";
 
 const DASHBOARD_BASE = "/dashboard";
 
@@ -12,6 +13,16 @@ function getOrderDisplay(sellerOrder) {
   const order = sellerOrder?.order;
   if (!order) return null;
   const customerName = order.user?.name || order.user?.email || order.shippingAddress?.fullName || order.shippingAddress?.name || "—";
+  const sellerId =
+    sellerOrder?.seller?._id?.toString?.() ??
+    sellerOrder?.seller?.toString?.() ??
+    "";
+  const sellerType = (sellerOrder?.sellerType || "").toString().toLowerCase();
+  const isMainEazShopOrder =
+    sellerId === EAZSHOP_SELLER_ID ||
+    sellerType === "eazshop" ||
+    String(order?.seller?._id || order?.seller || "") === EAZSHOP_SELLER_ID;
+
   return {
     _id: order._id ?? order.id,
     orderNumber: order.orderNumber ?? order._id ?? "—",
@@ -19,6 +30,8 @@ function getOrderDisplay(sellerOrder) {
     date: order.createdAt,
     total: order.totalPrice ?? order.total ?? sellerOrder.subtotal ?? 0,
     status: order.currentStatus ?? order.orderStatus ?? order.status ?? "—",
+    sourceLabel: isMainEazShopOrder ? PLATFORM_NAME : "EazShop Seller",
+    sourceTone: isMainEazShopOrder ? "main" : "seller",
   };
 }
 
@@ -66,6 +79,7 @@ export default function OfficialStoreOrdersPage() {
             <tr>
               <Th>Order #</Th>
               <Th>Customer</Th>
+              <Th>Source</Th>
               <Th>Date</Th>
               <Th>Amount</Th>
               <Th>Status</Th>
@@ -81,6 +95,11 @@ export default function OfficialStoreOrdersPage() {
                   <tr key={sellerOrder._id || row._id}>
                     <Td>{row.orderNumber}</Td>
                     <Td>{row.customer}</Td>
+                    <Td>
+                      <SourceBadge $tone={row.sourceTone}>
+                        {row.sourceLabel}
+                      </SourceBadge>
+                    </Td>
                     <Td>{formatDate(row.date)}</Td>
                     <Td>Gh₵{(row.total || 0).toFixed(2)}</Td>
                     <Td>
@@ -105,7 +124,7 @@ export default function OfficialStoreOrdersPage() {
               })
             ) : (
               <tr>
-                <Td colSpan={6}>
+                <Td colSpan={7}>
                   <EmptyState>
                     <FaShoppingCart size={40} />
                     <p>No Official Store orders yet.</p>
@@ -180,6 +199,17 @@ const StatusBadge = styled.span`
   font-weight: 500;
   background: ${(p) => p.$color}22;
   color: ${(p) => p.$color};
+`;
+
+const SourceBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: ${(p) => (p.$tone === "main" ? "#dbeafe" : "#ede9fe")};
+  color: ${(p) => (p.$tone === "main" ? "#1d4ed8" : "#6d28d9")};
 `;
 
 const ViewButton = styled.button`

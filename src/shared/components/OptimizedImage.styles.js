@@ -2,35 +2,33 @@ import styled, { css, keyframes } from "styled-components";
 import { devicesMax } from "../styles/breakpoint";
 
 const imageFadeIn = keyframes`
-  from { opacity: 0; transform: scale(0.98); }
-  to { opacity: 1; transform: scale(1); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 `;
 
 export const ImageWrapper = styled.div`
   position: relative;
   width: 100%;
-  aspect-ratio: ${({ $aspectRatio }) => $aspectRatio || "1 / 1"};
+  min-height: 0;
   overflow: hidden;
   background-color: ${({ $bg }) => $bg || "var(--color-grey-100, #f8f9fa)"};
   border-radius: ${({ $radius }) => $radius || "var(--border-radius-md, 0.75rem)"};
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s ease;
-
-  &.image-hover:hover img {
-    transform: scale(1.05);
-  }
 `;
 
 export const StyledImage = styled.img`
-  width: 100% !important;
-  height: 100% !important;
-  object-fit: ${({ $objectFit }) => $objectFit || "contain"} !important;
+  display: block;
+  width: auto !important;
+  height: auto !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain;
   object-position: center;
-  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   opacity: ${({ $loaded }) => ($loaded ? 1 : 0)};
   animation: ${({ $loaded }) => ($loaded ? css`${imageFadeIn} 0.4s ease-out` : "none")};
+  transform: none;
 `;
 
 export const Skeleton = styled.div`

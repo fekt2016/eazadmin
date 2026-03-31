@@ -37,7 +37,7 @@ const ProtectedRoutes = ({ children }) => {
     }
     return (
       <Navigate
-        to="/error"
+        to="/unauthorized"
         state={{ error: "Error fetching user data" }}
         replace
       />

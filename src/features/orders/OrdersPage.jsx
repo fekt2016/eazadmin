@@ -197,23 +197,43 @@ export default function OrdersPage() {
     switch (status) {
       case "pending":
       case "pending_payment":
-        return "#f39c12";
+        return "#f59e0b"; // Amber
       case "processing":
       case "preparing":
       case "ready_for_dispatch":
-        return "#3498db";
+        return "#0ea5e9"; // Sky blue
       case "confirmed":
-        return "#27ae60"; // Green for confirmed
+        return "#8b5cf6"; // Violet
       case "shipped":
       case "out_for_delivery":
-        return "#9b59b6";
+        return "#ec4899"; // Pink
       case "delivered":
-        return "#2ecc71";
+        return "#22c55e"; // Green
       case "cancelled":
-        return "#e74c3c";
+        return "#ef4444"; // Red
       default:
         return "#7f8c8d";
     }
+  };
+
+  const getDisplayStatus = (order) => {
+    const paymentStatus = (order?.paymentStatus || "").toString().toLowerCase();
+    const rawStatus =
+      (order?.currentStatus ?? order?.orderStatus ?? order?.status ?? "unknown")
+        .toString()
+        .toLowerCase();
+
+    // If payment is already successful, admin table should never show cancelled.
+    // This is a defensive UI normalization for legacy inconsistent rows.
+    const isPaymentConfirmed =
+      paymentStatus === "paid" || paymentStatus === "completed";
+    const isCancelled = rawStatus === "cancelled";
+
+    if (isPaymentConfirmed && isCancelled) {
+      return "confirmed";
+    }
+
+    return rawStatus;
   };
 
   return (
@@ -294,7 +314,7 @@ export default function OrdersPage() {
           </SearchIcon>
           <SearchInput
             type="text"
-            placeholder="Search by order ID"
+            placeholder="Search by order ID, order number, or tracking number"
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
@@ -356,6 +376,7 @@ export default function OrdersPage() {
             ordersList.map((order) => {
               const orderId = order._id ?? order.id;
               const orderIdStr = orderId?.toString?.() ?? orderId;
+              const displayStatus = getDisplayStatus(order);
               return (
                 <TableRow key={orderIdStr}>
                   <TableCell>{order.orderNumber ?? "—"}</TableCell>
@@ -378,11 +399,10 @@ export default function OrdersPage() {
                     Gh₵{(order.totalPrice ?? order.total ?? 0).toFixed(2)}
                   </TableCell>
                   <TableCell>
-                    <StatusBadge $color={getStatusColor(order.currentStatus ?? order.orderStatus ?? order.status)}>
-                      {getStatusIcon(order.currentStatus ?? order.orderStatus ?? order.status)}
-                      {(order.currentStatus ?? order.orderStatus ?? order.status ?? "Unknown")
-                        .toString().charAt(0).toUpperCase() +
-                        (order.currentStatus ?? order.orderStatus ?? order.status ?? "unknown").toString().slice(1)}
+                    <StatusBadge $color={getStatusColor(displayStatus)}>
+                      {getStatusIcon(displayStatus)}
+                      {displayStatus.charAt(0).toUpperCase() +
+                        displayStatus.slice(1)}
                     </StatusBadge>
                   </TableCell>
                   <TableCell>

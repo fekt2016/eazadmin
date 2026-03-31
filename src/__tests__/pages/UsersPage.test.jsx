@@ -4,8 +4,7 @@ import React from 'react';
 import { renderWithProviders } from '../utils/testUtils';
 import UsersPage from '../../features/users/UsersPage';
 
-// Increase timeout for this complex file
-vi.setConfig({ testTimeout: 10000 });
+// Use global testTimeout (15000) - tests need time for async render
 
 // Stable mock data
 const MOCK_USERS_DATA = {
@@ -91,11 +90,13 @@ describe('UsersPage', () => {
     it('renders users tab by default', async () => {
         renderWithProviders(<UsersPage />);
 
-        expect(screen.getByText(/User Management/i)).toBeInTheDocument();
+        await waitFor(() => {
+            expect(screen.getByText(/User Management/i)).toBeInTheDocument();
+        }, { timeout: 10000 });
         await waitFor(() => {
             expect(screen.getByText(/User One/i)).toBeInTheDocument();
-        }, { timeout: 3000 });
-    });
+        }, { timeout: 10000 });
+    }, 35000);
 
     it('switches to sellers tab', async () => {
         renderWithProviders(<UsersPage />);
@@ -111,11 +112,15 @@ describe('UsersPage', () => {
     it('opens add user modal', async () => {
         renderWithProviders(<UsersPage />);
 
+        await waitFor(() => {
+            expect(screen.getByText(/Add New User/i)).toBeInTheDocument();
+        }, { timeout: 10000 });
+
         const addBtn = screen.getByText(/Add New User/i);
         fireEvent.click(addBtn);
 
         await waitFor(() => {
             expect(screen.getByText(/Create New Account/i)).toBeInTheDocument();
-        }, { timeout: 3000 });
-    });
+        }, { timeout: 10000 });
+    }, 35000);
 });

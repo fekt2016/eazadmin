@@ -36,11 +36,15 @@ const EazShopShippingFeesPage = lazy(() => import("../features/official-store/Of
 const PickupCentersPage = lazy(() => import("../features/official-store/PickupCentersPage"));
 const EazShopTransactionsPage = lazy(() => import("../features/official-store/OfficialStoreTransactionsPage"));
 const ReviewsPage = lazy(() => import("../features/reviews/ReviewsPage"));
+const TestimonialsPage = lazy(() => import("../features/testimonials/TestimonialsPage"));
 const TrackingPage = lazy(() => import("../features/orders/TrackingPage"));
 const ActivityLogs = lazy(() => import("../pages/ActivityLogs"));
 const RefundsPage = lazy(() => import("../features/refunds/RefundsPage"));
 const RefundDetailPage = lazy(() => import("../features/refunds/pages/RefundDetailPage"));
 const BalanceHistoryPage = lazy(() => import("../features/history/BalanceHistoryPage"));
+const SellerCreditReconciliationPage = lazy(
+  () => import("../features/history/SellerCreditReconciliationPage")
+);
 const AdminSupportPage = lazy(() => import("../pages/support/AdminSupportPage"));
 const AdminTicketsPage = lazy(() => import("../pages/support/AdminTicketsPage"));
 const AdminTicketDetailPage = lazy(() => import("../pages/support/AdminTicketDetailPage"));
@@ -49,6 +53,7 @@ const AdminNotificationsPage = lazy(() => import("../pages/notifications/AdminNo
 const AdminCouponDiscountPage = lazy(() => import("../pages/coupons/AdminCouponDiscountPage"));
 const AdsManagementPage = lazy(() => import("../pages/ads/AdsManagementPage"));
 const TaxReportPage = lazy(() => import("../features/tax/TaxReportPage"));
+const StatusVideosPage = lazy(() => import("../features/status-videos/StatusVideosPage"));
 
 const AdminCatchAll = () => {
   const currentPath = window.location.pathname;
@@ -159,6 +164,10 @@ export default function AdminRoutes() {
             path={PATHS.ADS}
             element={<AdsManagementPage />}
           />
+          <Route
+            path={PATHS.STATUS_VIDEOS}
+            element={<StatusVideosPage />}
+          />
           {/* Redirect category/:id to categories page */}
           <Route
             path="category/:id"
@@ -247,6 +256,10 @@ export default function AdminRoutes() {
             element={<ReviewsPage />}
           />
           <Route
+            path={PATHS.TESTIMONIALS}
+            element={<TestimonialsPage />}
+          />
+          <Route
             path={PATHS.ACTIVITY_LOGS}
             element={<ActivityLogs />}
           />
@@ -265,6 +278,10 @@ export default function AdminRoutes() {
           <Route
             path={PATHS.BALANCE_HISTORY}
             element={<BalanceHistoryPage />}
+          />
+          <Route
+            path={PATHS.SELLER_CREDIT_RECONCILIATION}
+            element={<SellerCreditReconciliationPage />}
           />
           <Route
             path={PATHS.SUPPORT}

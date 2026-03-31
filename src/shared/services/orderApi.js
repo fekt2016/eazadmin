@@ -125,6 +125,47 @@ export const orderService = {
     const response = await api.post("/order/backfill-seller-credits", options);
     return response.data;
   },
+  reconcileSellerCredits: async (options = {}) => {
+    const response = await api.post(
+      "/order/reconcile-seller-credits",
+      options
+    );
+    return response.data;
+  },
+  reconcileSingleSellerCredit: async (orderId, options = {}) => {
+    if (!orderId) {
+      throw new Error("Order ID is required");
+    }
+    const response = await api.post(
+      `/order/reconcile-seller-credit/${orderId}`,
+      options
+    );
+    return response.data;
+  },
+  reconcileSingleSellerCreditByIdentifier: async (identifier, options = {}) => {
+    if (!identifier) {
+      throw new Error('Order identifier is required');
+    }
+    const response = await api.post('/order/reconcile-seller-credit', {
+      identifier,
+      ...options,
+    });
+    return response.data;
+  },
+  /**
+   * Dry-run missing-credit reconciliation to obtain amountSnapshot for UI eligibility.
+   */
+  previewSellerCreditReconciliation: async (identifier) => {
+    if (!identifier) {
+      throw new Error('Order identifier is required');
+    }
+    const response = await api.post('/order/reconcile-seller-credit', {
+      identifier,
+      dryRun: true,
+      reconciliationType: 'missing_credit_tx',
+    });
+    return response.data;
+  },
   deleteOrder: async (orderId) => {
     if (!orderId) {
       throw new Error("Order ID is required");

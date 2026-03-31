@@ -48,6 +48,21 @@ const activityLogApi = {
     const queryString = queryParams.toString();
     return api.get(`/logs/stats${queryString ? `?${queryString}` : ''}`);
   },
+
+  getHomepageExperimentStats: (params = {}) => {
+    const queryParams = new URLSearchParams();
+
+    if (params.role) queryParams.append('role', params.role);
+    if (params.platform) queryParams.append('platform', params.platform);
+    if (params.startDate) queryParams.append('startDate', params.startDate);
+    if (params.endDate) queryParams.append('endDate', params.endDate);
+    if (params.search) queryParams.append('search', params.search);
+
+    const queryString = queryParams.toString();
+    return api.get(
+      `/logs/stats/homepage-experiments${queryString ? `?${queryString}` : ''}`
+    );
+  },
 };
 
 export default activityLogApi;

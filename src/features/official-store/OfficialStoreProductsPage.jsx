@@ -18,6 +18,33 @@ function getShopName(product) {
   return "—";
 }
 
+function getOfficialProductType(product) {
+  const sellerId =
+    product.seller?._id?.toString?.() ??
+    product.seller?.toString?.() ??
+    "";
+  const supplierSellerId =
+    product.supplierSeller?._id?.toString?.() ??
+    product.supplierSeller?.toString?.() ??
+    "";
+
+  if (sellerId === EAZSHOP_SELLER_ID && !supplierSellerId) {
+    return { label: "Main EazShop", tone: "main" };
+  }
+
+  if (supplierSellerId || sellerId !== EAZSHOP_SELLER_ID) {
+    return { label: "Accepted Seller", tone: "accepted" };
+  }
+
+  return { label: "Official Store", tone: "neutral" };
+}
+
+function formatPrice(value) {
+  const numeric = Number(value);
+  if (Number.isFinite(numeric)) return numeric.toFixed(2);
+  return "0.00";
+}
+
 export default function OfficialStoreProductsPage() {
   const navigate = useNavigate();
   const { useGetOfficialStoreProducts } = useOfficialStore();
@@ -193,10 +220,13 @@ export default function OfficialStoreProductsPage() {
               <TableCell>
                 <ProductName>{product.name}</ProductName>
                 <ShopName>{getShopName(product)}</ShopName>
+                <ProductTypeBadge $tone={getOfficialProductType(product).tone}>
+                  {getOfficialProductType(product).label}
+                </ProductTypeBadge>
               </TableCell>
               <TableCell>
                 <PriceInfo>
-                  ₵{product.price?.toFixed(2) || "0.00"}
+                  ₵{formatPrice(product.price)}
                 </PriceInfo>
               </TableCell>
               <TableCell>
@@ -506,6 +536,28 @@ const ShopName = styled.div`
   font-size: 0.8rem;
   color: #64748b;
   margin-top: 0.2rem;
+`;
+
+const ProductTypeBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  margin-top: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: ${({ $tone }) =>
+    $tone === "main"
+      ? "#dbeafe"
+      : $tone === "accepted"
+        ? "#ede9fe"
+        : "#f1f5f9"};
+  color: ${({ $tone }) =>
+    $tone === "main"
+      ? "#1d4ed8"
+      : $tone === "accepted"
+        ? "#6d28d9"
+        : "#475569"};
 `;
 
 const PriceInfo = styled.div`

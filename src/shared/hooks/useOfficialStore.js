@@ -114,6 +114,23 @@ export const useOfficialStore = () => {
       retry: 2,
     });
 
+  // Official Store analytics (credits split)
+  const useGetOfficialStoreAnalytics = ({ range = 30, page = 1, limit = 10 } = {}) =>
+    useQuery({
+      queryKey: ['official-store', 'analytics', range, page, limit],
+      queryFn: async () => {
+        const res = await officialStoreService.getOfficialStoreAnalytics({
+          range,
+          page,
+          limit,
+        });
+        // Expected backend shape: { status, data: { summary, orders, pagination } }
+        return res?.data || res;
+      },
+      staleTime: 1000 * 60 * 5,
+      retry: 2,
+    });
+
   // Get Official Store shipping fees
   const useGetOfficialStoreShippingFees = () =>
     useQuery({
@@ -189,6 +206,7 @@ export const useOfficialStore = () => {
     useUpdateOfficialStoreProduct,
     useToggleOfficialStoreProduct,
     useGetOfficialStoreOrders,
+    useGetOfficialStoreAnalytics,
     useGetOfficialStoreShippingFees,
     useUpdateOfficialStoreShippingFees,
     useGetPickupCenters,

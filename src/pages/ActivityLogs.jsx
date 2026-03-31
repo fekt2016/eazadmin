@@ -18,6 +18,7 @@ import { toast } from "react-toastify";
 import { LoadingSpinner } from "../shared/components/LoadingSpinner";
 import DeviceSessionsPage from "../features/sessions/DeviceSessionsPage";
 import { ConfirmationModal } from "../shared/components/Modal/ConfirmationModal";
+import { HOMEPAGE_EVENT_LABELS } from "../shared/constants/homepageExperimentEvents";
 
 const Container = styled.div`
   padding: 2rem;
@@ -306,6 +307,72 @@ const PageButton = styled.button`
   }
 `;
 
+const InsightGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+
+  @media (max-width: 980px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+`;
+
+const InsightCard = styled.div`
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+`;
+
+const InsightLabel = styled.div`
+  color: #7f8c8d;
+  font-size: 0.8rem;
+  margin-bottom: 0.35rem;
+`;
+
+const InsightValue = styled.div`
+  color: #2c3e50;
+  font-size: 1.1rem;
+  font-weight: 700;
+`;
+
+const InsightSub = styled.div`
+  color: #7f8c8d;
+  font-size: 0.78rem;
+  margin-top: 0.2rem;
+`;
+
+const InsightTrendRow = styled.div`
+  margin-top: 0.65rem;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.35rem;
+`;
+
+const InsightTrendItem = styled.div`
+  border: 1px solid #eef2f7;
+  border-radius: 6px;
+  padding: 0.3rem 0.25rem;
+  text-align: center;
+  background: ${({ $intensity = 0 }) =>
+    `rgba(52, 152, 219, ${0.08 + $intensity * 0.2})`};
+  border-color: ${({ $intensity = 0 }) =>
+    `rgba(52, 152, 219, ${0.15 + $intensity * 0.35})`};
+`;
+
+const InsightTrendDate = styled.div`
+  color: #94a3b8;
+  font-size: 0.65rem;
+  margin-bottom: 0.15rem;
+`;
+
+const InsightTrendValue = styled.div`
+  color: #1e293b;
+  font-size: 0.72rem;
+  font-weight: 700;
+`;
+
 const Modal = styled.div`
   position: fixed;
   top: 0;
@@ -389,6 +456,41 @@ const formatDate = (dateString) => {
   });
 };
 
+const formatActivityDescription = (description) => {
+  if (!description || typeof description !== 'string') return description;
+  const prefix = 'Viewed screen: ';
+  if (!description.startsWith(prefix)) return description;
+
+  const rawScreen = description.slice(prefix.length).trim();
+  if (!rawScreen.startsWith('home:')) return description;
+
+  const [, eventName = '', variant = '', metadata = ''] = rawScreen.split(':');
+  const readableEvent = HOMEPAGE_EVENT_LABELS[eventName]
+    || `Unmapped homepage event (${eventName || 'unknown'})`;
+  const readableVariant = variant ? `Variant ${variant}` : null;
+  const readableMetadata = metadata
+    ? metadata.replace(/[-_]/g, ' ')
+    : null;
+
+  return [readableEvent, readableVariant, readableMetadata]
+    .filter(Boolean)
+    .join(' | ');
+};
+
+const parseHomepageScreenEvent = (description) => {
+  if (!description || typeof description !== 'string') return null;
+  const prefix = 'Viewed screen: ';
+  if (!description.startsWith(prefix)) return null;
+  const rawScreen = description.slice(prefix.length).trim();
+  if (!rawScreen.startsWith('home:')) return null;
+  const [, eventName = '', variant = '', metadata = ''] = rawScreen.split(':');
+  return {
+    eventName,
+    variant: (variant || 'unknown').toUpperCase(),
+    metadata,
+  };
+};
+
 export default function ActivityLogs() {
   const [activeTab, setActiveTab] = useState('activity-logs'); // 'activity-logs' | 'device-sessions'
   const [page, setPage] = useState(1);
@@ -423,6 +525,7 @@ export default function ActivityLogs() {
     cleanupOldLogs,
     isDeleting,
     isDeletingAll,
+    homepageExperimentStats,
   } = useActivityLogs({
     page,
     limit,
@@ -431,6 +534,65 @@ export default function ActivityLogs() {
     dateRange,
     search,
   });
+
+  const homepageInsights = useMemo(() => {
+    if (homepageExperimentStats) {
+      const byVariant = (homepageExperimentStats.byVariant || []).reduce(
+        (acc, item) => {
+          acc[item.variant] = {
+            impressions: item.impressions || 0,
+            interactions: item.interactions || 0,
+          };
+          return acc;
+        },
+        {}
+      );
+
+      return {
+        impressions: homepageExperimentStats.impressions || 0,
+        interactions: homepageExperimentStats.interactions || 0,
+        ctr: homepageExperimentStats.ctr || 0,
+        byVariant,
+        byDay: homepageExperimentStats.byDay || [],
+      };
+    }
+
+    const homepageEvents = logs
+      .map((log) => parseHomepageScreenEvent(log.description))
+      .filter(Boolean);
+
+    if (homepageEvents.length === 0) {
+      return null;
+    }
+
+    const impressions = homepageEvents.filter(
+      (event) => event.eventName === 'variant_seen'
+    ).length;
+    const interactions = homepageEvents.filter(
+      (event) => event.eventName !== 'variant_seen'
+    ).length;
+    const ctr = impressions > 0 ? (interactions / impressions) * 100 : 0;
+
+    const byVariant = homepageEvents.reduce((acc, event) => {
+      if (!acc[event.variant]) {
+        acc[event.variant] = { impressions: 0, interactions: 0 };
+      }
+      if (event.eventName === 'variant_seen') {
+        acc[event.variant].impressions += 1;
+      } else {
+        acc[event.variant].interactions += 1;
+      }
+      return acc;
+    }, {});
+
+    return {
+      impressions,
+      interactions,
+      ctr,
+      byVariant,
+      byDay: [],
+    };
+  }, [homepageExperimentStats, logs]);
 
   const handleDelete = (logId) => {
     setDeleteModalState({ isOpen: true, type: 'single', logId });
@@ -606,6 +768,65 @@ export default function ActivityLogs() {
             </FiltersPanel>
           )}
 
+          {homepageInsights && (
+            <InsightGrid>
+              <InsightCard>
+                <InsightLabel>Homepage impressions</InsightLabel>
+                <InsightValue>{homepageInsights.impressions}</InsightValue>
+                <InsightSub>Variant seen events</InsightSub>
+              </InsightCard>
+              <InsightCard>
+                <InsightLabel>Homepage interactions</InsightLabel>
+                <InsightValue>{homepageInsights.interactions}</InsightValue>
+                <InsightSub>Quick actions, filters, sticky clicks</InsightSub>
+              </InsightCard>
+              <InsightCard>
+                <InsightLabel>Interaction rate</InsightLabel>
+                <InsightValue>{homepageInsights.ctr.toFixed(1)}%</InsightValue>
+                <InsightSub>Interactions / impressions</InsightSub>
+              </InsightCard>
+              <InsightCard>
+                <InsightLabel>Variant split</InsightLabel>
+                <InsightValue>
+                  {Object.entries(homepageInsights.byVariant)
+                    .map(
+                      ([variant, counts]) =>
+                        `${variant}: ${counts.impressions}/${counts.interactions}`
+                    )
+                    .join(' | ')}
+                </InsightValue>
+                <InsightSub>Impressions/interactions by variant</InsightSub>
+                {homepageInsights.byDay?.length > 0 && (
+                  <InsightTrendRow>
+                    {(() => {
+                      const last7Days = homepageInsights.byDay.slice(-7);
+                      const maxInteractions = Math.max(
+                        ...last7Days.map((day) => day.interactions || 0),
+                        1
+                      );
+                      return last7Days.map((day) => {
+                        const intensity = (day.interactions || 0) / maxInteractions;
+                        return (
+                          <InsightTrendItem key={day.date} $intensity={intensity}>
+                            <InsightTrendDate>
+                              {new Date(day.date).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                              })}
+                            </InsightTrendDate>
+                            <InsightTrendValue>
+                              {day.impressions}/{day.interactions}
+                            </InsightTrendValue>
+                          </InsightTrendItem>
+                        );
+                      });
+                    })()}
+                  </InsightTrendRow>
+                )}
+              </InsightCard>
+            </InsightGrid>
+          )}
+
           <TableContainer>
             <Table>
               <TableHeader>
@@ -640,7 +861,7 @@ export default function ActivityLogs() {
                         <strong>{log.action}</strong>
                       </TableCell>
                       <TableCell style={{ maxWidth: "300px" }}>
-                        {log.description}
+                        {formatActivityDescription(log.description)}
                       </TableCell>
                       <TableCell>
                         <PlatformBadge>{log.platform}</PlatformBadge>
@@ -738,7 +959,9 @@ export default function ActivityLogs() {
                   </div>
                   <div className="detail-row">
                     <label>Description</label>
-                    <div className="value">{selectedLog.description}</div>
+                    <div className="value">
+                      {formatActivityDescription(selectedLog.description)}
+                    </div>
                   </div>
                   <div className="detail-row">
                     <label>Platform</label>

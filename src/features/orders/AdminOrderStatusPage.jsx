@@ -374,6 +374,25 @@ const AdminOrderStatusPage = () => {
 
 export default AdminOrderStatusPage;
 
+const STATUS_COLOR_MAP = {
+  pending_payment: { bg: '#fef3c7', color: '#b45309' },
+  payment_completed: { bg: '#e0f2fe', color: '#0369a1' },
+  processing: { bg: '#e0f2fe', color: '#0369a1' },
+  preparing: { bg: '#e0f2fe', color: '#0369a1' },
+  ready_for_dispatch: { bg: '#e0f2fe', color: '#0369a1' },
+  confirmed: { bg: '#f3e8ff', color: '#7e22ce' },
+  out_for_delivery: { bg: '#fce7f3', color: '#be185d' },
+  delivery_attempted: { bg: '#ffe4e6', color: '#be123c' },
+  delivered: { bg: '#dcfce7', color: '#15803d' },
+  cancelled: { bg: '#fee2e2', color: '#b91c1c' },
+  refunded: { bg: '#e2e8f0', color: '#475569' },
+};
+
+const getStatusColors = (status) => {
+  const normalizedStatus = (status || 'pending_payment').toString().toLowerCase();
+  return STATUS_COLOR_MAP[normalizedStatus] || STATUS_COLOR_MAP.pending_payment;
+};
+
 // Styled Components
 const PageContainer = styled.div`
   padding: 2rem;
@@ -481,22 +500,8 @@ const CurrentStatusBadge = styled.div`
   padding: 0.5rem 1rem;
   border-radius: 8px;
   font-weight: 600;
-  background: ${(props) => {
-    const status = props.status || 'pending_payment';
-    if (status === 'delivered') return '#d4edda';
-    if (status === 'confirmed') return '#d4edda';
-    if (status === 'cancelled') return '#f8d7da';
-    if (status === 'out_for_delivery') return '#d1ecf1';
-    return '#fff3cd';
-  }};
-  color: ${(props) => {
-    const status = props.status || 'pending_payment';
-    if (status === 'delivered') return '#155724';
-    if (status === 'confirmed') return '#155724';
-    if (status === 'cancelled') return '#721c24';
-    if (status === 'out_for_delivery') return '#0c5460';
-    return '#856404';
-  }};
+  background: ${(props) => getStatusColors(props.status).bg};
+  color: ${(props) => getStatusColors(props.status).color};
 `;
 
 const PaymentNoteSpan = styled.span`
@@ -593,20 +598,8 @@ const HistoryIcon = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  background: ${(props) => {
-    const status = props.status || 'pending_payment';
-    if (status === 'delivered') return '#d4edda';
-    if (status === 'cancelled') return '#f8d7da';
-    if (status === 'out_for_delivery') return '#d1ecf1';
-    return '#fff3cd';
-  }};
-  color: ${(props) => {
-    const status = props.status || 'pending_payment';
-    if (status === 'delivered') return '#155724';
-    if (status === 'cancelled') return '#721c24';
-    if (status === 'out_for_delivery') return '#0c5460';
-    return '#856404';
-  }};
+  background: ${(props) => getStatusColors(props.status).bg};
+  color: ${(props) => getStatusColors(props.status).color};
   flex-shrink: 0;
 `;
 

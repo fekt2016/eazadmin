@@ -20,6 +20,9 @@ import {
   FaTicketAlt,
   FaBullhorn,
   FaFileInvoiceDollar,
+  FaVideo,
+  FaWrench,
+  FaQuoteLeft,
 } from "react-icons/fa";
 import { PATHS } from "../../routes/routePath";
 import useAuth from '../hooks/useAuth';
@@ -55,6 +58,11 @@ export default function Sidebar({ role }) {
       icon: <FaStar />,
     },
     {
+      path: `${DASHBOARD_BASE}/${PATHS.TESTIMONIALS}`,
+      label: "Testimonials",
+      icon: <FaQuoteLeft />,
+    },
+    {
       path: `${DASHBOARD_BASE}/categories`,
       label: "Categories",
       icon: <FaChartLine />,
@@ -78,6 +86,11 @@ export default function Sidebar({ role }) {
       path: `${DASHBOARD_BASE}/balance-history`,
       label: "Balance History",
       icon: <FaWallet />,
+    },
+    {
+      path: `${DASHBOARD_BASE}/${PATHS.SELLER_CREDIT_RECONCILIATION}`,
+      label: "Credit Reconciliation",
+      icon: <FaWrench />,
     },
     {
       path: `${DASHBOARD_BASE}/tax`,
@@ -113,6 +126,11 @@ export default function Sidebar({ role }) {
       path: `${DASHBOARD_BASE}/ads`,
       label: "Advertisements",
       icon: <FaBullhorn />,
+    },
+    {
+      path: `${DASHBOARD_BASE}/${PATHS.STATUS_VIDEOS}`,
+      label: "Status Videos",
+      icon: <FaVideo />,
     },
   ];
   const handleLogout = () => {
@@ -205,7 +223,7 @@ const NavLink = styled(Link)`
 `;
 
 const SidebarHeader = styled.div`
-  padding: 0 1.5rem;
+  padding: 0 1rem;
   margin-bottom: 2rem;
   display: flex;
   align-items: center;

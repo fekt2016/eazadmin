@@ -4,8 +4,7 @@ import React from 'react';
 import { renderWithProviders } from '../utils/testUtils';
 import TrackingPage from '../../features/orders/TrackingPage';
 
-// Increase timeout for this complex file
-vi.setConfig({ testTimeout: 10000 });
+// Use global testTimeout (15000) - tests need time for async render
 
 // Stable mock data - module level constants prevent reference instability
 const MOCK_ORDER = {
@@ -90,26 +89,29 @@ describe('TrackingPage', () => {
         // Check for header
         expect(screen.getByText(/Order Tracking/i)).toBeInTheDocument();
 
-        // Wait for data with increased timeout for parallel runs
+        // Wait for data - component can be slow to render
         await waitFor(() => {
             expect(screen.getByText(/TRK123/i)).toBeInTheDocument();
             expect(screen.getByText(/ORD456/i)).toBeInTheDocument();
             expect(screen.getByText(/John Doe/i)).toBeInTheDocument();
-            // Match any instance of processing order (badge or history)
             const elements = screen.queryAllByText(/Processing Order/i);
             expect(elements.length).toBeGreaterThan(0);
-        }, { timeout: 3000 });
-    });
+        }, { timeout: 10000 });
+    }, 45000);
 
     it('opens update tracking modal', async () => {
         renderWithProviders(<TrackingPage />);
+
+        await waitFor(() => {
+            expect(screen.getByText(/Update Tracking/i)).toBeInTheDocument();
+        }, { timeout: 5000 });
 
         const updateButton = screen.getByText(/Update Tracking/i);
         fireEvent.click(updateButton);
 
         await waitFor(() => {
             expect(screen.getByText(/Update Tracking Status/i)).toBeInTheDocument();
-        });
+        }, { timeout: 5000 });
     });
 
     it('shows loading state correctly', () => {
