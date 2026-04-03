@@ -130,7 +130,8 @@ export default function OfficialStoreShippingFeesPage() {
           <FormSection>
             <SectionTitle>Free Delivery</SectionTitle>
             <SectionDescription>
-              Set the minimum order amount for free delivery
+              Minimum order subtotal (GHS) for free-delivery messaging on the buyer app cart and
+              checkout hints. Set to 0 to turn off the cart progress banner.
             </SectionDescription>
 
             <FormGroup>

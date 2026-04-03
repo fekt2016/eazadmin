@@ -1,9 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
+import { toast } from 'react-toastify';
 import { useGetShippingCharges, useGetShippingChargesSummary, useSettleShippingCharge } from '../../hooks/useShipping';
+import { useOfficialStore } from '../../shared/hooks/useOfficialStore';
 import { formatDate } from '../../shared/utils/helpers';
 import { ConfirmationModal } from '../../shared/components/Modal/ConfirmationModal';
-import { FaTruck, FaMoneyBillWave, FaPercentage, FaCheckCircle, FaExclamationCircle, FaAngleLeft, FaAngleRight } from 'react-icons/fa';
+import {
+  FaTruck,
+  FaMoneyBillWave,
+  FaPercentage,
+  FaCheckCircle,
+  FaExclamationCircle,
+  FaAngleLeft,
+  FaAngleRight,
+  FaShoppingCart,
+  FaSave,
+} from 'react-icons/fa';
 import Button from '../../components/ui/Button';
 
 export default function ShippingDashboardPage({ embedded = false }) {
@@ -15,6 +27,40 @@ export default function ShippingDashboardPage({ embedded = false }) {
   const { data: chargesData, isLoading, refetch } = useGetShippingCharges({ page, limit, status: statusFilter });
   const { data: summaryData, isLoading: summaryLoading } = useGetShippingChargesSummary();
   const settleMutation = useSettleShippingCharge();
+
+  const { useGetOfficialStoreShippingFees, useUpdateOfficialStoreShippingFees } = useOfficialStore();
+  const { data: platformFeesData, isLoading: platformFeesLoading } = useGetOfficialStoreShippingFees();
+  const updatePlatformFeesMutation = useUpdateOfficialStoreShippingFees();
+
+  const platformFees = platformFeesData ?? null;
+  const [freeDeliveryThresholdInput, setFreeDeliveryThresholdInput] = useState('');
+
+  useEffect(() => {
+    if (!platformFees) return;
+    const t = platformFees.freeDeliveryThreshold;
+    if (t != null && Number(t) > 0) {
+      setFreeDeliveryThresholdInput(String(Number(t)));
+    } else {
+      setFreeDeliveryThresholdInput('');
+    }
+  }, [platformFees]);
+
+  const handleSaveFreeDeliveryThreshold = async (e) => {
+    e.preventDefault();
+    const parsed = parseFloat(String(freeDeliveryThresholdInput).trim(), 10);
+    const freeDeliveryThreshold =
+      Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed * 100) / 100 : null;
+    try {
+      await updatePlatformFeesMutation.mutateAsync({ freeDeliveryThreshold });
+      toast.success(
+        freeDeliveryThreshold != null
+          ? `Buyer cart will show free delivery at GH₵${freeDeliveryThreshold}+`
+          : 'Buyer cart free-delivery banner disabled (no minimum).',
+      );
+    } catch (err) {
+      toast.error(err?.message || 'Failed to update free delivery threshold');
+    }
+  };
 
   const charges = chargesData?.data || [];
   const pagination = chargesData?.pagination || { page: 1, limit: 10, totalPages: 1 };
@@ -89,6 +135,46 @@ export default function ShippingDashboardPage({ embedded = false }) {
           </StatContent>
         </StatCard>
       </StatsContainer>
+
+      <BuyerCartShippingCard>
+        <BuyerCartShippingHeader>
+          <FaShoppingCart />
+          <div>
+            <BuyerCartShippingTitle>Buyer app — free delivery minimum</BuyerCartShippingTitle>
+            <BuyerCartShippingDesc>
+              Controls the cart message &quot;Add GH₵X more for free shipping&quot; on{' '}
+              <strong>saiisaiweb</strong>. Uses the same setting as Official Store → Shipping fees.
+              Leave empty or save 0 to hide that promo on the cart.
+            </BuyerCartShippingDesc>
+          </div>
+        </BuyerCartShippingHeader>
+        <BuyerCartShippingForm onSubmit={handleSaveFreeDeliveryThreshold}>
+          <BuyerCartField>
+            <BuyerCartLabel htmlFor="free-delivery-threshold-dashboard">
+              Minimum cart subtotal (GHS)
+            </BuyerCartLabel>
+            <BuyerCartInputRow>
+              <BuyerCartInput
+                id="free-delivery-threshold-dashboard"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="e.g. 100 (empty = off)"
+                value={freeDeliveryThresholdInput}
+                onChange={(e) => setFreeDeliveryThresholdInput(e.target.value)}
+                disabled={platformFeesLoading || updatePlatformFeesMutation.isPending}
+              />
+              <BuyerCartSaveBtn
+                type="submit"
+                disabled={platformFeesLoading || updatePlatformFeesMutation.isPending}
+              >
+                <FaSave />
+                {updatePlatformFeesMutation.isPending ? 'Saving…' : 'Save'}
+              </BuyerCartSaveBtn>
+            </BuyerCartInputRow>
+          </BuyerCartField>
+        </BuyerCartShippingForm>
+      </BuyerCartShippingCard>
 
       <ControlsContainer>
         <FilterGroup>
@@ -293,6 +379,116 @@ const StatValue = styled.div`
 const StatLabel = styled.div`
   color: #7f8c8d;
   font-size: 0.875rem;
+`;
+
+const BuyerCartShippingCard = styled.div`
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 2rem;
+  color: #f8fafc;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.15);
+`;
+
+const BuyerCartShippingHeader = styled.div`
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+
+  svg:first-child {
+    font-size: 1.5rem;
+    color: #fbbf24;
+    flex-shrink: 0;
+    margin-top: 0.15rem;
+  }
+`;
+
+const BuyerCartShippingTitle = styled.h2`
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0 0 0.35rem 0;
+  color: #fff;
+`;
+
+const BuyerCartShippingDesc = styled.p`
+  font-size: 0.82rem;
+  line-height: 1.5;
+  margin: 0;
+  color: rgba(248, 250, 252, 0.85);
+`;
+
+const BuyerCartShippingForm = styled.form`
+  margin: 0;
+`;
+
+const BuyerCartField = styled.div`
+  width: 100%;
+`;
+
+const BuyerCartLabel = styled.label`
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+  color: rgba(248, 250, 252, 0.95);
+`;
+
+const BuyerCartInputRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+`;
+
+const BuyerCartInput = styled.input`
+  flex: 1;
+  min-width: 160px;
+  max-width: 280px;
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(15, 23, 42, 0.5);
+  color: #fff;
+  font-size: 0.95rem;
+
+  &::placeholder {
+    color: rgba(248, 250, 252, 0.45);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: #fbbf24;
+    box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.25);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+  }
+`;
+
+const BuyerCartSaveBtn = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.65rem 1.25rem;
+  background: #fbbf24;
+  color: #0f172a;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover:not(:disabled) {
+    background: #f59e0b;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 `;
 
 const ControlsContainer = styled.div`

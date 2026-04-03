@@ -1,20 +1,20 @@
 /**
- * SEO Configuration for Saysay (Admin Backend Dashboard)
+ * SEO Configuration for Saiisai (Admin Backend Dashboard)
  * All pages are set to noIndex and noFollow - admin should never appear in search engines
  */
 
-const BASE_URL = (typeof process !== 'undefined' && process.env?.REACT_APP_ADMIN_URL) || window.location.origin || 'https://admin.saysay.com';
-const DEFAULT_IMAGE = `${BASE_URL}/images/saysay-admin-og.jpg`;
-const DEFAULT_DESCRIPTION = 'Saysay Admin Dashboard - Manage the platform';
+const BASE_URL = (typeof process !== 'undefined' && process.env?.REACT_APP_ADMIN_URL) || window.location.origin || 'https://admin.saiisai.com';
+const DEFAULT_IMAGE = `${BASE_URL}/images/saiisai-admin-og.jpg`;
+const DEFAULT_DESCRIPTION = 'Saiisai Admin Dashboard - Manage the platform';
 
 const seoConfig = {
   // ────────────────────────────────────────────────
   // Admin Dashboard
   // ────────────────────────────────────────────────
   dashboard: {
-    title: 'Admin Dashboard - Saysay',
-    description: 'Manage the Saysay platform',
-    keywords: 'admin, dashboard, Saysay',
+    title: 'Admin Dashboard - Saiisai',
+    description: 'Manage the Saiisai platform',
+    keywords: 'admin, dashboard, Saiisai',
     image: DEFAULT_IMAGE,
     type: 'website',
     canonical: `${BASE_URL}/dashboard`,
@@ -26,9 +26,9 @@ const seoConfig = {
   // Users Management
   // ────────────────────────────────────────────────
   users: {
-    title: 'Users Management - Admin | Saysay',
+    title: 'Users Management - Admin | Saiisai',
     description: 'Manage platform users',
-    keywords: 'users, admin, Saysay',
+    keywords: 'users, admin, Saiisai',
     image: DEFAULT_IMAGE,
     type: 'website',
     canonical: `${BASE_URL}/users`,
@@ -40,9 +40,9 @@ const seoConfig = {
   // Sellers Management
   // ────────────────────────────────────────────────
   sellers: {
-    title: 'Sellers Management - Admin | Saysay',
+    title: 'Sellers Management - Admin | Saiisai',
     description: 'Manage seller accounts',
-    keywords: 'sellers, admin, Saysay',
+    keywords: 'sellers, admin, Saiisai',
     image: DEFAULT_IMAGE,
     type: 'website',
     canonical: `${BASE_URL}/sellers`,
@@ -54,9 +54,9 @@ const seoConfig = {
   // Products Moderation
   // ────────────────────────────────────────────────
   products: {
-    title: 'Products Moderation - Admin | Saysay',
+    title: 'Products Moderation - Admin | Saiisai',
     description: 'Moderate and manage products',
-    keywords: 'products, moderation, admin, Saysay',
+    keywords: 'products, moderation, admin, Saiisai',
     image: DEFAULT_IMAGE,
     type: 'website',
     canonical: `${BASE_URL}/products`,
@@ -68,9 +68,9 @@ const seoConfig = {
   // Orders Management
   // ────────────────────────────────────────────────
   orders: {
-    title: 'Orders Management - Admin | Saysay',
+    title: 'Orders Management - Admin | Saiisai',
     description: 'Manage platform orders',
-    keywords: 'orders, admin, Saysay',
+    keywords: 'orders, admin, Saiisai',
     image: DEFAULT_IMAGE,
     type: 'website',
     canonical: `${BASE_URL}/orders`,
@@ -82,9 +82,9 @@ const seoConfig = {
   // Transactions
   // ────────────────────────────────────────────────
   transactions: {
-    title: 'Transactions - Admin | Saysay',
+    title: 'Transactions - Admin | Saiisai',
     description: 'View and manage transactions',
-    keywords: 'transactions, admin, Saysay',
+    keywords: 'transactions, admin, Saiisai',
     image: DEFAULT_IMAGE,
     type: 'website',
     canonical: `${BASE_URL}/transactions`,
@@ -96,9 +96,9 @@ const seoConfig = {
   // Settings
   // ────────────────────────────────────────────────
   settings: {
-    title: 'Settings - Admin | Saysay',
+    title: 'Settings - Admin | Saiisai',
     description: 'Platform settings and configuration',
-    keywords: 'settings, admin, Saysay',
+    keywords: 'settings, admin, Saiisai',
     image: DEFAULT_IMAGE,
     type: 'website',
     canonical: `${BASE_URL}/settings`,
@@ -110,9 +110,9 @@ const seoConfig = {
   // System Logs
   // ────────────────────────────────────────────────
   systemLogs: {
-    title: 'System Logs - Admin | Saysay',
+    title: 'System Logs - Admin | Saiisai',
     description: 'View system logs and activity',
-    keywords: 'logs, system, admin, Saysay',
+    keywords: 'logs, system, admin, Saiisai',
     image: DEFAULT_IMAGE,
     type: 'website',
     canonical: `${BASE_URL}/logs`,

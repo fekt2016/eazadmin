@@ -5,6 +5,24 @@ import { renderWithProviders } from '../utils/testUtils';
 import ShippingDashboardPage from '../../features/shipping/ShippingDashboardPage';
 
 // Mock the hooks
+vi.mock('../../shared/hooks/useOfficialStore', () => ({
+  useOfficialStore: () => ({
+    useGetOfficialStoreShippingFees: () => ({
+      data: {
+        sameCity: 25,
+        crossCity: 35,
+        heavyItem: 60,
+        freeDeliveryThreshold: 100,
+      },
+      isLoading: false,
+    }),
+    useUpdateOfficialStoreShippingFees: () => ({
+      mutateAsync: vi.fn().mockResolvedValue({}),
+      isPending: false,
+    }),
+  }),
+}));
+
 vi.mock('../../hooks/useShipping', () => ({
     useGetShippingCharges: vi.fn(() => ({
         data: {

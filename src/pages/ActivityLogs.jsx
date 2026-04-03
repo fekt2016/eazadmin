@@ -491,10 +491,11 @@ const parseHomepageScreenEvent = (description) => {
   };
 };
 
+const DEFAULT_LIMIT = 50;
+
 export default function ActivityLogs() {
   const [activeTab, setActiveTab] = useState('activity-logs'); // 'activity-logs' | 'device-sessions'
   const [page, setPage] = useState(1);
-  const [limit] = useState(50);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [platformFilter, setPlatformFilter] = useState("all");
@@ -528,7 +529,7 @@ export default function ActivityLogs() {
     homepageExperimentStats,
   } = useActivityLogs({
     page,
-    limit,
+    limit: DEFAULT_LIMIT,
     role: roleFilter !== "all" ? roleFilter : null,
     platform: platformFilter !== "all" ? platformFilter : null,
     dateRange,
@@ -890,7 +891,7 @@ export default function ActivityLogs() {
           {totalPages > 1 && (
             <Pagination>
               <PaginationInfo>
-                Showing {(page - 1) * limit + 1} to {Math.min(page * limit, total)} of {total}{" "}
+                Showing {(page - 1) * DEFAULT_LIMIT + 1} to {Math.min(page * DEFAULT_LIMIT, total)} of {total}{" "}
                 logs
               </PaginationInfo>
               <PaginationControls>
