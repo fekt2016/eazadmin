@@ -107,7 +107,7 @@ const UploadText = styled.p`
   color: #718096;
 
   strong {
-    color: #3182ce;
+    color: var(--color-primary-600);
     font-weight: 500;
   }
 `;

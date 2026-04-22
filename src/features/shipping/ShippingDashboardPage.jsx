@@ -17,6 +17,23 @@ import {
   FaSave,
 } from 'react-icons/fa';
 import Button from '../../components/ui/Button';
+import { PageHeader, PageTitle, PageSub } from '../../shared/components/page/PageHeader';
+
+const T = {
+  primary: 'var(--color-primary-600)',
+  primaryLight: 'var(--color-primary-500)',
+  primaryBg: 'var(--color-primary-100)',
+  border: 'var(--color-border)',
+  cardBg: 'var(--color-card-bg)',
+  bodyBg: 'var(--color-body-bg)',
+  text: 'var(--color-grey-900)',
+  textMuted: 'var(--color-grey-500)',
+  textLight: 'var(--color-grey-400)',
+  radius: 'var(--border-radius-xl)',
+  radiusSm: 'var(--border-radius-md)',
+  shadow: 'var(--shadow-sm)',
+  shadowMd: 'var(--shadow-md)',
+};
 
 export default function ShippingDashboardPage({ embedded = false }) {
   const [page, setPage] = useState(1);
@@ -104,7 +121,7 @@ export default function ShippingDashboardPage({ embedded = false }) {
     <>
       <StatsContainer>
         <StatCard>
-          <StatIcon $color="#3498db"><FaMoneyBillWave /></StatIcon>
+          <StatIcon $color="var(--color-primary-600)"><FaMoneyBillWave /></StatIcon>
           <StatContent>
             <StatValue>Gh₵{summary.totalShippingRevenue.toFixed(2)}</StatValue>
             <StatLabel>Total Shipping Revenue</StatLabel>
@@ -299,12 +316,14 @@ export default function ShippingDashboardPage({ embedded = false }) {
 
   return (
     <Container>
-      <Header>
-        <Title>
-          <FaTruck /> Shipping Dashboard
-        </Title>
-        <Description>Track shipping charges, platform cuts, and dispatcher payouts</Description>
-      </Header>
+      <PageHeader>
+        <div>
+          <PageTitle>
+            <FaTruck /> Shipping Dashboard
+          </PageTitle>
+          <PageSub>Track shipping charges, platform cuts, and dispatcher payouts</PageSub>
+        </div>
+      </PageHeader>
       {content}
     </Container>
   );
@@ -312,28 +331,9 @@ export default function ShippingDashboardPage({ embedded = false }) {
 
 // Styled Components
 const Container = styled.div`
-  padding: ${props => props.$embedded ? '0' : '2rem'};
-  background-color: ${props => props.$embedded ? 'transparent' : '#f8fafc'};
-  min-height: ${props => props.$embedded ? 'auto' : '100vh'};
-`;
-
-const Header = styled.div`
-  margin-bottom: 2rem;
-`;
-
-const Title = styled.h1`
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  font-size: 2rem;
-  font-weight: 700;
-  color: #2c3e50;
-  margin-bottom: 0.5rem;
-`;
-
-const Description = styled.p`
-  color: #7f8c8d;
-  font-size: 1rem;
+  padding: ${(props) => (props.$embedded ? '0' : '2rem')};
+  background-color: ${(props) => (props.$embedded ? 'transparent' : T.bodyBg)};
+  min-height: ${(props) => (props.$embedded ? 'auto' : '100vh')};
 `;
 
 const StatsContainer = styled.div`
@@ -344,12 +344,19 @@ const StatsContainer = styled.div`
 `;
 
 const StatCard = styled.div`
-  background: white;
-  border-radius: 10px;
-  padding: 1.5rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  background: ${T.cardBg};
+  border: 1px solid ${T.border};
+  border-radius: ${T.radius};
+  padding: 2rem;
+  box-shadow: ${T.shadow};
   display: flex;
   align-items: center;
+  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+
+  &:hover {
+    box-shadow: ${T.shadowMd};
+    transform: translateY(-2px);
+  }
 `;
 
 const StatIcon = styled.div`
@@ -362,7 +369,7 @@ const StatIcon = styled.div`
   margin-right: 1rem;
   font-size: 1.5rem;
   color: white;
-  background-color: ${(props) => props.$color || "#3498db"};
+  background-color: ${(props) => props.$color || "var(--color-primary-600)"};
 `;
 
 const StatContent = styled.div`
@@ -373,11 +380,11 @@ const StatContent = styled.div`
 const StatValue = styled.div`
   font-size: 1.25rem;
   font-weight: 700;
-  color: #2c3e50;
+  color: ${T.text};
 `;
 
 const StatLabel = styled.div`
-  color: #7f8c8d;
+  color: ${T.textMuted};
   font-size: 0.875rem;
 `;
 

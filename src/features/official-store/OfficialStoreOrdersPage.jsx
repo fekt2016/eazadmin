@@ -6,6 +6,15 @@ import { LoadingSpinner } from "../../shared/components/LoadingSpinner";
 import { formatDate } from "../../shared/utils/helpers";
 import { PATHS } from "../../routes/routePath";
 import { EAZSHOP_SELLER_ID, PLATFORM_NAME } from "../../shared/constants/systemConstants";
+import {
+  PageHeader,
+  PageTitle,
+  PageSub,
+} from "../../shared/components/page/PageHeader";
+
+const T = {
+  bodyBg: "var(--color-body-bg)",
+};
 
 const DASHBOARD_BASE = "/dashboard";
 
@@ -39,7 +48,7 @@ function getStatusColor(status) {
   const s = String(status || "").toLowerCase();
   if (["delivered", "completed"].includes(s)) return "#2ecc71";
   if (["shipped", "out_for_delivery"].includes(s)) return "#9b59b6";
-  if (["processing", "confirmed", "preparing"].includes(s)) return "#3498db";
+  if (["processing", "confirmed", "preparing"].includes(s)) return "var(--color-primary-600)";
   if (["pending", "pending_payment"].includes(s)) return "#f39c12";
   if (["cancelled"].includes(s)) return "#e74c3c";
   return "#7f8c8d";
@@ -66,12 +75,14 @@ export default function OfficialStoreOrdersPage() {
 
   return (
     <Container>
-      <Header>
-        <Title>
-          <FaShoppingCart /> Official Store Orders
-        </Title>
-        <Description>Orders for the company store (Official Store)</Description>
-      </Header>
+      <PageHeader>
+        <div>
+          <PageTitle>
+            <FaShoppingCart /> Official Store Orders
+          </PageTitle>
+          <PageSub>Orders for the company store (Official Store)</PageSub>
+        </div>
+      </PageHeader>
 
       <TableWrapper>
         <Table>
@@ -143,24 +154,9 @@ const Container = styled.div`
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-`;
-
-const Header = styled.div``;
-
-const Title = styled.h2`
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--color-grey-900, #111);
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-`;
-
-const Description = styled.p`
-  font-size: 0.875rem;
-  color: var(--color-grey-600, #4b5563);
-  margin: 0.25rem 0 0 0;
+  padding: 1.5rem 0;
+  min-height: 100vh;
+  background: ${T.bodyBg};
 `;
 
 const TableWrapper = styled.div`
@@ -208,8 +204,8 @@ const SourceBadge = styled.span`
   border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 600;
-  background: ${(p) => (p.$tone === "main" ? "#dbeafe" : "#ede9fe")};
-  color: ${(p) => (p.$tone === "main" ? "#1d4ed8" : "#6d28d9")};
+  background: ${(p) => (p.$tone === "main" ? "var(--color-primary-100)" : "#ede9fe")};
+  color: ${(p) => (p.$tone === "main" ? "var(--color-primary-700)" : "#6d28d9")};
 `;
 
 const ViewButton = styled.button`
@@ -218,15 +214,15 @@ const ViewButton = styled.button`
   gap: 0.35rem;
   padding: 0.35rem 0.75rem;
   font-size: 0.8125rem;
-  color: var(--color-primary, #2563eb);
+  color: var(--color-primary-600);
   background: transparent;
-  border: 1px solid var(--color-primary, #2563eb);
+  border: 1px solid var(--color-primary-600);
   border-radius: 6px;
   cursor: pointer;
   transition: background 0.2s, color 0.2s;
 
   &:hover {
-    background: var(--color-primary, #2563eb);
+    background: var(--color-primary-600);
     color: white;
   }
 `;

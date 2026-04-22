@@ -6,3 +6,9 @@
 - Never import from `saiisai` or `saiisaiseller` component paths.
 - If a feature exists on mobile and web, implement separate components for web.
 - Do not create cross-platform shared frontend component folders/packages.
+
+# Shared project skills
+
+See .cursor/skills/ for confirmed tokens, security rules,
+API response shapes, image pipeline, and cross-app consistency rules.
+These skills take precedence over any assumptions.

@@ -1,4 +1,6 @@
 import { useState, useMemo } from "react";
+import useAuth from "../shared/hooks/useAuth";
+import SupportAgentDashboard from "./dashboard/SupportAgentDashboard";
 import { FaBox, FaChartLine, FaShoppingCart, FaUsers, FaCheckCircle, FaStar, FaSync } from "react-icons/fa";
 import styled from "styled-components";
 import { Link, useNavigate } from "react-router-dom";
@@ -10,6 +12,22 @@ import { useGetTopSellers } from "../shared/hooks/useGetTopSellers";
 import { formatDate } from "../shared/utils/helpers";
 import { LoadingState, ErrorState } from "../shared/components/ui/LoadingComponents";
 import { orderService } from "../shared/services/orderApi";
+
+const T = {
+  primary:      'var(--color-primary-600)',
+  primaryLight: 'var(--color-primary-500)',
+  primaryBg:    'var(--color-primary-100)',
+  border:       'var(--color-border)',
+  cardBg:       'var(--color-card-bg)',
+  bodyBg:       'var(--color-body-bg)',
+  text:         'var(--color-grey-900)',
+  textMuted:    'var(--color-grey-500)',
+  textLight:    'var(--color-grey-400)',
+  radius:       'var(--border-radius-xl)',
+  radiusSm:     'var(--border-radius-md)',
+  shadow:       'var(--shadow-sm)',
+  shadowMd:     'var(--shadow-md)',
+};
 
 // Format currency
 const formatCurrency = (amount) => {
@@ -26,15 +44,15 @@ const getStatusColor = (status) => {
   const statusMap = {
     delivered: "#2ecc71",
     completed: "#2ecc71",
-    confirmed: "#3498db", // Blue for confirmed orders
-    processing: "#3498db",
+    confirmed: "#bb6c02",
+    processing: "#985308",
     shipped: "#9b59b6",
     pending: "#f39c12",
     pending_payment: "#f39c12", // Orange for pending payment
     cancelled: "#e74c3c",
     failed: "#e74c3c",
     returned: "#95a5a6",
-    paid: "#3498db", // Treat paid as confirmed
+    paid: "#bb6c02",
   };
   return statusMap[status?.toLowerCase()] || "#95a5a6";
 };
@@ -62,34 +80,17 @@ const formatStatus = (status) => {
   return statusMap[normalizedStatus] || status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, " ");
 };
 
-// Color maps for styled components
-const bgColorMap = {
-  primary: "var(--color-primary-100)",
-  success: "var(--color-green-100)",
-  accent: "var(--color-brand-100)",
-  warning: "var(--color-yellow-100)",
-};
-
-const colorMap = {
-  primary: "var(--color-primary-500)",
-  success: "var(--color-green-700)",
-  accent: "var(--color-brand-500)",
-  warning: "var(--color-yellow-700)",
-};
-
-const statusBgMap = {
-  Completed: "var(--color-green-100)",
-  Pending: "var(--color-yellow-100)",
-  Failed: "var(--color-red-100)",
-};
-
-const statusColorMap = {
-  Completed: "var(--color-green-700)",
-  Pending: "var(--color-yellow-700)",
-  Failed: "var(--color-red-700)",
-};
-
 export default function AdminDashboard() {
+  const { adminData } = useAuth();
+  const currentAdmin = useMemo(() => {
+    if (!adminData) return null;
+    const fromMe = adminData.data?.data?.data;
+    if (fromMe) return fromMe;
+    if (adminData.role && (adminData.email || adminData.name)) return adminData;
+    if (adminData.data?.role) return adminData.data;
+    return null;
+  }, [adminData]);
+
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: stats, isLoading: statsLoading, error: statsError } = useAdminStats();
@@ -198,7 +199,6 @@ export default function AdminDashboard() {
       };
     });
   }, [ordersData]);
-  console.log("recentOrders", recentOrders);
 
   // Process sellers data
   const vendors = useMemo(() => {
@@ -213,6 +213,10 @@ export default function AdminDashboard() {
       rating: seller.rating || seller.averageRating || 0,
     }));
   }, [sellersData]);
+
+  if (currentAdmin?.role === "support_agent") {
+    return <SupportAgentDashboard admin={currentAdmin} />;
+  }
 
   if (statsLoading || ordersLoading || sellersLoading) {
     return (
@@ -246,16 +250,22 @@ export default function AdminDashboard() {
       <MainContent>
         <Content>
           <WelcomeBanner>
-            <div>
-              <h1>Welcome back, Admin!</h1>
-              <p>
-                Here's what's happening with your multi-vendor platform today.
+            <BannerLeft>
+              <BannerEyebrow>Platform overview</BannerEyebrow>
+              <BannerTitle>Welcome back, Admin!</BannerTitle>
+              <BannerSubtitle>
+                Here&apos;s what&apos;s happening with your multi-vendor platform today.
                 Monitor your vendors, track sales, and manage orders
                 efficiently.
-              </p>
-            </div>
-            <BannerButtons>
-              <button type="button" onClick={runBackfill} disabled={backfillLoading} title="Credit sellers for delivered orders that were never credited">
+              </BannerSubtitle>
+            </BannerLeft>
+            <BannerActions>
+              <BannerOutlineBtn
+                type="button"
+                onClick={runBackfill}
+                disabled={backfillLoading}
+                title="Credit sellers for delivered orders that were never credited"
+              >
                 {backfillLoading ? (
                   <>Running…</>
                 ) : (
@@ -264,107 +274,113 @@ export default function AdminDashboard() {
                     Backfill seller credits
                   </>
                 )}
-              </button>
-              <button type="button">Generate Report</button>
-            </BannerButtons>
+              </BannerOutlineBtn>
+              <BannerSolidBtn type="button">Generate Report</BannerSolidBtn>
+            </BannerActions>
           </WelcomeBanner>
 
           {lastBackfillErrors && lastBackfillErrors.length > 0 && (
-            <BackfillSkipReasons>
+            <BackfillAlert>
               <h4>Why were orders skipped?</h4>
               <ul>
                 {lastBackfillErrors.map((e, i) => (
                   <li key={e.orderId || i}>
-                    <strong>{e.orderNumber || e.orderId || `Order ${i + 1}`}:</strong> {e.message || "Unknown reason"}
+                    <strong>{e.orderNumber || e.orderId || `Order ${i + 1}`}:</strong>{" "}
+                    {e.message || "Unknown reason"}
                   </li>
                 ))}
               </ul>
-            </BackfillSkipReasons>
+            </BackfillAlert>
           )}
 
-          <CardsContainer>
+          <StatsGrid>
             {metrics.map((metric, index) => (
-              <Card key={index}>
-                <CardIcon bg={metric.bg}>{metric.icon}</CardIcon>
-                <CardContent>
-                  <h3>{metric.value}</h3>
-                  <p>{metric.title}</p>
-                  <small style={{ color: "var(--color-green-700)", fontWeight: 500 }}>
-                    {metric.change}
-                  </small>
-                </CardContent>
-              </Card>
+              <StatCard key={index} $variant={metric.bg}>
+                <StatCardTop>
+                  <StatIconWrap $variant={metric.bg}>{metric.icon}</StatIconWrap>
+                  <StatLabel>{metric.title}</StatLabel>
+                </StatCardTop>
+                <StatValue>{metric.value}</StatValue>
+                <StatTrend>{metric.change}</StatTrend>
+              </StatCard>
             ))}
-          </CardsContainer>
+          </StatsGrid>
 
-          <ChartsContainer>
-            <ChartCard>
-              <ChartHeader>
-                <h3>Revenue Analytics (Last 30 Days)</h3>
-              </ChartHeader>
+          <ChartsRow>
+            <Panel>
+              <PanelHeader>
+                <div>
+                  <PanelTitle>Revenue Analytics (Last 30 Days)</PanelTitle>
+                </div>
+              </PanelHeader>
               {stats?.revenueGraphData && stats.revenueGraphData.length > 0 ? (
-                <RevenueChart>
+                <RevenueChartScroll>
                   <ChartBars>
                     {stats.revenueGraphData.map((day, index) => {
-                      const maxRevenue = Math.max(...stats.revenueGraphData.map(d => d.revenue), 1);
+                      const maxRevenue = Math.max(...stats.revenueGraphData.map((d) => d.revenue), 1);
                       const height = (day.revenue / maxRevenue) * 100;
+                      const tip = `GH₵${day.revenue.toFixed(0)}`;
                       return (
-                        <ChartBar key={index}>
-                          <BarValue>GH₵{day.revenue.toFixed(0)}</BarValue>
-                          <BarFill height={height} />
-                          <BarLabel>{new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</BarLabel>
+                        <ChartBar key={index} title={tip}>
+                          <BarFill $height={height} />
+                          <BarLabel>
+                            {new Date(day.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                          </BarLabel>
                         </ChartBar>
                       );
                     })}
                   </ChartBars>
-                </RevenueChart>
+                </RevenueChartScroll>
               ) : (
                 <ChartPlaceholder>No revenue data available</ChartPlaceholder>
               )}
-            </ChartCard>
+            </Panel>
 
-            <ChartCard>
-              <ChartHeader>
-                <h3>Top Sellers</h3>
-              </ChartHeader>
+            <Panel>
+              <PanelHeader>
+                <div>
+                  <PanelTitle>Top Sellers</PanelTitle>
+                </div>
+              </PanelHeader>
               {vendors.length > 0 ? (
-                <VendorsList>
-                  {vendors.map((vendor) => (
-                    <VendorCard
+                <SellerList>
+                  {vendors.map((vendor, idx) => (
+                    <SellerRow
                       key={vendor.id}
                       onClick={() => navigate(`/dashboard/sellers/detail/${vendor.id}`)}
                     >
-                      <VendorAvatar>{vendor.name.charAt(0).toUpperCase()}</VendorAvatar>
-                      <VendorInfo>
-                        <h4>{vendor.name}</h4>
-                        <p>
+                      <SellerRank>{idx + 1}</SellerRank>
+                      <SellerAvatar>{vendor.name.charAt(0).toUpperCase()}</SellerAvatar>
+                      <SellerMeta>
+                        <SellerName>{vendor.name}</SellerName>
+                        <SellerStatsLine>
                           {vendor.products} products • {formatCurrency(vendor.sales)} sales
-                        </p>
-                      </VendorInfo>
-                      <VendorRating>
-                        <FaStar style={{ color: '#FFD700', marginRight: '4px' }} />
-                        {vendor.rating > 0 ? vendor.rating.toFixed(1) : 'N/A'}
-                      </VendorRating>
-                    </VendorCard>
+                        </SellerStatsLine>
+                      </SellerMeta>
+                      <SellerRating>
+                        <FaStar />
+                        {vendor.rating > 0 ? vendor.rating.toFixed(1) : "N/A"}
+                      </SellerRating>
+                    </SellerRow>
                   ))}
-                </VendorsList>
+                </SellerList>
               ) : (
                 <EmptyVendors>
                   <p>No sellers available</p>
                 </EmptyVendors>
               )}
-            </ChartCard>
-          </ChartsContainer>
+            </Panel>
+          </ChartsRow>
 
-          <ChartCard>
-            <ChartHeader>
-              <h3>Recent Orders</h3>
-              <ViewAllButton to="/admin/dashboard/orders">
-                View All
-              </ViewAllButton>
-            </ChartHeader>
-            <TableContainer>
-              <Table>
+          <Panel>
+            <PanelHeader $row>
+              <div>
+                <PanelTitle>Recent Orders</PanelTitle>
+              </div>
+              <ViewAllLink to="/admin/dashboard/orders">View All</ViewAllLink>
+            </PanelHeader>
+            <TableWrap>
+              <OrderTable>
                 <thead>
                   <tr>
                     <th>ORDER ID</th>
@@ -379,42 +395,52 @@ export default function AdminDashboard() {
                     recentOrders.map((order) => (
                       <tr
                         key={order.id}
-                        style={{ cursor: "pointer" }}
                         onClick={() => navigate(`/dashboard/orders/detail/${order.id}`, { replace: false })}
                       >
-                        <td>{order.orderNumber}</td>
+                        <td className="mono">{order.orderNumber}</td>
                         <td>{order.customer}</td>
-                        <td>{order.date}</td>
-                        <td>{order.amount}</td>
+                        <td className="muted">{order.date}</td>
+                        <td className="amount">{order.amount}</td>
                         <td>
-                          <StatusBadge $color={order.statusColor}>
-                            {formatStatus(order.status)}
-                          </StatusBadge>
+                          <OrderBadge $color={order.statusColor}>{formatStatus(order.status)}</OrderBadge>
                         </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="5" style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-grey-500)' }}>
-                        {ordersError ? 'Failed to load orders' : 'No recent orders'}
+                      <td colSpan="5" className="empty-cell">
+                        {ordersError ? "Failed to load orders" : "No recent orders"}
                       </td>
                     </tr>
                   )}
                 </tbody>
-              </Table>
-            </TableContainer>
-          </ChartCard>
+              </OrderTable>
+            </TableWrap>
+          </Panel>
         </Content>
       </MainContent>
     </DashboardContainer>
   );
 }
 
-// Styled components using global variables
+const statAccent = {
+  primary: "var(--color-primary-600)",
+  success: "var(--color-green-700)",
+  accent: "var(--color-primary-600)",
+  warning: "var(--color-yellow-700)",
+};
+
+const statIconTint = {
+  primary: "rgba(187, 108, 2, 0.12)",
+  success: "rgba(21, 128, 61, 0.12)",
+  accent: "rgba(187, 108, 2, 0.12)",
+  warning: "rgba(161, 98, 7, 0.12)",
+};
+
 const DashboardContainer = styled.div`
   display: flex;
   min-height: 100vh;
-  background-color: var(--color-grey-100);
+  background-color: ${T.bodyBg};
   width: 100%;
   overflow-x: hidden;
   max-width: 100vw;
@@ -429,129 +455,172 @@ const MainContent = styled.div`
 `;
 
 const Content = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
   padding: 20px 15px;
   width: 100%;
   max-width: 100%;
   overflow-x: hidden;
   box-sizing: border-box;
-  
+
   @media (min-width: 640px) {
     padding: 25px 20px;
   }
-  
+
   @media (min-width: 1024px) {
     padding: 30px;
   }
-  
+
   @media (min-width: 1440px) {
     padding: 40px;
   }
 `;
 
 const WelcomeBanner = styled.div`
-  background: linear-gradient(90deg, var(--color-primary-500), var(--color-brand-500));
-  color: var(--color-white-0);
-  border-radius: 15px;
-  padding: 20px;
-  margin-bottom: 25px;
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  text-align: center;
+  gap: 1.5rem;
+  padding: 2.8rem 3.2rem;
+  border-radius: ${T.radius};
+  overflow: hidden;
+  color: #fff;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+  align-items: center;
+  justify-content: space-between;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at top right, rgba(226, 152, 0, 0.18) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  @media (max-width: 767px) {
+    padding: 1.5rem 1.25rem;
+    align-items: stretch;
+  }
 
   @media (min-width: 768px) {
     flex-direction: row;
-    justify-content: space-between;
     align-items: center;
-    text-align: left;
-    padding: 25px;
-  }
-
-  h1 {
-    font-size: 20px;
-    margin-bottom: 8px;
-    
-    @media (min-width: 768px) {
-      font-size: 28px;
-      margin-bottom: 10px;
-    }
-  }
-
-  p {
-    opacity: 0.9;
-    font-size: 14px;
-    
-    @media (min-width: 768px) {
-      font-size: 16px;
-      max-width: 600px;
-    }
-  }
-
-  button {
-    background: var(--color-white-0);
-    border: none;
-    padding: 12px 24px;
-    border-radius: 10px;
-    font-weight: 500;
-    cursor: pointer;
-    color: var(--color-primary-500);
-    transition: all 0.3s;
-    width: 100%;
-    
-    @media (min-width: 768px) {
-      width: auto;
-      padding: 10px 20px;
-    }
-
-    &:hover:not(:disabled) {
-      transform: translateY(-3px);
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-      background: var(--color-grey-50);
-    }
-
-    &:disabled {
-      opacity: 0.7;
-      cursor: not-allowed;
-    }
+    justify-content: space-between;
   }
 `;
 
-const BannerButtons = styled.div`
+const BannerLeft = styled.div`
+  position: relative;
+  z-index: 1;
+  max-width: 40rem;
+`;
+
+const BannerEyebrow = styled.p`
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #e29800;
+`;
+
+const BannerTitle = styled.h1`
+  margin: 0 0 0.5rem;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #fff;
+
+  @media (min-width: 768px) {
+    font-size: 2.4rem;
+  }
+`;
+
+const BannerSubtitle = styled.p`
+  margin: 0;
+  font-size: 1.35rem;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.65);
+`;
+
+const BannerActions = styled.div`
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 0.75rem;
   width: 100%;
 
   @media (min-width: 768px) {
     flex-direction: row;
     width: auto;
-    gap: 12px;
+    flex-shrink: 0;
   }
 `;
 
-const BackfillSkipReasons = styled.div`
-  background: var(--color-yellow-50, #fffbeb);
-  border: 1px solid var(--color-yellow-200, #fde68a);
-  border-radius: 10px;
-  padding: 14px 18px;
-  margin-bottom: 25px;
+const BannerOutlineBtn = styled.button`
+  padding: 0.85rem 1.35rem;
+  border-radius: ${T.radiusSm};
+  font-size: 1.35rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: #fff;
+  background: transparent;
+  border: 1.5px solid rgba(255, 255, 255, 0.85);
+  transition: background 0.2s, border-color 0.2s, transform 0.2s;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+`;
+
+const BannerSolidBtn = styled.button`
+  padding: 0.85rem 1.35rem;
+  border-radius: ${T.radiusSm};
+  font-size: 1.35rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: #fff;
+  border: none;
+  background: linear-gradient(135deg, ${T.primaryLight} 0%, ${T.primary} 100%);
+  box-shadow: ${T.shadow};
+  transition: transform 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: ${T.shadowMd};
+  }
+`;
+
+const BackfillAlert = styled.div`
+  background: #fefce8;
+  border: 1px solid #fde68a;
+  border-radius: ${T.radius};
+  padding: 1.25rem 1.5rem;
 
   h4 {
-    margin: 0 0 8px 0;
-    font-size: 14px;
+    margin: 0 0 0.5rem;
+    font-size: 1.35rem;
     font-weight: 600;
-    color: var(--color-grey-800);
+    color: ${T.text};
   }
 
   ul {
     margin: 0;
-    padding-left: 20px;
+    padding-left: 1.25rem;
   }
 
   li {
-    margin-bottom: 6px;
-    font-size: 13px;
-    color: var(--color-grey-700);
+    margin-bottom: 0.4rem;
+    font-size: 1.25rem;
+    color: ${T.textMuted};
   }
 
   li:last-child {
@@ -559,244 +628,160 @@ const BackfillSkipReasons = styled.div`
   }
 `;
 
-const CardsContainer = styled.div`
+const StatsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
-  margin-bottom: 30px;
+  grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
+  gap: 1.25rem;
   width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-
-  @media (max-width: 480px) {
-    grid-template-columns: 1fr;
-    gap: 15px;
-  }
-
-  @media (min-width: 481px) and (max-width: 640px) {
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 15px;
-  }
-
-  @media (min-width: 641px) and (max-width: 1024px) {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  @media (min-width: 1025px) {
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  }
 `;
 
-const Card = styled.div`
-  background: var(--color-white-0);
-  border-radius: 12px;
-  padding: 15px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  transition: all 0.3s;
-  min-height: 100px;
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-  overflow: hidden;
-
-  @media (min-width: 768px) {
-    padding: 20px;
-    gap: 15px;
-    border-radius: 15px;
-    min-height: auto;
-  }
+const StatCard = styled.div`
+  background: ${T.cardBg};
+  border: 1px solid ${T.border};
+  border-radius: ${T.radius};
+  padding: 2rem;
+  box-shadow: ${T.shadow};
+  transition: transform 0.2s, box-shadow 0.2s;
 
   &:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+    box-shadow: ${T.shadowMd};
   }
 `;
 
-const CardIcon = styled.div`
-  width: 50px;
-  height: 50px;
-  border-radius: 10px;
+const StatCardTop = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+`;
+
+const StatIconWrap = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
-  background: ${(props) => bgColorMap[props.bg] || bgColorMap.primary};
-  color: ${(props) => colorMap[props.bg] || colorMap.primary};
+  width: 4.2rem;
+  height: 4.2rem;
+  border-radius: ${T.radiusSm};
+  font-size: 1.8rem;
   flex-shrink: 0;
+  background: ${(p) => statIconTint[p.$variant] || statIconTint.primary};
+  color: ${(p) => statAccent[p.$variant] || statAccent.primary};
+`;
 
-  @media (min-width: 768px) {
-    width: 60px;
-    height: 60px;
-    font-size: 24px;
-    border-radius: 12px;
+const StatLabel = styled.span`
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: ${T.textLight};
+  text-align: right;
+`;
+
+const StatValue = styled.div`
+  font-size: 2rem;
+  font-weight: 700;
+  color: ${T.text};
+  line-height: 1.2;
+  margin-bottom: 0.35rem;
+`;
+
+const StatTrend = styled.div`
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--success);
+`;
+
+const Panel = styled.div`
+  background: ${T.cardBg};
+  border: 1px solid ${T.border};
+  border-radius: ${T.radius};
+  box-shadow: ${T.shadow};
+  padding: 1.35rem 1.5rem;
+  width: 100%;
+  box-sizing: border-box;
+`;
+
+const PanelHeader = styled.div`
+  display: flex;
+  flex-direction: ${(p) => (p.$row ? "row" : "column")};
+  justify-content: ${(p) => (p.$row ? "space-between" : "flex-start")};
+  align-items: ${(p) => (p.$row ? "center" : "flex-start")};
+  gap: ${(p) => (p.$row ? "1rem" : "0")};
+  margin-bottom: 1.25rem;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: flex-start;
   }
 `;
 
-const CardContent = styled.div`
-  flex: 1;
-  min-width: 0;
-
-  h3 {
-    font-size: 18px;
-    margin-bottom: 4px;
-    word-break: break-word;
-    
-    @media (min-width: 768px) {
-      font-size: 24px;
-      margin-bottom: 5px;
-    }
-  }
-
-  p {
-    color: var(--color-grey-400);
-    font-size: 12px;
-    margin-bottom: 4px;
-    
-    @media (min-width: 768px) {
-      font-size: 14px;
-      margin-bottom: 5px;
-    }
-  }
-
-  small {
-    font-size: 11px;
-    font-weight: 500;
-    color: var(--color-green-700);
-    
-    @media (min-width: 768px) {
-      font-size: 12px;
-    }
-  }
+const PanelTitle = styled.h3`
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: ${T.text};
 `;
 
-const ChartsContainer = styled.div`
+const ChartsRow = styled.div`
   display: grid;
   grid-template-columns: 2fr 1fr;
-  gap: 20px;
-  margin-bottom: 30px;
+  gap: 1.25rem;
   width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
 
   @media (max-width: 1024px) {
     grid-template-columns: 1fr;
-    gap: 15px;
-  }
-
-  @media (max-width: 768px) {
-    gap: 15px;
   }
 `;
 
-const ChartCard = styled.div`
-  background: var(--color-white-0);
-  border-radius: 15px;
-  padding: 20px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+const RevenueChartScroll = styled.div`
   width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-  overflow: hidden;
-
-  @media (max-width: 768px) {
-    padding: 15px;
-    border-radius: 12px;
-  }
-
-  @media (max-width: 480px) {
-    padding: 12px;
-  }
-`;
-
-const ChartHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-
-  h3 {
-    font-size: 18px;
-  }
-
-  @media (max-width: 768px) {
-    margin-bottom: 15px;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-
-    h3 {
-      font-size: 16px;
-    }
-  }
-`;
-
-const ChartPlaceholder = styled.div`
-  height: 300px;
-  background: linear-gradient(120deg, var(--color-grey-50), var(--color-grey-200));
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-grey-400);
-  font-weight: 500;
-  
-  @media (max-width: 768px) {
-    height: 200px;
-  }
-`;
-
-const RevenueChart = styled.div`
-  padding: 15px 0;
-  width: 100%;
-  max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
-  box-sizing: border-box;
-  
-  @media (min-width: 768px) {
-    padding: 20px 0;
-  }
+  padding: 0.5rem 0 0;
+`;
+
+const ChartPlaceholder = styled.div`
+  height: 16rem;
+  background: ${T.bodyBg};
+  border-radius: ${T.radiusSm};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: ${T.textMuted};
+  font-weight: 600;
+  font-size: 1.35rem;
 `;
 
 const ChartBars = styled.div`
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 6px;
+  gap: 0.6rem;
   height: 200px;
-  padding: 0 5px;
+  padding: 0 0.4rem;
   min-width: 500px;
   width: max-content;
   box-sizing: border-box;
-  
+
   @media (max-width: 480px) {
     min-width: 400px;
-    gap: 4px;
+    gap: 0.4rem;
     height: 180px;
-    padding: 0 3px;
   }
-  
-  @media (min-width: 481px) and (max-width: 640px) {
-    min-width: 450px;
-    gap: 5px;
-    height: 200px;
-  }
-  
+
   @media (min-width: 641px) {
     min-width: auto;
-    gap: 8px;
+    gap: 0.8rem;
     height: 250px;
-    padding: 0 10px;
     width: 100%;
   }
-  
+
   @media (min-width: 768px) {
-    gap: 12px;
-    height: 300px;
+    gap: 1rem;
+    height: 280px;
   }
 `;
 
@@ -807,344 +792,228 @@ const ChartBar = styled.div`
   align-items: center;
   justify-content: flex-end;
   height: 100%;
-  position: relative;
-  min-width: 30px;
-  
+  min-width: 2.8rem;
+
   @media (min-width: 640px) {
-    min-width: 40px;
+    min-width: 3.2rem;
   }
 `;
 
 const BarFill = styled.div`
   width: 100%;
-  height: ${props => props.height}%;
-  background: linear-gradient(180deg, var(--color-primary-500), var(--color-brand-500));
-  border-radius: 8px 8px 0 0;
+  height: ${(p) => p.$height}%;
   min-height: 4px;
-  transition: all 0.3s ease;
-  position: relative;
-  
+  border-radius: 8px 8px 0 0;
+  background: linear-gradient(180deg, #e29800 0%, #bb6c02 100%);
+  transition: opacity 0.2s;
+
   &:hover {
-    opacity: 0.8;
+    opacity: 0.92;
   }
 `;
 
 const BarLabel = styled.div`
-  font-size: 10px;
-  color: var(--color-grey-500);
-  margin-top: 8px;
+  font-size: 1rem;
+  color: ${T.textMuted};
+  margin-top: 0.6rem;
   text-align: center;
-  transform: rotate(-45deg);
+  transform: rotate(-40deg);
   white-space: nowrap;
-  overflow: visible;
-  max-width: 60px;
+  max-width: 5rem;
   text-overflow: ellipsis;
-
-  @media (max-width: 768px) {
-    font-size: 9px;
-    margin-top: 6px;
-    max-width: 50px;
-  }
-
-  @media (max-width: 480px) {
-    font-size: 8px;
-    margin-top: 4px;
-    max-width: 40px;
-  }
+  overflow: hidden;
 `;
 
-const BarValue = styled.div`
-  position: absolute;
-  top: -25px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--color-primary-700);
-  white-space: nowrap;
-  opacity: 0;
-  transition: opacity 0.3s;
-  
-  ${ChartBar}:hover & {
-    opacity: 1;
-  }
-
-  @media (max-width: 768px) {
-    font-size: 10px;
-    top: -20px;
-  }
-
-  @media (max-width: 480px) {
-    font-size: 9px;
-    top: -18px;
-  }
+const SellerList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
 `;
 
-const TableContainer = styled.div`
-  background: var(--color-white-0);
-  border-radius: 15px;
-  padding: 15px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-  overflow-x: auto;
-  overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-  
-  @media (min-width: 768px) {
-    padding: 20px;
-  }
-
-  @media (max-width: 480px) {
-    padding: 10px;
-  }
-`;
-
-const Table = styled.table`
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 600px;
-  font-size: 14px;
-  table-layout: auto;
-
-  @media (max-width: 480px) {
-    min-width: 500px;
-    font-size: 12px;
-  }
-
-  @media (min-width: 481px) and (max-width: 640px) {
-    min-width: 550px;
-    font-size: 13px;
-  }
-
-  @media (min-width: 768px) {
-    font-size: 16px;
-    min-width: auto;
-    width: 100%;
-  }
-
-  th, td {
-    padding: 12px 8px;
-    text-align: left;
-    border-bottom: 1px solid var(--color-grey-200);
-    box-sizing: border-box;
-    
-    @media (max-width: 480px) {
-      padding: 10px 6px;
-    }
-    
-    @media (min-width: 768px) {
-      padding: 15px 10px;
-    }
-    
-    @media (min-width: 1024px) {
-      padding: 15px 20px;
-    }
-  }
-
-  th {
-    color: var(--color-grey-500);
-    font-weight: 500;
-    font-size: 12px;
-    white-space: nowrap;
-    
-    @media (max-width: 480px) {
-      font-size: 11px;
-    }
-    
-    @media (min-width: 768px) {
-      font-size: 14px;
-    }
-  }
-
-  td {
-    font-size: 14px;
-    word-break: break-word;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 200px;
-    
-    @media (max-width: 480px) {
-      font-size: 12px;
-      max-width: 150px;
-    }
-    
-    @media (min-width: 768px) {
-      font-size: 16px;
-      max-width: none;
-    }
-  }
-
-  tbody tr {
-    cursor: pointer;
-    transition: background-color 0.2s;
-    
-    &:hover {
-      background-color: rgba(67, 97, 238, 0.05);
-    }
-  }
-`;
-
-const StatusBadge = styled.span`
-  padding: 4px 8px;
-  border-radius: 20px;
-  font-size: 10px;
-  font-weight: 500;
-  background: ${(props) => props.$color ? `${props.$color}20` : statusBgMap.Completed};
-  color: ${(props) => props.$color || statusColorMap.Completed};
-  display: inline-block;
-  white-space: nowrap;
-  
-  @media (min-width: 480px) {
-    padding: 5px 10px;
-    font-size: 12px;
-  }
-`;
-
-const VendorsList = styled.div`
-  width: 100%;
-  max-width: 100%;
-  overflow-y: auto;
-  max-height: 400px;
-`;
-
-const VendorCard = styled.div`
+const SellerRow = styled.div`
   display: flex;
   align-items: center;
-  padding: 12px;
-  border-bottom: 1px solid var(--color-grey-200);
-  gap: 12px;
+  gap: 0.75rem;
+  padding: 0.65rem 0.5rem;
+  border-radius: ${T.radiusSm};
   cursor: pointer;
-  transition: background-color 0.2s;
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-  overflow: hidden;
-
-  &:last-child {
-    border-bottom: none;
-  }
+  transition: background 0.15s;
 
   &:hover {
-    background-color: rgba(67, 97, 238, 0.05);
+    background: ${T.bodyBg};
   }
+`;
 
-  @media (min-width: 768px) {
-    padding: 15px;
-    gap: 15px;
-  }
+const SellerRank = styled.span`
+  width: 1.8rem;
+  flex-shrink: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: ${T.textLight};
+  text-align: center;
+`;
 
-  @media (max-width: 480px) {
-    padding: 10px;
-    gap: 10px;
+const SellerAvatar = styled.div`
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.5rem;
+  color: #fff;
+  background: linear-gradient(135deg, #bb6c02 0%, #e29800 100%);
+`;
+
+const SellerMeta = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const SellerName = styled.div`
+  font-weight: 700;
+  font-size: 1.35rem;
+  color: ${T.text};
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+const SellerStatsLine = styled.div`
+  font-size: 1.15rem;
+  color: ${T.textMuted};
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+const SellerRating = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+  font-weight: 700;
+  font-size: 1.3rem;
+  color: ${T.text};
+
+  svg {
+    color: #e29800;
+    font-size: 1.2rem;
   }
 `;
 
 const EmptyVendors = styled.div`
-  padding: 40px 20px;
+  padding: 2.5rem 1rem;
   text-align: center;
-  color: var(--color-grey-500);
-  
+  color: ${T.textMuted};
+
   p {
     margin: 0;
-    font-size: 14px;
+    font-size: 1.35rem;
   }
 `;
 
-const VendorAvatar = styled.div`
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: var(--color-primary-500);
-  display: flex;
+const ViewAllLink = styled(Link)`
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-white-0);
+  padding: 0.55rem 1.1rem;
+  border-radius: 999px;
+  font-size: 1.25rem;
   font-weight: 600;
-  font-size: 16px;
-  flex-shrink: 0;
-
-  @media (min-width: 768px) {
-    width: 50px;
-    height: 50px;
-    font-size: 18px;
-  }
-`;
-
-const VendorInfo = styled.div`
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-
-  h4 {
-    margin-bottom: 4px;
-    font-size: 14px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
-    
-    @media (max-width: 480px) {
-      font-size: 13px;
-    }
-    
-    @media (min-width: 768px) {
-      font-size: 16px;
-      margin-bottom: 5px;
-    }
-  }
-
-  p {
-    color: var(--color-grey-400);
-    font-size: 12px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
-    
-    @media (max-width: 480px) {
-      font-size: 11px;
-    }
-    
-    @media (min-width: 768px) {
-      font-size: 13px;
-    }
-  }
-`;
-
-const VendorRating = styled.div`
-  font-weight: 600;
-  color: var(--color-sec-700);
-  font-size: 14px;
-  
-  @media (min-width: 768px) {
-    font-size: 16px;
-  }
-`;
-
-const ViewAllButton = styled(Link)`
-  background: var(--color-primary-500);
-  color: var(--color-white-0);
-  border: none;
-  padding: 8px 15px;
-  border-radius: 8px;
-  cursor: pointer;
   text-decoration: none;
-  font-size: 14px;
-  transition: all 0.2s;
+  color: ${T.primary};
+  border: 1.5px solid ${T.border};
+  background: transparent;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
   white-space: nowrap;
 
   &:hover {
-    background: var(--color-primary-700);
-    transform: translateY(-2px);
+    background: ${T.primaryBg};
+    border-color: ${T.primaryLight};
+    color: ${T.primary};
+  }
+`;
+
+const TableWrap = styled.div`
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+`;
+
+const OrderTable = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 600px;
+  font-size: 1.35rem;
+
+  th,
+  td {
+    padding: 0.85rem 0.65rem;
+    text-align: left;
+    border-bottom: 1px solid ${T.border};
+    vertical-align: middle;
   }
 
-  @media (max-width: 768px) {
-    padding: 6px 12px;
-    font-size: 12px;
+  th {
+    background: ${T.bodyBg};
+    color: ${T.textMuted};
+    font-weight: 600;
+    font-size: 1.1rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
   }
 
-  @media (max-width: 480px) {
-    padding: 5px 10px;
-    font-size: 11px;
+  td {
+    color: ${T.text};
   }
+
+  td.mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 1.25rem;
+    color: ${T.textMuted};
+  }
+
+  td.muted {
+    color: ${T.textMuted};
+    font-size: 1.25rem;
+  }
+
+  td.amount {
+    font-weight: 700;
+    color: ${T.text};
+  }
+
+  td.empty-cell {
+    text-align: center;
+    padding: 2rem;
+    color: ${T.textMuted};
+  }
+
+  tbody tr {
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  tbody tr:hover {
+    background: ${T.bodyBg};
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+`;
+
+const OrderBadge = styled.span`
+  display: inline-block;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: ${(p) => p.$color || T.textMuted};
+  background: ${(p) => (p.$color ? `${p.$color}18` : "rgba(107, 114, 128, 0.18)")};
 `;

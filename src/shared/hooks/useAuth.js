@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { authApi } from '../services/adminApi';
+import { markRecentLogin } from '../services/api';
 
 // SECURITY: Cookie-only authentication - no token storage
 // Tokens are in HTTP-only cookies set by backend
@@ -13,6 +14,22 @@ function clearAuthData() {
   if (typeof window !== "undefined") {
     localStorage.removeItem("current_role"); // Non-sensitive role preference only
   }
+}
+
+// Public/auth pages where the admin cookie is not expected to exist.
+// The auth query must NOT auto-fetch on these pages; doing so creates an
+// in-flight GET /admin/me (no cookie → 401) that can arrive at the axios
+// interceptor *after* the user has navigated to /dashboard, triggering the
+// "session expired" redirect even though login succeeded.
+const AUTH_PAGE_PATHS = ['/', '/login', '/forgot-password', '/reset-password'];
+
+function isAuthPage() {
+  if (typeof window === 'undefined') return false;
+  const p =
+    typeof window.location?.pathname === 'string'
+      ? window.location.pathname
+      : '';
+  return AUTH_PAGE_PATHS.some(ap => p === ap || p.startsWith(ap + '/'));
 }
 
 export default function useAuth() {
@@ -31,25 +48,34 @@ export default function useAuth() {
     refetch: refetchAuth,
   } = useQuery({
     queryKey: ["adminAuth"],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       try {
-        const response = await authApi.getCurrentUser();
+        const response = await authApi.getCurrentUser({ signal });
         return response; // Return user object directly
       } catch (error) {
-        // 401 = cookie expired/missing; 403 = wrong role (e.g. backend getMe only allowed 'admin') – treat as unauthenticated and redirect to login
+        // Cancelled queries (e.g. via cancelQueries after login): re-throw so
+        // React Query discards the result without updating the cache.
+        if (error.name === 'CanceledError' || error.code === 'ERR_CANCELED') {
+          throw error;
+        }
+        // 401 = cookie expired/missing; 403 = wrong role – treat as unauthenticated
         if (error.response?.status === 401 || error.response?.status === 403) {
           return null;
         }
         throw error;
       }
     },
+    // Do NOT auto-fetch on login/forgot-password pages.
+    // There is no admin cookie on those pages so the fetch would return 401.
+    // If that in-flight 401 response arrives after the user navigates to
+    // /dashboard, the axios interceptor fires the "session expired" redirect.
+    enabled: !isAuthPage(),
     staleTime: 1000 * 60 * 10, // 10 minutes
     retry: (failureCount, error) => {
-      // Retry up to 2 times, but not on 401/403 (server confirmed auth failure or wrong role)
-      if (error?.response?.status === 401 || error?.response?.status === 403) {
-        return false;
-      }
-      return failureCount < 2; // Retry network errors
+      // Never retry on 401/403 or on cancelled requests
+      if (error?.response?.status === 401 || error?.response?.status === 403) return false;
+      if (error?.name === 'CanceledError' || error?.code === 'ERR_CANCELED') return false;
+      return failureCount < 2; // Retry transient network errors
     },
     refetchOnWindowFocus: false, // Prevent frequent refetches
   });
@@ -61,33 +87,25 @@ export default function useAuth() {
       // SECURITY: Token is in HTTP-only cookie, NOT in response
       // Backend sets cookie automatically - no token storage needed
       const user = response.data?.user || response.data?.data?.user || response.data;
-      
+
       // Store non-sensitive role preference only
       if (typeof window !== "undefined") {
         localStorage.setItem("current_role", "admin");
       }
-      
+
+      // Activate grace period to suppress spurious "session expired" redirects
+      // that can occur during the brief window right after login completes.
+      markRecentLogin();
+
+      // Cancel any in-flight GET /admin/me request from the login page.
+      // Without this, a 401 response arriving after navigation to /dashboard
+      // triggers the interceptor redirect ("session expired") even though login succeeded.
+      queryClient.cancelQueries({ queryKey: ["adminAuth"] });
       queryClient.setQueryData(["adminAuth"], user); // Set user object directly
     },
   });
 
-  // 3️⃣ REGISTER mutation
-  const register = useMutation({
-    mutationFn: authApi.register,
-    onSuccess: (response) => {
-      // SECURITY: Token is in HTTP-only cookie, NOT in response
-      const user = response.data?.user || response.data?.data?.user || response.data;
-      
-      // Store non-sensitive role preference only
-      if (typeof window !== "undefined") {
-        localStorage.setItem("current_role", "admin");
-      }
-      
-      queryClient.setQueryData(["adminAuth"], user); // Set user object directly
-    },
-  });
-
-  // 4️⃣ LOGOUT mutation
+  // 3️⃣ LOGOUT mutation
   const logout = useMutation({
     mutationFn: authApi.logout,
     onSuccess: () => {
@@ -167,7 +185,6 @@ export default function useAuth() {
     error: queryError,
     refetchAuth,
     login,
-    register,
     logout,
     requestPasswordReset,
     resetPasswordWithToken,

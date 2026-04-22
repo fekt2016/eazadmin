@@ -8,18 +8,41 @@ import RefundTimeline from '../components/RefundTimeline';
 import { PATHS } from '../../../routes/routePath';
 import { formatDate } from '../../../shared/utils/helpers';
 import { LoadingSpinner } from '../../../shared/components/LoadingSpinner';
+import {
+  PageHeader as SharedPageHeader,
+  PageTitle,
+  PageSub,
+} from '../../../shared/components/page/PageHeader';
+
+const T = {
+  border: 'var(--color-border)',
+  cardBg: 'var(--color-card-bg)',
+  bodyBg: 'var(--color-body-bg)',
+  text: 'var(--color-grey-900)',
+  textMuted: 'var(--color-grey-500)',
+  primary: 'var(--color-primary-600)',
+  radius: 'var(--border-radius-xl)',
+  shadow: 'var(--shadow-sm)',
+};
 
 const PageContainer = styled.div`
   padding: 2rem;
   max-width: 1400px;
   margin: 0 auto;
+  min-height: 100vh;
+  background: ${T.bodyBg};
 `;
 
-const Header = styled.div`
-  display: flex;
+const DetailPageHeader = styled(SharedPageHeader)`
   align-items: center;
+  justify-content: flex-start;
   gap: 1.5rem;
   margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: ${T.cardBg};
+  border: 1px solid ${T.border};
+  border-radius: ${T.radius};
+  box-shadow: ${T.shadow};
 `;
 
 const BackButton = styled.button`
@@ -27,32 +50,24 @@ const BackButton = styled.button`
   align-items: center;
   gap: 0.5rem;
   padding: 0.8rem 1.5rem;
-  background: #f3f4f6;
-  border: none;
-  border-radius: 0.6rem;
+  background: var(--color-card-bg);
+  border: 1px solid ${T.border};
+  border-radius: var(--border-radius-md);
   font-size: 1.4rem;
   font-weight: 600;
-  color: #374151;
+  color: var(--color-grey-700);
   cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s, border-color 0.2s;
   &:hover {
-    background: #e5e7eb;
+    background: var(--color-grey-50);
+    border-color: var(--color-grey-300);
   }
 `;
 
 const HeaderContent = styled.div`
   flex: 1;
-`;
-
-const Title = styled.h1`
-  font-size: 2.4rem;
-  font-weight: 700;
-  color: #1f2937;
-  margin-bottom: 0.5rem;
-`;
-
-const Subtitle = styled.div`
-  font-size: 1.4rem;
-  color: #6b7280;
+  min-width: 0;
 `;
 
 const ContentGrid = styled.div`
@@ -79,16 +94,17 @@ const RightColumn = styled.div`
 `;
 
 const Card = styled.div`
-  background: white;
-  border-radius: 0.8rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background: ${T.cardBg};
+  border: 1px solid ${T.border};
+  border-radius: var(--border-radius-lg);
+  box-shadow: ${T.shadow};
   padding: 2rem;
 `;
 
 const CardTitle = styled.h3`
   font-size: 1.8rem;
   font-weight: 700;
-  color: #1f2937;
+  color: ${T.text};
   margin-bottom: 1.5rem;
   display: flex;
   align-items: center;
@@ -113,13 +129,13 @@ const InfoItem = styled.div`
 
 const InfoLabel = styled.div`
   font-size: 1.3rem;
-  color: #6b7280;
+  color: ${T.textMuted};
   font-weight: 500;
 `;
 
 const InfoValue = styled.div`
   font-size: 1.5rem;
-  color: #1f2937;
+  color: ${T.text};
   font-weight: 600;
 `;
 
@@ -127,7 +143,7 @@ const LinkButton = styled(Link)`
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  color: #6366f1;
+  color: ${T.primary};
   text-decoration: none;
   font-size: 1.4rem;
   font-weight: 600;
@@ -350,17 +366,19 @@ export default function RefundDetailPage() {
 
   return (
     <PageContainer>
-      <Header>
+      <DetailPageHeader>
         <BackButton onClick={() => navigate(-1)}>
           <FaArrowLeft /> Back
         </BackButton>
         <HeaderContent>
-          <Title>Refund Request #{refund.orderNumber || refund._id?.slice(-8)}</Title>
-          <Subtitle>
+          <PageTitle>
+            Refund Request #{refund.orderNumber || refund._id?.slice(-8)}
+          </PageTitle>
+          <PageSub as="div">
             <RefundStatusBadge status={refund.refundStatus || 'pending'} />
-          </Subtitle>
+          </PageSub>
         </HeaderContent>
-      </Header>
+      </DetailPageHeader>
 
       <ContentGrid>
         <LeftColumn>

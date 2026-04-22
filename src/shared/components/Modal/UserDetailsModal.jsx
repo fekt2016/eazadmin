@@ -172,7 +172,7 @@ const CloseButton = styled.button`
 
   &:hover {
     background: #f5f7fb;
-    color: #4361ee;
+    color: #bb6c02;
   }
 `;
 
@@ -189,7 +189,7 @@ const ModalFooter = styled.div`
 
 const ModalButton = styled.button`
   padding: 12px 25px;
-  background: #4361ee;
+  background: #bb6c02;
   color: white;
   border: none;
   border-radius: 10px;
@@ -217,7 +217,7 @@ const UserAvatar = styled.div`
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: #4361ee;
+  background: #bb6c02;
   color: white;
   display: flex;
   align-items: center;
@@ -286,9 +286,9 @@ const RoleBadge = styled.span`
       ? "#4CC9F020"
       : role === "seller"
       ? "#F8961E20"
-      : "#4361EE20"};
+      : "rgba(187, 108, 2, 0.13)"};
   color: ${({ role }) =>
-    role === "admin" ? "#4CC9F0" : role === "seller" ? "#F8961E" : "#4361EE"};
+    role === "admin" ? "#4CC9F0" : role === "seller" ? "#F8961E" : "#bb6c02"};
 `;
 
 const StatusBadge = styled.span`

@@ -17,6 +17,16 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../shared/services/api";
 import { toast } from "react-toastify";
 import { ConfirmationModal } from "../../shared/components/Modal/ConfirmationModal";
+import {
+  PageHeader,
+  PageTitle,
+  PageSub,
+  HeaderActions as SharedHeaderActions,
+} from "../../shared/components/page/PageHeader";
+
+const T = {
+  bodyBg: "var(--color-body-bg)",
+};
 
 export default function PickupCentersPage({ embedded = false }) {
   const queryClient = useQueryClient();
@@ -183,16 +193,18 @@ export default function PickupCentersPage({ embedded = false }) {
 
   return (
     <DashboardContainer $embedded={embedded}>
-      <Header>
-        <TitleContainer>
-          <Title>Pickup Centers</Title>
-          <Subtitle>Manage Saiisai pickup centers</Subtitle>
-        </TitleContainer>
-        <AddButton onClick={() => handleOpenModal()}>
-          <FaPlus />
-          Add Pickup Center
-        </AddButton>
-      </Header>
+      <PageHeader>
+        <div>
+          <PageTitle>Pickup Centers</PageTitle>
+          <PageSub>Manage Saiisai pickup centers</PageSub>
+        </div>
+        <SharedHeaderActions>
+          <AddButton onClick={() => handleOpenModal()}>
+            <FaPlus />
+            Add Pickup Center
+          </AddButton>
+        </SharedHeaderActions>
+      </PageHeader>
 
       <Filters>
         <SearchContainer>
@@ -440,34 +452,8 @@ export default function PickupCentersPage({ embedded = false }) {
 // Styled Components
 const DashboardContainer = styled.div`
   padding: ${(props) => (props.$embedded ? "0" : "2rem")};
-  background-color: ${(props) => (props.$embedded ? "transparent" : "#f8fafc")};
+  background: ${(props) => (props.$embedded ? "transparent" : T.bodyBg)};
   min-height: ${(props) => (props.$embedded ? "auto" : "100vh")};
-`;
-
-const Header = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
-  gap: 1rem;
-`;
-
-const TitleContainer = styled.div`
-  flex: 1;
-`;
-
-const Title = styled.h1`
-  font-size: 1.8rem;
-  color: #1e293b;
-  margin: 0 0 0.5rem 0;
-  font-weight: 700;
-`;
-
-const Subtitle = styled.p`
-  font-size: 0.9rem;
-  color: #64748b;
-  margin: 0;
 `;
 
 const AddButton = styled.button`
@@ -475,17 +461,17 @@ const AddButton = styled.button`
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1.5rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--color-primary-600);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--border-radius-md);
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: background 0.3s ease;
 
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    background: var(--color-primary-700);
+    box-shadow: var(--shadow-sm);
   }
 `;
 
@@ -642,14 +628,14 @@ const ActionButton = styled.button`
   padding: 0.5rem 1rem;
   border: 1px solid ${({ $danger }) => ($danger ? "#fee2e2" : "#e2e8f0")};
   background: ${({ $danger }) => ($danger ? "#fee2e2" : "white")};
-  color: ${({ $danger }) => ($danger ? "#b91c1c" : "#2563eb")};
+  color: ${({ $danger }) => ($danger ? "#b91c1c" : "var(--color-primary-600)")};
   border-radius: 8px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover {
-    background: ${({ $danger }) => ($danger ? "#fecaca" : "#eff6ff")};
+    background: ${({ $danger }) => ($danger ? "#fecaca" : "var(--color-primary-50)")};
     transform: translateY(-1px);
   }
 `;
@@ -838,7 +824,11 @@ const SubmitButton = styled.button`
   flex: 1;
   padding: 0.75rem;
   border: none;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-primary-600) 0%,
+    var(--color-primary-800) 100%
+  );
   color: white;
   border-radius: 8px;
   font-weight: 600;
@@ -847,7 +837,7 @@ const SubmitButton = styled.button`
 
   &:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 4px 12px rgba(187, 108, 2, 0.35);
   }
 
   &:disabled {

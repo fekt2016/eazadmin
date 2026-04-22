@@ -29,13 +29,13 @@ const TabButton = styled.button`
   font-weight: 500;
   border: none;
   background: ${({ $active }) => ($active ? '#fff' : 'transparent')};
-  color: ${({ $active }) => ($active ? '#4361ee' : '#6b7280')};
-  border-bottom: 2px solid ${({ $active }) => ($active ? '#4361ee' : 'transparent')};
+  color: ${({ $active }) => ($active ? '#bb6c02' : '#6b7280')};
+  border-bottom: 2px solid ${({ $active }) => ($active ? '#bb6c02' : 'transparent')};
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover {
-    color: #4361ee;
+    color: #bb6c02;
   }
 `;
 
@@ -76,8 +76,8 @@ const FormGroup = styled.div`
   }
   input:focus, select:focus {
     outline: none;
-    border-color: #4361ee;
-    box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.2);
+    border-color: #bb6c02;
+    box-shadow: 0 0 0 2px rgba(187, 108, 2, 0.18);
   }
 `;
 
@@ -93,7 +93,7 @@ const Button = styled.button`
   transition: background 0.2s;
 
   &.primary {
-    background: #4361ee;
+    background: #bb6c02;
     color: #fff;
     &:hover { background: #3651d4; }
   }

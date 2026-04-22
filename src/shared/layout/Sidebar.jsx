@@ -1,4 +1,5 @@
-import { Link } from "react-router-dom";
+import { NavLink } from "react-router-dom";
+import { useMemo } from "react";
 import styled from "styled-components";
 import {
   FaChartLine,
@@ -18,15 +19,33 @@ import {
   FaWallet,
   FaHeadset,
   FaTicketAlt,
-  FaBullhorn,
   FaFileInvoiceDollar,
   FaVideo,
   FaWrench,
   FaQuoteLeft,
+  FaComments,
+  FaTag,
 } from "react-icons/fa";
 import { PATHS } from "../../routes/routePath";
+import { canAccessAdminPath } from "../../config/rolePermissions";
 import useAuth from '../hooks/useAuth';
 import Logo from '../components/Logo';
+
+const T = {
+  primary:      'var(--color-primary-600)',
+  primaryLight: 'var(--color-primary-500)',
+  primaryBg:    'var(--color-primary-100)',
+  border:       'var(--color-border)',
+  cardBg:       'var(--color-card-bg)',
+  bodyBg:       'var(--color-body-bg)',
+  text:         'var(--color-grey-900)',
+  textMuted:    'var(--color-grey-500)',
+  textLight:    'var(--color-grey-400)',
+  radius:       'var(--border-radius-xl)',
+  radiusSm:     'var(--border-radius-md)',
+  shadow:       'var(--shadow-sm)',
+  shadowMd:     'var(--shadow-md)',
+};
 
 // All dashboard child routes: use absolute path so nav works from any nested route
 const DASHBOARD_BASE = "/dashboard";
@@ -46,6 +65,12 @@ export default function Sidebar({ role }) {
       path: `${DASHBOARD_BASE}/products`,
       label: "All Products",
       icon: <FaBoxes />,
+    },
+    {
+      path: `${DASHBOARD_BASE}/${PATHS.PROMOS}`,
+      label: "Promos",
+      icon: <FaTag />,
+      roles: ["superadmin", "admin"],
     },
     {
       path: `${DASHBOARD_BASE}/${PATHS.OFFICIAL_STORE}`,
@@ -98,8 +123,13 @@ export default function Sidebar({ role }) {
       icon: <FaFileInvoiceDollar />,
     },
     {
+      path: `${DASHBOARD_BASE}/${PATHS.LIVE_CHAT}`,
+      label: "Live Chat",
+      icon: <FaComments />,
+    },
+    {
       path: `${DASHBOARD_BASE}/support`,
-      label: "Support",
+      label: "Support Tickets",
       icon: <FaHeadset />,
     },
     {
@@ -123,19 +153,32 @@ export default function Sidebar({ role }) {
       icon: <FaTicketAlt />,
     },
     {
-      path: `${DASHBOARD_BASE}/ads`,
-      label: "Advertisements",
-      icon: <FaBullhorn />,
-    },
-    {
       path: `${DASHBOARD_BASE}/${PATHS.STATUS_VIDEOS}`,
       label: "Status Videos",
       icon: <FaVideo />,
+    },
+    {
+      path: `${DASHBOARD_BASE}/${PATHS.SETTINGS}`,
+      label: "Settings",
+      icon: <FaCog />,
     },
   ];
   const handleLogout = () => {
     logout.mutate();
   };
+
+  const visibleMenuItems = useMemo(() => {
+    const allowedRoles = ["superadmin", "admin", "support_agent"];
+    if (!role || !allowedRoles.includes(role)) {
+      return menuItems.filter((item) => item.path === DASHBOARD_BASE);
+    }
+    return menuItems.filter((item) => {
+      if (Array.isArray(item.roles) && !item.roles.includes(role)) {
+        return false;
+      }
+      return canAccessAdminPath(role, item.path);
+    });
+  }, [role]);
 
   return (
     <Container>
@@ -143,7 +186,7 @@ export default function Sidebar({ role }) {
         <Logo variant="compact" />
       </SidebarHeader>
       <MenuList>
-        {menuItems.map((item) => (
+        {visibleMenuItems.map((item) => (
           <MenuItem key={item.path}>
             <NavLink
               to={item.path}
@@ -166,10 +209,6 @@ export default function Sidebar({ role }) {
   );
 }
 
-// Theme variables
-
-// Header Component
-
 export const NavItems = styled.nav`
   display: flex;
   align-items: center;
@@ -180,51 +219,10 @@ export const NavItems = styled.nav`
   }
 `;
 
-const theme = {
-  primaryColor: "#2563eb",
-  secondaryColor: "#1e40af",
-  textColor: "#1f2937",
-  lightText: "#6b7280",
-  sidebarWidth: "240px",
-  headerHeight: "64px",
-  borderRadius: "8px",
-  transition: "all 0.3s ease",
-};
-
-// Sidebar Component
-const Container = styled.aside`
-  width: ${theme.sidebarWidth};
-  height: 100%;
-  background: ${theme.primaryColor};
-  color: white;
-  /* position: fixed;
-  top: 0;
-  left: 0; */
-  display: flex;
-  flex-direction: column;
-  padding: 1rem 0;
-`;
-const NavLink = styled(Link)`
-  color: ${theme.lightText};
-  text-decoration: none;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  transition: ${theme.transition};
-
-  &:hover {
-    color: ${theme.primaryColor};
-  }
-
-  &.active {
-    color: ${theme.primaryColor};
-    font-weight: 500;
-  }
-`;
-
 const SidebarHeader = styled.div`
-  padding: 0 1rem;
-  margin-bottom: 2rem;
+  padding: 0 var(--space-md);
+  margin-bottom: var(--space-sm);
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -234,39 +232,63 @@ const MenuList = styled.ul`
   list-style: none;
   padding: 0;
   margin: 0;
-  flex-grow: 1;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+`;
+
+// Sidebar Component — light surface + amber active (eazseller-aligned)
+const Container = styled.aside`
+  width: var(--sidebar-width);
+  height: 100vh;
+  min-height: 0;
+  background: ${T.cardBg};
+  color: ${T.text};
+  border-right: 1px solid ${T.border};
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-sm) 0;
+  box-shadow: ${T.shadow};
+  overflow: hidden;
 `;
 
 const MenuItem = styled.li`
   a {
-    color: rgba(255, 255, 255, 0.8);
+    color: ${T.textMuted};
     text-decoration: none;
-    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    line-height: 1.4;
+    padding: 0.55rem var(--space-sm) 0.55rem var(--space-md);
     display: flex;
     align-items: center;
-    gap: 1rem;
-    transition: ${theme.transition};
+    gap: 0.6rem;
+    transition: background var(--transition-fast), color var(--transition-fast);
+    border-radius: 0 ${T.radiusSm} ${T.radiusSm} 0;
+    margin-right: var(--space-xs);
 
     &:hover {
-      background: ${theme.secondaryColor};
-      color: white;
+      background: ${T.bodyBg};
+      color: ${T.text};
     }
 
     &.active {
-      background: ${theme.secondaryColor};
-      color: white;
-      border-left: 4px solid white;
+      background: var(--color-primary-100);
+      color: ${T.primary};
+      font-weight: 600;
     }
   }
 `;
 
 const MenuIcon = styled.span`
   font-size: 1.2rem;
+  flex-shrink: 0;
   display: flex;
+  align-items: center;
 `;
 
 const Badge = styled.span`
-  background: #ef4444;
+  background: var(--error);
   color: white;
   border-radius: 50%;
   min-width: 20px;
@@ -281,19 +303,23 @@ const Badge = styled.span`
 `;
 
 const LogoutButton = styled.button`
-  background: ${theme.secondaryColor};
-  color: white;
+  background: ${T.primary};
+  color: #fff;
   border: none;
-  padding: 1rem 1.5rem;
-  margin: 1rem;
-  border-radius: ${theme.borderRadius};
+  padding: 0.7rem var(--space-md);
+  margin: var(--space-sm);
+  flex-shrink: 0;
+  border-radius: ${T.radiusSm};
   display: flex;
   align-items: center;
-  gap: 1rem;
+  justify-content: center;
+  gap: 0.55rem;
   cursor: pointer;
-  transition: ${theme.transition};
+  font-size: 1rem;
+  font-weight: 600;
+  transition: background var(--transition-fast);
 
   &:hover {
-    background: #1e3a8a;
+    background: var(--color-primary-700);
   }
 `;

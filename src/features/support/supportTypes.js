@@ -57,7 +57,7 @@ export const TICKET_ROLE = {
  * Status badge colors
  */
 export const STATUS_COLORS = {
-  open: '#3B82F6',
+  open: 'var(--color-primary-600)',
   in_progress: '#F59E0B',
   awaiting_user: '#8B5CF6',
   escalated: '#EF4444',
@@ -70,7 +70,7 @@ export const STATUS_COLORS = {
  */
 export const PRIORITY_COLORS = {
   low: '#6B7280',
-  medium: '#3B82F6',
+  medium: 'var(--color-primary-600)',
   high: '#F59E0B',
   critical: '#EF4444',
 };

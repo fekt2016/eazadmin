@@ -7,6 +7,16 @@ import { LoadingSpinner } from "../../shared/components/LoadingSpinner";
 import { PATHS } from "../../routes/routePath";
 import { EAZSHOP_SELLER_ID, PLATFORM_NAME } from "../../shared/constants/systemConstants";
 import { normalizeApiResponse } from "../../shared/utils/apiUtils";
+import {
+  PageHeader,
+  PageTitle,
+  PageSub,
+  HeaderActions as SharedHeaderActions,
+} from "../../shared/components/page/PageHeader";
+
+const T = {
+  bodyBg: "var(--color-body-bg)",
+};
 
 function getShopName(product) {
   if (product.isEazShopProduct === true) return PLATFORM_NAME;
@@ -49,10 +59,8 @@ export default function OfficialStoreProductsPage() {
   const navigate = useNavigate();
   const { useGetOfficialStoreProducts } = useOfficialStore();
   const { data, isLoading, error } = useGetOfficialStoreProducts();
-  console.log('📦 [OfficialStoreProductsPage] Data:', data);
 
   const products = useMemo(() => {
-    console.log('📦 [EazShopProductsPage] Raw data from hook:', data);
     return normalizeApiResponse(data, 'products') || [];
   }, [data]);
 
@@ -132,52 +140,43 @@ export default function OfficialStoreProductsPage() {
     );
   }
 
-  // Debug: Log when we have data but no products
-  if (data && products.length === 0) {
-    console.warn('⚠️ [EazShopProductsPage] Data exists but no products extracted:', {
-      data,
-      dataType: typeof data,
-      isArray: Array.isArray(data),
-      productsLength: products.length,
-      dataKeys: data ? Object.keys(data) : [],
-    });
-  }
-
   return (
     <DashboardContainer>
-      <Header>
-        <TitleContainer>
-          <Title>Official Store Products</Title>
-          <Subtitle>Manage Official Store (company store) products. Use “Add product” to create new items.</Subtitle>
-        </TitleContainer>
-        <HeaderActions>
+      <PageHeader>
+        <div>
+          <PageTitle>Official Store Products</PageTitle>
+          <PageSub>
+            Manage Official Store (company store) products. Use “Add product” to create new items.
+          </PageSub>
+        </div>
+        <SharedHeaderActions>
           <AddProductButton
             onClick={() => navigate(`/dashboard/${PATHS.OFFICIAL_STORE_PRODUCTS_NEW}`)}
             title="Create a new Official Store product"
           >
             <FiPlus /> Add product
           </AddProductButton>
-        </HeaderActions>
-        <Controls>
-          <SearchContainer>
-            <SearchIcon />
-            <SearchInput
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search products..."
-            />
-          </SearchContainer>
-          <FilterSelect
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="all">All Statuses</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="outOfStock">Out of Stock</option>
-          </FilterSelect>
-        </Controls>
-      </Header>
+        </SharedHeaderActions>
+      </PageHeader>
+      <Controls>
+        <SearchContainer>
+          <SearchIcon />
+          <SearchInput
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search products..."
+          />
+        </SearchContainer>
+        <FilterSelect
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
+          <option value="all">All Statuses</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+          <option value="outOfStock">Out of Stock</option>
+        </FilterSelect>
+      </Controls>
 
       <ProductTable>
         <TableHeader>
@@ -345,27 +344,8 @@ export default function OfficialStoreProductsPage() {
 // Styled Components
 const DashboardContainer = styled.div`
   padding: 2rem;
-  background-color: #f8fafc;
+  background: ${T.bodyBg};
   min-height: 100vh;
-`;
-
-const Header = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
-  gap: 1rem;
-`;
-
-const TitleContainer = styled.div`
-  flex: 1;
-`;
-
-const HeaderActions = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
 `;
 
 const AddProductButton = styled.button`
@@ -373,38 +353,26 @@ const AddProductButton = styled.button`
   align-items: center;
   gap: 0.5rem;
   padding: 0.6rem 1.25rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--color-primary-600);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--border-radius-md);
   font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
 
   &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.35);
+    background: var(--color-primary-700);
+    box-shadow: var(--shadow-sm);
   }
-`;
-
-const Title = styled.h1`
-  font-size: 1.8rem;
-  color: #1e293b;
-  margin: 0 0 0.5rem 0;
-  font-weight: 700;
-`;
-
-const Subtitle = styled.p`
-  font-size: 0.9rem;
-  color: #64748b;
-  margin: 0;
 `;
 
 const Controls = styled.div`
   display: flex;
   gap: 1rem;
   flex-wrap: wrap;
+  margin-bottom: 2rem;
 `;
 
 const SearchContainer = styled.div`
@@ -548,13 +516,13 @@ const ProductTypeBadge = styled.span`
   font-weight: 600;
   background: ${({ $tone }) =>
     $tone === "main"
-      ? "#dbeafe"
+      ? "var(--color-primary-100)"
       : $tone === "accepted"
         ? "#ede9fe"
         : "#f1f5f9"};
   color: ${({ $tone }) =>
     $tone === "main"
-      ? "#1d4ed8"
+      ? "var(--color-primary-700)"
       : $tone === "accepted"
         ? "#6d28d9"
         : "#475569"};
@@ -604,7 +572,7 @@ const ActionButtons = styled.div`
 `;
 
 const ActionButton = styled.button`
-  background: ${({ danger }) => (danger ? "#fee2e2" : "#eff6ff")};
+  background: ${({ danger }) => (danger ? "#fee2e2" : "var(--color-primary-50)")};
   border: none;
   border-radius: 8px;
   padding: 0.5rem;
@@ -612,11 +580,11 @@ const ActionButton = styled.button`
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: ${({ danger }) => (danger ? "#b91c1c" : "#2563eb")};
+  color: ${({ danger }) => (danger ? "#b91c1c" : "var(--color-primary-600)")};
   transition: all 0.2s ease;
 
   &:hover {
-    background: ${({ danger }) => (danger ? "#fecaca" : "#dbeafe")};
+    background: ${({ danger }) => (danger ? "#fecaca" : "var(--color-primary-100)")};
     transform: translateY(-1px);
   }
 
@@ -665,7 +633,11 @@ const NoResultsAction = styled.div`
 
 const CreateButton = styled.button`
   padding: 0.75rem 2rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-primary-600) 0%,
+    var(--color-primary-800) 100%
+  );
   color: white;
   border: none;
   border-radius: 8px;
@@ -676,7 +648,7 @@ const CreateButton = styled.button`
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 4px 12px rgba(187, 108, 2, 0.35);
   }
 `;
 

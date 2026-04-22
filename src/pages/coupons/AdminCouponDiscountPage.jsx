@@ -19,6 +19,15 @@ import { LoadingSpinner } from '../../shared/components/LoadingSpinner';
 import Button from '../../shared/components/Button';
 import { formatDate } from '../../shared/utils/helpers';
 import { ConfirmationModal } from '../../shared/components/Modal/ConfirmationModal';
+import {
+  PageHeader,
+  PageTitle,
+  PageSub,
+} from '../../shared/components/page/PageHeader';
+
+const T = {
+  bodyBg: 'var(--color-body-bg)',
+};
 
 const statusOptions = [
   { id: "all", label: "All" },
@@ -151,13 +160,15 @@ export const AdminCouponDiscountPage = () => {
 
   return (
     <Container>
-      <Header>
-        <Title>
-          <FaTicketAlt />
-          Coupons & Discounts Management
-        </Title>
-        <Subtitle>Manage all coupons and discounts created by sellers</Subtitle>
-      </Header>
+      <PageHeader>
+        <div>
+          <PageTitle>
+            <FaTicketAlt />
+            Coupons & Discounts Management
+          </PageTitle>
+          <PageSub>Manage all coupons and discounts created by sellers</PageSub>
+        </div>
+      </PageHeader>
 
       <TabContainer>
         <TabButton
@@ -385,25 +396,8 @@ const Container = styled.div`
   padding: 2rem;
   max-width: 1600px;
   margin: 0 auto;
-`;
-
-const Header = styled.div`
-  margin-bottom: 2rem;
-`;
-
-const Title = styled.h1`
-  font-size: 2rem;
-  font-weight: 600;
-  color: #2c3e50;
-  margin: 0 0 0.5rem 0;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-`;
-
-const Subtitle = styled.p`
-  color: #7f8c8d;
-  margin: 0;
+  min-height: 100vh;
+  background: ${T.bodyBg};
 `;
 
 const TabContainer = styled.div`
@@ -417,9 +411,9 @@ const TabButton = styled.button`
   padding: 0.75rem 1.5rem;
   border: none;
   background: transparent;
-  color: ${(props) => (props.active ? "var(--color-primary-500, #007bff)" : "#666")};
+  color: ${(props) => (props.active ? "var(--color-primary-600)" : "#666")};
   border-bottom: 3px solid
-    ${(props) => (props.active ? "var(--color-primary-500, #007bff)" : "transparent")};
+    ${(props) => (props.active ? "var(--color-primary-600)" : "transparent")};
   cursor: pointer;
   font-size: 0.9rem;
   font-weight: ${(props) => (props.active ? "600" : "400")};
@@ -429,7 +423,7 @@ const TabButton = styled.button`
   transition: all 0.2s;
 
   &:hover {
-    color: var(--color-primary-500, #007bff);
+    color: var(--color-primary-600);
   }
 `;
 
@@ -465,8 +459,8 @@ const SearchInput = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    border-color: var(--color-primary-600);
+    box-shadow: 0 0 0 3px rgba(187, 108, 2, 0.2);
   }
 `;
 
@@ -485,8 +479,8 @@ const Select = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    border-color: var(--color-primary-600);
+    box-shadow: 0 0 0 3px rgba(187, 108, 2, 0.2);
   }
 `;
 
@@ -504,8 +498,8 @@ const StatusButton = styled.button`
   cursor: pointer;
   transition: all 0.2s;
   border: 1px solid transparent;
-  background-color: ${(props) => (props.active ? "#dbeafe" : "#f3f4f6")};
-  color: ${(props) => (props.active ? "#1d4ed8" : "#4b5563")};
+  background-color: ${(props) => (props.active ? "var(--color-primary-100)" : "#f3f4f6")};
+  color: ${(props) => (props.active ? "var(--color-primary-700)" : "#4b5563")};
 
   &:hover {
     background-color: #e5e7eb;
@@ -587,7 +581,7 @@ const CouponName = styled.h3`
 
 const GlobalBadge = styled.span`
   padding: 4px 8px;
-  background: #3b82f6;
+  background: var(--color-primary-600);
   color: white;
   border-radius: 12px;
   font-size: 0.75rem;
@@ -687,7 +681,7 @@ const DiscountName = styled.h3`
 `;
 
 const DiscountCode = styled.div`
-  color: #3b82f6;
+  color: var(--color-primary-600);
   font-weight: 500;
   font-size: 0.875rem;
   display: flex;

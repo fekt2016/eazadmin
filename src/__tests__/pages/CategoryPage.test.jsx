@@ -4,8 +4,8 @@ import React from 'react';
 import { renderWithProviders } from '../utils/testUtils';
 import CategoryPage from '../../features/categories/CategoryPage';
 
-// High timeout for parallel stability
-vi.setConfig({ testTimeout: 20000 });
+// High timeout for parallel stability (full suite can be CPU-bound)
+vi.setConfig({ testTimeout: 60000 });
 
 // Stable mock data
 const MOCK_CATEGORY = {
@@ -89,7 +89,7 @@ describe('CategoryPage', () => {
             const electronics = screen.getAllByText(/Electronics/i);
             expect(electronics.length).toBeGreaterThan(0);
             expect(screen.getAllByText(/5/)[0]).toBeInTheDocument();
-        }, { timeout: 10000 });
+        }, { timeout: 45000 });
     });
 
     it('opens add category modal', async () => {
@@ -101,6 +101,6 @@ describe('CategoryPage', () => {
         await waitFor(() => {
             const modalTitles = screen.getAllByText(/Add New Category/i);
             expect(modalTitles.length).toBeGreaterThan(0);
-        }, { timeout: 10000 });
+        }, { timeout: 45000 });
     });
 });

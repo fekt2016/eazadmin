@@ -54,12 +54,6 @@ export default function CategoryPage() {
       // Reset to first page when parentFilter changes
       if (updated.parentFilter !== prev.parentFilter) {
         setCurrentPage(1);
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[CategoryPage] Filter changed, resetting to page 1:', {
-            oldFilter: prev.parentFilter,
-            newFilter: updated.parentFilter,
-          });
-        }
       }
       return updated;
     });
@@ -103,79 +97,6 @@ export default function CategoryPage() {
       c.name && c.name.toLowerCase().includes('electron')
     );
 
-    // Always log all categories for debugging
-    console.log('[CategoryPage] 📦 ALL CATEGORIES FROM DATABASE:', {
-      total: cats.length,
-      expected: 112,
-      match: cats.length === 112 ? '✅ MATCH' : `❌ MISMATCH (expected 112, got ${cats.length})`,
-      categoryNames: cats.map(c => c.name || 'NO NAME'),
-    });
-
-    // Log Electronics category specifically
-    if (electronicsExact) {
-      console.log('[CategoryPage] ✅ ELECTRONICS CATEGORY FOUND (exact match):', {
-        name: electronicsExact.name,
-        _id: electronicsExact._id,
-        parentCategory: electronicsExact.parentCategory,
-        parentCategoryType: typeof electronicsExact.parentCategory,
-        parentCategoryValue: electronicsExact.parentCategory,
-        parentCategoryId: typeof electronicsExact.parentCategory === 'object'
-          ? (electronicsExact.parentCategory?._id || electronicsExact.parentCategory?.id || electronicsExact.parentCategory)
-          : electronicsExact.parentCategory,
-        hasParent: electronicsExact.parentCategory !== null &&
-          electronicsExact.parentCategory !== undefined &&
-          electronicsExact.parentCategory !== '' &&
-          !(typeof electronicsExact.parentCategory === 'object' &&
-            Object.keys(electronicsExact.parentCategory || {}).length === 0),
-        isTopLevel: !(electronicsExact.parentCategory !== null &&
-          electronicsExact.parentCategory !== undefined &&
-          electronicsExact.parentCategory !== '' &&
-          !(typeof electronicsExact.parentCategory === 'object' &&
-            Object.keys(electronicsExact.parentCategory || {}).length === 0)),
-        status: electronicsExact.status,
-        fullCategory: electronicsExact,
-      });
-    } else {
-      console.log('[CategoryPage] ❌ ELECTRONICS CATEGORY NOT FOUND (exact match "electronics")');
-    }
-
-    // Log all categories containing "electron"
-    if (electronicsPartial.length > 0) {
-      console.log('[CategoryPage] 🔍 Categories containing "electron":', {
-        count: electronicsPartial.length,
-        categories: electronicsPartial.map(c => ({
-          name: c.name,
-          _id: c._id,
-          parentCategory: c.parentCategory,
-          parentCategoryType: typeof c.parentCategory,
-          hasParent: c.parentCategory !== null &&
-            c.parentCategory !== undefined &&
-            c.parentCategory !== '' &&
-            !(typeof c.parentCategory === 'object' &&
-              Object.keys(c.parentCategory || {}).length === 0),
-        })),
-      });
-    }
-
-    // Log detailed category information
-    console.log('[CategoryPage] 📋 Categories with details:', {
-      categoriesWithDetails: cats.map(c => ({
-        name: c.name || 'NO NAME',
-        _id: c._id,
-        parentCategory: c.parentCategory,
-        parentCategoryType: typeof c.parentCategory,
-        parentCategoryValue: c.parentCategory,
-        hasParent: c.parentCategory !== null &&
-          c.parentCategory !== undefined &&
-          c.parentCategory !== '' &&
-          !(typeof c.parentCategory === 'object' &&
-            Object.keys(c.parentCategory || {}).length === 0),
-        status: c.status,
-      })),
-      sampleCategory: cats[0],
-      sampleCategoryStructure: cats[0] ? Object.keys(cats[0]) : [],
-    });
-
     return cats;
   }, [data]);
 
@@ -189,46 +110,11 @@ export default function CategoryPage() {
         !(typeof cat.parentCategory === 'object' &&
           Object.keys(cat.parentCategory || {}).length === 0);
 
-      // Special logging for Electronics category
-      if (cat.name && cat.name.toLowerCase().includes('electron')) {
-        console.log('[CategoryPage] Electronics category check:', {
-          name: cat.name,
-          _id: cat._id,
-          parentCategory: cat.parentCategory,
-          parentCategoryType: typeof cat.parentCategory,
-          hasParent,
-          isTopLevel: !hasParent,
-        });
-      }
-
       return !hasParent;
     });
 
     // Sort alphabetically
     const sorted = topLevel.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-
-    // Always log top-level categories for debugging
-    const electronicsInList = sorted.find(c => c.name && c.name.toLowerCase().includes('electron'));
-    console.log('[CategoryPage] 📋 Top-level categories:', {
-      totalCategories: categories.length,
-      topLevelCount: sorted.length,
-      topLevelNames: sorted.map(c => c.name),
-      electronicsInList: electronicsInList ? electronicsInList.name : 'NOT FOUND',
-      electronicsDetails: electronicsInList ? {
-        name: electronicsInList.name,
-        _id: electronicsInList._id,
-        parentCategory: electronicsInList.parentCategory,
-        parentCategoryType: typeof electronicsInList.parentCategory,
-      } : null,
-      allTopLevelCategories: sorted.map(c => ({
-        name: c.name,
-        _id: c._id,
-        parentCategory: c.parentCategory,
-        parentCategoryType: typeof c.parentCategory,
-        parentCategoryValue: c.parentCategory,
-      })),
-      sampleCategory: sorted[0],
-    });
 
     return sorted;
   }, [categories]);
@@ -277,13 +163,8 @@ export default function CategoryPage() {
 
         if (matches) {
           searchResults.push(matchInfo);
-          console.log('[Category Search] ✅ MATCH (by name):', matchInfo);
         } else {
           nonMatchingCategories.push(matchInfo);
-          // Log non-matches for categories that might be expected to match
-          if (categoryName.includes('electron') || searchTerm.includes('electron')) {
-            console.log('[Category Search] ❌ NO MATCH (but contains "electron"):', matchInfo);
-          }
         }
 
         // Show category ONLY if it matches the category name field
@@ -306,29 +187,7 @@ export default function CategoryPage() {
 
           // If it has a parent, filter it out
           if (hasParent) {
-            // Debug logging for Electronics category
-            if (cat.name && cat.name.toLowerCase().includes('electron')) {
-              console.log('[CategoryPage] ❌ Electronics filtered out from TOP_LEVEL (has parent):', {
-                name: cat.name,
-                _id: cat._id,
-                parentCategory: cat.parentCategory,
-                parentCategoryType: typeof cat.parentCategory,
-                parentCategoryValue: cat.parentCategory,
-                hasParent,
-              });
-            }
             return false;
-          } else {
-            // Debug logging for Electronics category when it passes
-            if (cat.name && cat.name.toLowerCase().includes('electron')) {
-              console.log('[CategoryPage] ✅ Electronics included in TOP_LEVEL (no parent):', {
-                name: cat.name,
-                _id: cat._id,
-                parentCategory: cat.parentCategory,
-                parentCategoryType: typeof cat.parentCategory,
-                hasParent: false,
-              });
-            }
           }
         } else {
           // Filter by specific parent category ID
@@ -370,52 +229,11 @@ export default function CategoryPage() {
           if (parentIdStr !== filterIdStr) {
             return false;
           }
-
-          // Log successful match
-          if (process.env.NODE_ENV === 'development') {
-            console.log('[CategoryPage] ✅ Subcategory included:', {
-              subcategoryName: cat.name,
-              subcategoryId: cat._id,
-              parentId: parentIdStr,
-              filterId: filterIdStr,
-            });
-          }
         }
       }
 
       return true;
     });
-
-    // Log comprehensive search results summary
-    if (searchTerm) {
-      console.log('[Category Search] 📊 Search Summary:', {
-        searchTerm: filters.search,
-        searchTermLower: searchTerm,
-        totalCategories: categories.length,
-        filteredCount: filtered.length,
-        matchedCount: searchResults.length,
-        notMatchedCount: nonMatchingCategories.length,
-        matchedCategoryNames: searchResults.map(r => r.categoryName),
-        allMatches: searchResults,
-        sampleNonMatches: nonMatchingCategories.slice(0, 5), // First 5 non-matches
-      });
-    }
-
-    // Log summary of filtered results
-    if (process.env.NODE_ENV === 'development' && filters.parentFilter !== "ALL" && filters.parentFilter !== "TOP_LEVEL") {
-      console.log('[CategoryPage] 📊 Filter Summary:', {
-        parentFilter: filters.parentFilter,
-        totalCategories: categories.length,
-        filteredCount: filtered.length,
-        filteredCategoryNames: filtered.map(c => c.name),
-        sampleFiltered: filtered.slice(0, 5).map(c => ({
-          name: c.name,
-          _id: c._id,
-          parentCategory: c.parentCategory,
-          parentCategoryType: typeof c.parentCategory,
-        })),
-      });
-    }
 
     return filtered;
   }, [categories, filters.status, filters.search, filters.parentFilter]);
@@ -432,7 +250,6 @@ export default function CategoryPage() {
   }, [filteredCategories, currentPage, itemsPerPage]);
 
   const handleInputChange = (e) => {
-    console.log("e", e);
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
 
@@ -504,14 +321,7 @@ export default function CategoryPage() {
         }
       }
 
-      // 5. Debugging: Log form data
-      const formEntries = {};
-      for (const [key, value] of form.entries()) {
-        formEntries[key] = value;
-      }
-      console.log("Form data to send:", formEntries);
-
-      // 6. Submit the form
+      // 5. Submit the form
       if (editingCategory) {
         updateCategory.mutate(
           {
@@ -521,8 +331,7 @@ export default function CategoryPage() {
           {
             onSuccess: () => resetForm(),
             onError: (error) => {
-              console.log("Failed to update category status:", error);
-              // You might want to show an error message to the user here
+              console.error("Failed to update category status:", error);
             },
           }
         );
@@ -714,7 +523,11 @@ const PaginationButton = styled.button`
   align-items: center;
   gap: 0.5rem;
   padding: 0.875rem 1.75rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-primary-600) 0%,
+    var(--color-primary-800) 100%
+  );
   color: white;
   border: none;
   border-radius: 10px;
@@ -722,11 +535,11 @@ const PaginationButton = styled.button`
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px rgba(187, 108, 2, 0.3);
 
   &:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 6px 20px rgba(187, 108, 2, 0.4);
   }
 
   &:active:not(:disabled) {
@@ -1089,7 +902,7 @@ const PageInfo = styled.span`
 
 // const PaginationButton = styled.button`
 //   padding: 0.7rem 1.5rem;
-//   background-color: #3498db;
+//   background-color: var(--color-primary-600);
 //   color: white;
 //   border: none;
 //   border-radius: 8px;

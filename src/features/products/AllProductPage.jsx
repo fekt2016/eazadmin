@@ -12,6 +12,23 @@ import { ConfirmationModal } from "../../shared/components/Modal/ConfirmationMod
 import { getOptimizedImageUrl, IMAGE_SLOTS } from "../../shared/utils/cloudinaryConfig";
 import OptimizedImage from "../../shared/components/OptimizedImage";
 import React, { memo, useCallback, useMemo, useState } from "react";
+import { PageHeader, PageTitle, HeaderActions } from "../../shared/components/page/PageHeader";
+
+const T = {
+  primary: 'var(--color-primary-600)',
+  primaryLight: 'var(--color-primary-500)',
+  primaryBg: 'var(--color-primary-100)',
+  border: 'var(--color-border)',
+  cardBg: 'var(--color-card-bg)',
+  bodyBg: 'var(--color-body-bg)',
+  text: 'var(--color-grey-900)',
+  textMuted: 'var(--color-grey-500)',
+  textLight: 'var(--color-grey-400)',
+  radius: 'var(--border-radius-xl)',
+  radiusSm: 'var(--border-radius-md)',
+  shadow: 'var(--shadow-sm)',
+  shadowMd: 'var(--shadow-md)',
+};
 
 // Helper function to calculate total stock from variants
 const calculateTotalStock = (product) => {
@@ -160,86 +177,46 @@ export default function AllProductPage() {
   const { getProducts, approveProduct, rejectProduct, deleteProduct } = useProduct();
   const { data, isLoading: productLoading, error: productError } = getProducts;
 
-  // Debug: Log the raw response
-  console.log("🔍 [AllProductPage] Raw API response:", data);
-  console.log("🔍 [AllProductPage] Response structure:", {
-    status: data?.status,
-    results: data?.results,
-    total: data?.total,
-    hasData: !!data?.data,
-    dataKeys: data?.data ? Object.keys(data.data) : [],
-    hasNestedData: !!data?.data?.data,
-    nestedDataLength: data?.data?.data?.length,
-    nestedDataType: Array.isArray(data?.data?.data) ? 'array' : typeof data?.data?.data,
-    nestedDataPreview: data?.data?.data ? (Array.isArray(data.data.data) ? `Array[${data.data.data.length}]` : JSON.stringify(data.data.data).substring(0, 100)) : 'null'
-  });
-
-  // Expand data.data to see what's inside
-  if (data?.data) {
-    console.log("🔍 [AllProductPage] data.data contents:", data.data);
-    console.log("🔍 [AllProductPage] data.data.data:", data.data.data);
-  }
-  console.log("🔍 [AllProductPage] Loading:", productLoading);
-  console.log("🔍 [AllProductPage] Error:", productError);
   const { useMarkProductAsEazShop } = useEazShop();
   const markAsEazShopMutation = useMarkProductAsEazShop();
 
   const products = useMemo(() => {
     // Handle different response structures
     if (!data) {
-      console.log("⚠️ [AllProductPage] No data received");
       return [];
     }
-
-    console.log("📦 [AllProductPage] Raw data structure:", JSON.stringify(data, null, 2));
 
     // Backend returns: { status: 'success', results: number, total: number, data: { data: products[] } }
     // Check for nested data.data.data (from getAllProduct controller)
     if (data.data?.data && Array.isArray(data.data.data)) {
-      console.log("✅ [AllProductPage] Found products at data.data.data:", data.data.data.length);
       return data.data.data;
     }
 
     // Check for data.data.products
     if (data.data?.products && Array.isArray(data.data.products)) {
-      console.log("✅ [AllProductPage] Found products at data.data.products:", data.data.products.length);
       return data.data.products;
     }
 
     // Check for data.products
     if (data.products && Array.isArray(data.products)) {
-      console.log("✅ [AllProductPage] Found products at data.products:", data.products.length);
       return data.products;
     }
 
     // Check for data.results (if it's an array, not just a count)
     if (data.results && Array.isArray(data.results)) {
-      console.log("✅ [AllProductPage] Found products at data.results:", data.results.length);
       return data.results;
     }
 
     // Check if data itself is an array
     if (Array.isArray(data)) {
-      console.log("✅ [AllProductPage] Data is array:", data.length);
       return data;
     }
 
     // Check for data.data as array
     if (data.data && Array.isArray(data.data)) {
-      console.log("✅ [AllProductPage] Found products at data.data:", data.data.length);
       return data.data;
     }
 
-    // If results is 0, it means no products found (not a structure issue)
-    if (data.results === 0 || data.total === 0) {
-      console.warn("⚠️ [AllProductPage] API returned 0 products. This could mean:");
-      console.warn("  1. No products exist in database");
-      console.warn("  2. User is not authenticated as admin (filtering to approved only)");
-      console.warn("  3. All products are filtered out by moderation status");
-      console.warn("  Check authentication and database");
-    } else {
-      console.warn("⚠️ [AllProductPage] Could not extract products from data structure:", data);
-    }
     return [];
   }, [data]);
   // const [products, setProducts] = useState([]);
@@ -404,11 +381,6 @@ export default function AllProductPage() {
     );
   }
 
-  // Debug info
-  console.log("Total products:", products.length);
-  console.log("Filtered products:", filteredProducts.length);
-  console.log("Current products:", currentProducts.length);
-  console.log("Active tab:", activeTab);
   // Count products by tab - handle null/undefined moderationStatus
   const approvedCount = products.filter(p => {
     const status = (p.moderationStatus || "").toLowerCase();
@@ -421,38 +393,41 @@ export default function AllProductPage() {
 
   return (
     <DashboardContainer>
-      <Header>
-        <Title>All Products</Title>
-        <Controls>
-          <SearchContainer>
-            <SearchIcon />
-            <SearchInput
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              // onChange={(e) => console.log(e.target.value)}
-              placeholder="Search products..."
-            />
-          </SearchContainer>
-          <FilterSelect
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="all">All Statuses</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="outOfStock">Out of Stock</option>
-          </FilterSelect>
-          <FilterSelect
-            value={moderationFilter}
-            onChange={(e) => setModerationFilter(e.target.value)}
-          >
-            <option value="all">All Moderation</option>
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
-          </FilterSelect>
-        </Controls>
-      </Header>
+      <PageHeader>
+        <div>
+          <PageTitle>All Products</PageTitle>
+        </div>
+        <HeaderActions>
+          <Controls>
+            <SearchContainer>
+              <SearchIcon />
+              <SearchInput
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search products..."
+              />
+            </SearchContainer>
+            <FilterSelect
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="all">All Statuses</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="outOfStock">Out of Stock</option>
+            </FilterSelect>
+            <FilterSelect
+              value={moderationFilter}
+              onChange={(e) => setModerationFilter(e.target.value)}
+            >
+              <option value="all">All Moderation</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+            </FilterSelect>
+          </Controls>
+        </HeaderActions>
+      </PageHeader>
 
       {/* Tabs */}
       <TabsContainer>
@@ -623,7 +598,7 @@ export default function AllProductPage() {
               `Approve product "${actionModalConfig.payload?.name}"?`
         }
         confirmText={actionModalConfig.type === 'delete' ? 'Remove' : 'Approve'}
-        confirmColor={actionModalConfig.type === 'delete' ? '#dc2626' : actionModalConfig.type === 'approve' ? '#10b981' : '#4361ee'}
+        confirmColor={actionModalConfig.type === 'delete' ? '#dc2626' : actionModalConfig.type === 'approve' ? '#10b981' : '#bb6c02'}
       />
     </DashboardContainer>
   );
@@ -631,24 +606,8 @@ export default function AllProductPage() {
 
 const DashboardContainer = styled.div`
   padding: 2rem;
-  background-color: #f8fafc;
+  background-color: ${T.bodyBg};
   min-height: 100vh;
-`;
-
-const Header = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
-  gap: 1rem;
-`;
-
-const Title = styled.h1`
-  font-size: 1.8rem;
-  color: #1e293b;
-  margin: 0;
-  font-weight: 700;
 `;
 
 const Controls = styled.div`
@@ -660,16 +619,16 @@ const Controls = styled.div`
 const SearchContainer = styled.div`
   display: flex;
   align-items: center;
-  background: white;
-  border-radius: 8px;
+  background: ${T.cardBg};
+  border-radius: ${T.radiusSm};
   padding: 0.5rem 1rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  border: 1px solid #e2e8f0;
-  transition: all 0.3s ease;
+  box-shadow: ${T.shadow};
+  border: 1.5px solid ${T.border};
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 
   &:focus-within {
-    border-color: #6366f1;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    border-color: ${T.primary};
+    box-shadow: 0 0 0 3px ${T.primaryBg};
   }
 `;
 
@@ -692,22 +651,22 @@ const SearchInput = styled.input`
 `;
 
 const FilterSelect = styled.select`
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  border: 1.5px solid ${T.border};
+  border-radius: ${T.radiusSm};
   padding: 0.5rem 1rem;
-  background: white;
+  background: ${T.cardBg};
   font-size: 1rem;
   cursor: pointer;
-  color: #334155;
-  transition: all 0.3s ease;
+  color: ${T.text};
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 
   &:hover {
-    border-color: #cbd5e1;
+    border-color: ${T.primary};
   }
 
   &:focus {
-    border-color: #6366f1;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    border-color: ${T.primary};
+    box-shadow: 0 0 0 3px ${T.primaryBg};
     outline: none;
   }
 `;
@@ -715,55 +674,58 @@ const FilterSelect = styled.select`
 const ProductTable = styled.table`
   width: 100%;
   border-collapse: collapse;
-  background: white;
-  border-radius: 12px;
+  background: ${T.cardBg};
+  border: 1px solid ${T.border};
+  border-radius: ${T.radius};
   overflow: hidden;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+  box-shadow: ${T.shadow};
 `;
 
 const TableHeader = styled.thead`
-  background-color: #f1f5f9;
+  background-color: ${T.bodyBg};
 `;
 
 const HeaderRow = styled.tr`
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid ${T.border};
 `;
 
 const SortableHeader = styled.th`
-  padding: 1.2rem 1.5rem;
+  padding: 1rem 1.4rem;
   text-align: left;
   font-weight: 600;
-  color: #475569;
+  font-size: var(--text-xs);
+  color: ${T.textMuted};
   text-transform: uppercase;
-  font-size: 0.8rem;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.08em;
   cursor: pointer;
   user-select: none;
   transition: background-color 0.2s ease;
+  border-bottom: 1px solid ${T.border};
 
   &:hover {
-    background-color: #e2e8f0;
+    background-color: ${T.bodyBg};
   }
 `;
 
 const HeaderCell = styled.th`
-  padding: 1.2rem 1.5rem;
+  padding: 1rem 1.4rem;
   text-align: left;
   font-weight: 600;
-  color: #475569;
+  font-size: var(--text-xs);
+  color: ${T.textMuted};
   text-transform: uppercase;
-  font-size: 0.8rem;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid ${T.border};
 `;
 
 const TableBody = styled.tbody``;
 
 const TableRow = styled.tr`
-  border-bottom: 1px solid #f1f5f9;
-  transition: background-color 0.2s ease;
+  border-bottom: 1px solid ${T.border};
+  transition: background-color 0.15s ease;
 
   &:hover {
-    background-color: #f8fafc;
+    background-color: ${T.bodyBg};
   }
 
   &:last-child {
@@ -773,7 +735,7 @@ const TableRow = styled.tr`
 
 const TableCell = styled.td`
   padding: 1.2rem 1.5rem;
-  color: #334155;
+  color: ${T.text};
   font-size: 0.95rem;
 `;
 
@@ -835,10 +797,12 @@ const ActionButtons = styled.div`
 const ActionButton = styled.button`
   background: ${({ danger, $eazshop, $approve, $reject }) =>
     danger ? "#fee2e2" :
-      $eazshop ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" :
+      $eazshop
+        ? "linear-gradient(135deg, var(--color-primary-600) 0%, var(--color-primary-800) 100%)"
+        :
         $approve ? "#dcfce7" :
           $reject ? "#fee2e2" :
-            "#eff6ff"};
+            "var(--color-primary-50)"};
   border: none;
   border-radius: 8px;
   padding: 0.5rem;
@@ -851,16 +815,18 @@ const ActionButton = styled.button`
       $eazshop ? "white" :
         $approve ? "#166534" :
           $reject ? "#b91c1c" :
-            "#2563eb"};
+            "var(--color-primary-600)"};
   transition: all 0.2s ease;
 
   &:hover:not(:disabled) {
     background: ${({ danger, $eazshop, $approve, $reject }) =>
     danger ? "#fecaca" :
-      $eazshop ? "linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)" :
+      $eazshop
+        ? "linear-gradient(135deg, var(--color-primary-700) 0%, var(--color-primary-900) 100%)"
+        :
         $approve ? "#bbf7d0" :
           $reject ? "#fecaca" :
-            "#dbeafe"};
+            "var(--color-primary-100)"};
     transform: translateY(-1px);
   }
 
@@ -1130,6 +1096,6 @@ const PreOrderBadge = styled.span`
   border-radius: 12px;
   font-weight: 500;
   font-size: 0.85rem;
-  background: #dbeafe;
-  color: #1e40af;
+  background: var(--color-primary-100);
+  color: var(--color-primary-700);
 `;

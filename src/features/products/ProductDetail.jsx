@@ -16,25 +16,42 @@ import {
   FaExclamationTriangle,
 } from "react-icons/fa";
 import useProduct from "../../shared/hooks/useProduct";
-import adApi from "../../shared/services/adApi";
+import adminPromoApi from "../../shared/services/adminPromoApi";
 import { LoadingSpinner } from "../../shared/components/LoadingSpinner";
 import { PATHS } from "../../routes/routePath";
 import { toast } from "react-toastify";
 import { ConfirmationModal } from "../../shared/components/Modal/ConfirmationModal";
 import { getOptimizedImageUrl, IMAGE_SLOTS } from "../../shared/utils/cloudinaryConfig";
 import OptimizedImage from "../../shared/components/OptimizedImage";
+import {
+  PageHeader as SharedPageHeader,
+  PageTitle,
+  PageSub,
+  HeaderActions,
+} from "../../shared/components/page/PageHeader";
 
-const getPromotionKeyFromLink = (link) => {
-  if (!link || typeof link !== "string") return "";
-  try {
-    const url = new URL(link);
-    const match = (url.pathname || "").match(/\/offers\/([^/?#]+)/i);
-    return match ? match[1].trim() : "";
-  } catch {
-    const match = String(link).match(/\/offers\/([^/?#]+)/i);
-    return match ? match[1].trim() : "";
-  }
+const T = {
+  primary: "var(--color-primary-600)",
+  primaryHover: "var(--color-primary-700)",
+  border: "var(--color-border)",
+  cardBg: "var(--color-card-bg)",
+  bodyBg: "var(--color-body-bg)",
+  textMuted: "var(--color-grey-500)",
+  radius: "var(--border-radius-xl)",
+  shadow: "var(--shadow-sm)",
+  success: "var(--color-success-600, #059669)",
+  successHover: "var(--color-success-700, #047857)",
+  danger: "var(--color-danger-600, #dc2626)",
+  dangerHover: "var(--color-danger-700, #b91c1c)",
 };
+
+const DetailPageHeader = styled(SharedPageHeader)`
+  padding: 1.5rem;
+  background: ${T.cardBg};
+  border: 1px solid ${T.border};
+  border-radius: ${T.radius};
+  box-shadow: ${T.shadow};
+`;
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -82,22 +99,25 @@ export default function ProductDetail() {
 
   // Fetch admin promotions for dropdown (add product to promotion)
   const { data: promosData } = useQuery({
-    queryKey: ["admin-ads"],
+    queryKey: ["admin-promos"],
     queryFn: async () => {
-      const { ads } = await adApi.getAds();
-      return ads || [];
+      const data = await adminPromoApi.getPromos({ limit: 200 });
+      return data?.promos || data?.items || data?.results || [];
     },
   });
   const promotionOptions = useMemo(() => {
-    const ads = promosData ?? [];
-    return ads
-      .filter((ad) => ad.link)
-      .map((ad) => ({
-        key: getPromotionKeyFromLink(ad.link),
-        title: ad.title || "Promotion",
-        discountType: ad.discountType === "fixed" ? "fixed" : "percentage",
-        discountPercent: typeof ad.discountPercent === "number" ? ad.discountPercent : 0,
-        discountFixed: typeof ad.discountFixed === "number" ? ad.discountFixed : 0,
+    const promos = promosData ?? [];
+    return promos
+      .filter((promo) => promo.slug)
+      .map((promo) => ({
+        key: promo.slug,
+        title: promo.name || "Promotion",
+        discountType: "percentage",
+        discountPercent:
+          typeof promo.minDiscountPercent === "number"
+            ? promo.minDiscountPercent
+            : 0,
+        discountFixed: 0,
       }))
       .filter((p) => p.key);
   }, [promosData]);
@@ -127,6 +147,30 @@ export default function ProductDetail() {
     if (!variants.length) return 0;
     return variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
   }, [product?.totalStock, variants]);
+
+  const promoState = useMemo(() => {
+    const regularPrice = Number(product?.price || 0);
+    const promoPrice = Number(product?.promoPrice);
+    const hasValidPromoPrice =
+      Number.isFinite(promoPrice) &&
+      promoPrice > 0 &&
+      regularPrice > 0 &&
+      promoPrice < regularPrice;
+    const hasPromotionKey = Boolean(String(product?.promotionKey || '').trim());
+    const isOnPromo = hasValidPromoPrice || hasPromotionKey;
+    const savings =
+      hasValidPromoPrice && regularPrice > 0
+        ? Math.max(regularPrice - promoPrice, 0)
+        : 0;
+
+    return {
+      isOnPromo,
+      hasValidPromoPrice,
+      promoPrice: hasValidPromoPrice ? promoPrice : null,
+      savings,
+      promotionKey: String(product?.promotionKey || '').trim(),
+    };
+  }, [product?.price, product?.promoPrice, product?.promotionKey]);
 
   // Check if product is pending approval
   const isPendingApproval = useMemo(() => {
@@ -256,15 +300,15 @@ export default function ProductDetail() {
 
   return (
     <Container>
-      <Header>
+      <DetailPageHeader>
         <HeaderLeft>
           <BackButton onClick={() => navigate(`/dashboard/${PATHS.PRODUCTS}`)}>
             <FaArrowLeft /> Back
           </BackButton>
-          <TitleSection>
-            <ProductTitle>{product.name}</ProductTitle>
-            <ProductId>ID: {product.id || product._id}</ProductId>
-          </TitleSection>
+          <div>
+            <PageTitle>{product.name}</PageTitle>
+            <PageSub>ID: {product.id || product._id}</PageSub>
+          </div>
         </HeaderLeft>
         <HeaderActions>
           {isPendingApproval && (
@@ -282,7 +326,7 @@ export default function ProductDetail() {
             <FaTrash /> Delete
           </DeleteButton>
         </HeaderActions>
-      </Header>
+      </DetailPageHeader>
 
       <ContentGrid>
         {/* Left Column - Images */}
@@ -307,7 +351,11 @@ export default function ProductDetail() {
                     alt={`${product.name} - Image ${index + 1}`}
                     objectFit="contain"
                     radius="8px"
-                    style={{ border: selectedImage === index ? "3px solid #667eea" : "3px solid transparent" }}
+                    style={{
+                      border: selectedImage === index
+                        ? "3px solid var(--color-primary-600)"
+                        : "3px solid transparent",
+                    }}
                   />
                 </div>
               ))}
@@ -336,6 +384,29 @@ export default function ProductDetail() {
               <InfoItem>
                 <InfoLabel>Price</InfoLabel>
                 <InfoValue>GH₵{product.price?.toFixed(2) || "0.00"}</InfoValue>
+              </InfoItem>
+              <InfoItem>
+                <InfoLabel>Promo</InfoLabel>
+                {promoState.isOnPromo ? (
+                  <PromoIndicatorWrap>
+                    <PromoIndicatorBadge>On promo</PromoIndicatorBadge>
+                    {promoState.hasValidPromoPrice ? (
+                      <PromoDetailText>
+                        GH₵{promoState.promoPrice.toFixed(2)} promo price
+                        {' '}(
+                        save GH₵{promoState.savings.toFixed(2)}
+                        )
+                      </PromoDetailText>
+                    ) : null}
+                    {!promoState.hasValidPromoPrice && promoState.promotionKey ? (
+                      <PromoDetailText>
+                        Promo key: {promoState.promotionKey}
+                      </PromoDetailText>
+                    ) : null}
+                  </PromoIndicatorWrap>
+                ) : (
+                  <InfoValue>Not on promo</InfoValue>
+                )}
               </InfoItem>
               <InfoItem>
                 <InfoLabel>Pre-Order</InfoLabel>
@@ -742,17 +813,8 @@ export default function ProductDetail() {
 // Styled Components
 const Container = styled.div`
   padding: 2rem;
-  background: #f8fafc;
+  background: ${T.bodyBg};
   min-height: 100vh;
-`;
-
-const Header = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 2rem;
-  gap: 2rem;
-  flex-wrap: wrap;
 `;
 
 const HeaderLeft = styled.div`
@@ -760,28 +822,7 @@ const HeaderLeft = styled.div`
   align-items: center;
   gap: 1.5rem;
   flex: 1;
-`;
-
-const TitleSection = styled.div`
-  flex: 1;
-`;
-
-const ProductTitle = styled.h1`
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: #1e293b;
-  margin: 0 0 0.5rem 0;
-`;
-
-const ProductId = styled.p`
-  font-size: 1rem;
-  color: #64748b;
-  margin: 0;
-`;
-
-const HeaderActions = styled.div`
-  display: flex;
-  gap: 1rem;
+  min-width: 0;
 `;
 
 const BackButton = styled.button`
@@ -789,17 +830,18 @@ const BackButton = styled.button`
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1.5rem;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  color: #475569;
+  background: var(--color-card-bg);
+  border: 1px solid ${T.border};
+  border-radius: var(--border-radius-md);
+  color: var(--color-grey-700);
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
+  flex-shrink: 0;
 
   &:hover {
-    background: #f1f5f9;
-    border-color: #cbd5e1;
+    background: var(--color-grey-50);
+    border-color: var(--color-grey-300);
   }
 `;
 
@@ -808,16 +850,16 @@ const ActionButton = styled.button`
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1.5rem;
-  background: #667eea;
+  background: ${T.primary};
   border: none;
-  border-radius: 8px;
+  border-radius: var(--border-radius-md);
   color: white;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover {
-    background: #5568d3;
+    background: ${T.primaryHover};
   }
 `;
 
@@ -826,16 +868,16 @@ const DeleteButton = styled.button`
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1.5rem;
-  background: #ef4444;
+  background: ${T.danger};
   border: none;
-  border-radius: 8px;
+  border-radius: var(--border-radius-md);
   color: white;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover {
-    background: #dc2626;
+    background: ${T.dangerHover};
   }
 `;
 
@@ -844,16 +886,16 @@ const ApproveButton = styled.button`
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1.5rem;
-  background: #10b981;
+  background: ${T.success};
   border: none;
-  border-radius: 8px;
+  border-radius: var(--border-radius-md);
   color: white;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover:not(:disabled) {
-    background: #059669;
+    background: ${T.successHover};
   }
 
   &:disabled {
@@ -1013,6 +1055,33 @@ const PromoHelp = styled.p`
   margin: 0;
   font-size: 0.8rem;
   color: #6b7280;
+`;
+
+const PromoIndicatorWrap = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+`;
+
+const PromoIndicatorBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border-radius: 999px;
+  border: 1px solid #f59e0b;
+  background: #fffbeb;
+  color: #b45309;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+`;
+
+const PromoDetailText = styled.span`
+  color: #92400e;
+  font-size: 0.84rem;
+  font-weight: 500;
 `;
 
 const EditableInput = styled.input`
@@ -1189,9 +1258,11 @@ const VariantLabel = styled.label`
   overflow: hidden;
 
   &:hover {
-    border-color: ${props => props.$disabled ? '#e2e8f0' : '#667eea'};
+    border-color: ${(props) =>
+      props.$disabled ? "#e2e8f0" : "var(--color-primary-600)"};
     transform: ${props => props.$disabled ? 'none' : 'translateY(-1px)'};
-    box-shadow: ${props => props.$disabled ? 'none' : '0 4px 12px rgba(102, 126, 234, 0.1)'};
+    box-shadow: ${(props) =>
+      props.$disabled ? "none" : "0 4px 12px rgba(187, 108, 2, 0.12)"};
   }
 
   ${props => props.$isLowStock && !props.$disabled && `
@@ -1203,8 +1274,8 @@ const VariantLabel = styled.label`
   `}
 
   input:checked + & {
-    border-color: #667eea;
-    background: #f0f4ff;
+    border-color: var(--color-primary-600);
+    background: var(--color-primary-50);
     
     ${props => props.$isColor && `
       background: white;
@@ -1239,7 +1310,7 @@ const ColorSwatch = styled.div`
   transition: all 0.2s ease;
 
   input:checked + ${VariantLabel} & {
-    border-color: #667eea;
+    border-color: var(--color-primary-600);
     transform: scale(1.05);
   }
 `;
@@ -1321,7 +1392,7 @@ const SelectionDot = styled.div`
   transition: all 0.2s ease;
 
   input:checked + ${VariantLabel} & {
-    background: #667eea;
+    background: var(--color-primary-600);
     transform: scale(1.2);
   }
 `;
@@ -1335,7 +1406,7 @@ const RadioInput = styled.input`
   padding: 0;
 
   &:focus-visible + label {
-    outline: 3px solid #667eea;
+    outline: 3px solid var(--color-primary-600);
     outline-offset: 2px;
   }
 `;

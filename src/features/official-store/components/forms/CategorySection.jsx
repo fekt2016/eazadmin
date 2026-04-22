@@ -45,10 +45,6 @@ const CategorySection = ({ categories, parentCategories: parentCategoriesProp })
         return nameA.localeCompare(nameB);
       });
       
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[CategorySection] Using parentCategories prop:', sorted.length);
-      }
-      
       return sorted;
     }
     
@@ -79,29 +75,11 @@ const CategorySection = ({ categories, parentCategories: parentCategoriesProp })
       return nameA.localeCompare(nameB);
     });
     
-    // Debug logging (only in development)
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[CategorySection] Category filtering:', {
-        totalCategories: categories.length,
-        parentCategoriesFound: sorted.length,
-        sampleCategories: categories.slice(0, 3).map(c => ({
-          name: c.name,
-          hasParent: !!c.parentCategory,
-          parentType: typeof c.parentCategory,
-          parentCategoryValue: c.parentCategory,
-        })),
-        parentCategoryNames: sorted.map(c => c.name),
-      });
-    }
-    
     return sorted;
   }, [categories, parentCategoriesProp]);
 
   const subCategories = useMemo(() => {
     if (!parentCategory) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[CategorySection] No parent category selected, returning empty subcategories');
-      }
       return [];
     }
     
@@ -126,23 +104,12 @@ const CategorySection = ({ categories, parentCategories: parentCategoriesProp })
           return nameA.localeCompare(nameB);
         });
         
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[CategorySection] Using subcategories from parent object:', {
-            parentName: selectedParentCategoryObj.name,
-            subcategoriesCount: sorted.length,
-            subcategoryNames: sorted.map(s => s.name),
-          });
-        }
-        
         return sorted;
       }
     }
     
     // Method 2: Filter by parentCategory field (fallback)
     if (!categories || !Array.isArray(categories) || categories.length === 0) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[CategorySection] No categories available for subcategory filtering');
-      }
       return [];
     }
     
@@ -203,93 +170,6 @@ const CategorySection = ({ categories, parentCategories: parentCategoriesProp })
       const nameB = (b.name || '').toLowerCase().trim();
       return nameA.localeCompare(nameB);
     });
-    
-    // Debug logging (only in development)
-    if (process.env.NODE_ENV === 'development') {
-      // Find all categories with parentCategory to help debug
-      const allCategoriesWithParent = categories.filter(c => c && c.parentCategory);
-      const categoriesByParent = {};
-      allCategoriesWithParent.forEach(cat => {
-        let parentId = null;
-        if (typeof cat.parentCategory === 'object' && cat.parentCategory !== null) {
-          parentId = String(cat.parentCategory._id || cat.parentCategory.id || cat.parentCategory);
-        } else if (cat.parentCategory) {
-          parentId = String(cat.parentCategory);
-        }
-        if (parentId) {
-          if (!categoriesByParent[parentId]) {
-            categoriesByParent[parentId] = [];
-          }
-          categoriesByParent[parentId].push(cat.name);
-        }
-      });
-      
-      // Find Electronic category specifically for debugging
-      const electronicCategory = categories.find(c => c && c.name && c.name.toLowerCase().includes('electronic'));
-      const electronicSubs = categories.filter(c => {
-        if (!c || !c.parentCategory) return false;
-        let parentId = null;
-        if (typeof c.parentCategory === 'object' && c.parentCategory !== null) {
-          parentId = c.parentCategory._id || c.parentCategory.id || (c.parentCategory.toString && c.parentCategory.toString()) || c.parentCategory;
-        } else if (c.parentCategory) {
-          parentId = c.parentCategory;
-        }
-        const parentIdStr = parentId ? (typeof parentId === 'object' && parentId.toString ? parentId.toString() : String(parentId)) : null;
-        const electronicIdStr = electronicCategory ? (typeof electronicCategory._id === 'object' && electronicCategory._id.toString ? electronicCategory._id.toString() : String(electronicCategory._id)) : null;
-        return parentIdStr === electronicIdStr;
-      });
-      
-      console.log('[CategorySection] Subcategory filtering:', {
-        selectedParentCategory: parentCategory,
-        selectedParentCategoryStr: String(parentCategory),
-        selectedParentCategoryType: typeof parentCategory,
-        totalCategories: categories.length,
-        categoriesWithParent: allCategoriesWithParent.length,
-        subCategoriesFound: sorted.length,
-        // Electronic category debug info
-        electronicCategory: electronicCategory ? {
-          name: electronicCategory.name,
-          _id: electronicCategory._id,
-          _idStr: typeof electronicCategory._id === 'object' && electronicCategory._id.toString ? electronicCategory._id.toString() : String(electronicCategory._id),
-          hasSubcategories: electronicSubs.length,
-          subcategoryNames: electronicSubs.map(s => s.name),
-        } : 'Not found',
-        categoriesByParent: Object.keys(categoriesByParent).slice(0, 10).reduce((acc, key) => {
-          acc[key] = categoriesByParent[key]; // Show all subcategories per parent
-          return acc;
-        }, {}),
-        sampleSubCategories: sorted.slice(0, 5).map(c => ({
-          name: c.name,
-          _id: c._id,
-          parentCategory: c.parentCategory,
-          parentCategoryType: typeof c.parentCategory,
-          parentCategoryId: typeof c.parentCategory === 'object' 
-            ? (c.parentCategory?._id || c.parentCategory?.id || c.parentCategory)
-            : c.parentCategory,
-          parentCategoryIdStr: typeof c.parentCategory === 'object' 
-            ? String(c.parentCategory?._id || c.parentCategory?.id || c.parentCategory)
-            : String(c.parentCategory || ''),
-        })),
-        allSubCategoryNames: sorted.map(c => c.name),
-        // Show a sample of categories that didn't match
-        nonMatchingCategories: categories
-          .filter(c => c && c.parentCategory)
-          .slice(0, 3)
-          .map(c => {
-            let catParentId = null;
-            if (typeof c.parentCategory === 'object' && c.parentCategory !== null) {
-              catParentId = String(c.parentCategory._id || c.parentCategory.id || c.parentCategory);
-            } else if (c.parentCategory) {
-              catParentId = String(c.parentCategory);
-            }
-            return {
-              name: c.name,
-              parentId: catParentId,
-              matches: catParentId === String(parentCategory),
-            };
-          }),
-      });
-    }
     
     return sorted;
   }, [categories, parentCategory, selectedParentCategoryObj]);

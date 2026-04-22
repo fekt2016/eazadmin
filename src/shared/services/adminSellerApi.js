@@ -11,7 +11,7 @@ const adminSellerApi = {
     };
     // Remove undefined values
     const cleanParams = Object.fromEntries(
-      Object.entries(validatedParams).filter(([v]) => v !== undefined)
+      Object.entries(validatedParams).filter(([, v]) => v !== undefined)
     );
 
     return api.get(`/seller`, { params: cleanParams });

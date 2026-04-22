@@ -44,7 +44,7 @@ export const BreadcrumbLink = styled(Link).withConfig({
   transition: color 0.2s ease;
   
   &:hover {
-    color: #3B82F6;
+    color: var(--color-primary-600);
   }
 `;
 
@@ -66,7 +66,7 @@ export const BreadcrumbSeparator = styled.span`
 // ============================================
 
 export const HeroSection = styled(motion.section)`
-  background: linear-gradient(135deg, #3B82F6 0%, #1E3A8A 100%);
+  background: linear-gradient(135deg, var(--color-primary-600) 0%, #1E3A8A 100%);
   border-radius: 1.6rem;
   padding: 5rem 4rem;
   margin-bottom: 4rem;
@@ -264,7 +264,7 @@ export const AlertCard = styled(motion.div)`
     border-color: ${props => {
       if (props.$priority === 'critical') return '#DC2626';
       if (props.$priority === 'high') return '#EA580C';
-      return '#3B82F6';
+      return 'var(--color-primary-600)';
     }};
   }
 `;
@@ -278,7 +278,7 @@ export const AlertCardLeftBar = styled.div`
   background: ${props => {
     if (props.$priority === 'critical') return '#DC2626';
     if (props.$priority === 'high') return '#EA580C';
-    return '#3B82F6';
+    return 'var(--color-primary-600)';
   }};
 `;
 
@@ -301,12 +301,12 @@ export const AlertIconCircle = styled.div`
   background: ${props => {
     if (props.$priority === 'critical') return '#FEE2E2';
     if (props.$priority === 'high') return '#FED7AA';
-    return '#DBEAFE';
+    return 'var(--color-primary-100)';
   }};
   color: ${props => {
     if (props.$priority === 'critical') return '#DC2626';
     if (props.$priority === 'high') return '#EA580C';
-    return '#3B82F6';
+    return 'var(--color-primary-600)';
   }};
   display: flex;
   align-items: center;
@@ -339,12 +339,12 @@ export const AlertBadge = styled.span`
   background: ${props => {
     if (props.$priority === 'critical') return '#FEE2E2';
     if (props.$priority === 'high') return '#FED7AA';
-    return '#DBEAFE';
+    return 'var(--color-primary-100)';
   }};
   color: ${props => {
     if (props.$priority === 'critical') return '#991B1B';
     if (props.$priority === 'high') return '#9A3412';
-    return '#1E40AF';
+    return 'var(--color-primary-700)';
   }};
 `;
 
@@ -374,7 +374,7 @@ export const AlertButton = styled(motion.button)`
   background: ${props => {
     if (props.$priority === 'critical') return '#DC2626';
     if (props.$priority === 'high') return '#EA580C';
-    return '#3B82F6';
+    return 'var(--color-primary-600)';
   }};
   color: #ffffff;
   border: none;
@@ -389,7 +389,7 @@ export const AlertButton = styled(motion.button)`
     background: ${props => {
       if (props.$priority === 'critical') return '#B91C1C';
       if (props.$priority === 'high') return '#C2410C';
-      return '#2563EB';
+      return 'var(--color-primary-600)';
     }};
   }
 `;
@@ -431,8 +431,8 @@ export const ToolCard = styled(motion(Link))`
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   
   &:hover {
-    border-color: #3B82F6;
-    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.12);
+    border-color: var(--color-primary-600);
+    box-shadow: 0 8px 24px rgba(187, 108, 2, 0.12);
   }
   
   @media (max-width: 768px) {
@@ -445,8 +445,8 @@ export const ToolIconCircle = styled.div`
   width: 5.6rem;
   height: 5.6rem;
   border-radius: 50%;
-  background: rgba(59, 130, 246, 0.1);
-  color: #3B82F6;
+  background: rgba(187, 108, 2, 0.1);
+  color: var(--color-primary-600);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -456,7 +456,7 @@ export const ToolIconCircle = styled.div`
   
   ${ToolCard}:hover & {
     transform: scale(1.1);
-    background: rgba(59, 130, 246, 0.15);
+    background: rgba(187, 108, 2, 0.15);
   }
   
   @media (max-width: 768px) {
@@ -544,8 +544,8 @@ export const CardIcon = styled.div`
   width: 5.6rem;
   height: 5.6rem;
   border-radius: 50%;
-  background: ${props => props.$bgColor || 'rgba(59, 130, 246, 0.1)'};
-  color: ${props => props.$iconColor || '#3B82F6'};
+  background: ${props => props.$bgColor || 'rgba(187, 108, 2, 0.1)'};
+  color: ${props => props.$iconColor || 'var(--color-primary-600)'};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -568,7 +568,7 @@ export const CardDescription = styled.p`
 `;
 
 export const CardButton = styled.button`
-  background: ${props => props.$bgColor || '#3B82F6'};
+  background: ${props => props.$bgColor || 'var(--color-primary-600)'};
   color: #ffffff;
   border: none;
   padding: 0.8rem 1.6rem;
@@ -581,7 +581,7 @@ export const CardButton = styled.button`
   width: 100%;
   
   &:hover {
-    background: ${props => props.$hoverColor || '#2563EB'};
+    background: ${props => props.$hoverColor || 'var(--color-primary-600)'};
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   }
@@ -615,8 +615,8 @@ export const QuickLink = styled.a`
   font-size: 0.9375rem;
   
   &:hover {
-    border-color: ${props => props.$accentColor || '#3B82F6'};
-    color: ${props => props.$accentColor || '#3B82F6'};
+    border-color: ${props => props.$accentColor || 'var(--color-primary-600)'};
+    color: ${props => props.$accentColor || 'var(--color-primary-600)'};
     transform: translateX(4px);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   }
@@ -632,7 +632,7 @@ export const ChatSection = styled.section`
 `;
 
 export const ChatButton = styled.button`
-  background: ${props => props.$bgColor || '#3B82F6'};
+  background: ${props => props.$bgColor || 'var(--color-primary-600)'};
   color: #ffffff;
   border: none;
   padding: 1.2rem 2.4rem;
@@ -647,7 +647,7 @@ export const ChatButton = styled.button`
   margin-top: 1.6rem;
   
   &:hover {
-    background: ${props => props.$hoverColor || '#2563EB'};
+    background: ${props => props.$hoverColor || 'var(--color-primary-600)'};
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
   }

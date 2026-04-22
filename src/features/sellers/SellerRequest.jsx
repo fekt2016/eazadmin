@@ -47,7 +47,6 @@ const SellerRequests = () => {
   };
 
   const sellersList = sellers?.data?.results || [];
-  console.log("sellersList:", sellersList);
 
   if (!sellersList || sellersList.length === 0) {
     if (isSellerLoading) return <Loading>Loading sellers...</Loading>;
@@ -316,7 +315,7 @@ const PaginationContainer = styled.div`
 const PageButton = styled.button`
   padding: 0.5rem 1rem;
   border: 1px solid #dee2e6;
-  background-color: ${(props) => (props.active ? "#007bff" : props.disabled ? "#e9ecef" : "white")};
+  background-color: ${(props) => (props.active ? "var(--color-primary-600)" : props.disabled ? "#e9ecef" : "white")};
   color: ${(props) => (props.active ? "white" : props.disabled ? "#adb5bd" : "#495057")};
   border-radius: 4px;
   cursor: ${(props) => (props.disabled ? "not-allowed" : "pointer")};
@@ -357,16 +356,16 @@ const SortLabel = styled.span`
 
 const SortButton = styled.button`
   padding: 0.5rem 1rem;
-  border: 1px solid ${(props) => (props.active ? "#007bff" : "#ddd")};
+  border: 1px solid ${(props) => (props.active ? "var(--color-primary-600)" : "#ddd")};
   border-radius: 4px;
-  background: ${(props) => (props.active ? "#007bff20" : "white")};
-  color: ${(props) => (props.active ? "#007bff" : "#666")};
+  background: ${(props) => (props.active ? "rgba(187, 108, 2, 0.13)" : "white")};
+  color: ${(props) => (props.active ? "var(--color-primary-600)" : "#666")};
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover {
-    border-color: #007bff;
-    color: #007bff;
+    border-color: var(--color-primary-600);
+    color: var(--color-primary-600);
   }
 `;
 
@@ -391,12 +390,12 @@ const LimitSelect = styled.select`
   font-size: 0.9rem;
 
   &:hover {
-    border-color: #007bff;
+    border-color: var(--color-primary-600);
   }
 
   &:focus {
     outline: none;
-    border-color: #007bff;
+    border-color: var(--color-primary-600);
   }
 `;
 

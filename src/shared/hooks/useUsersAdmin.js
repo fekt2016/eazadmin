@@ -117,7 +117,6 @@ const useSellerAdmin = (userId) => {
   const updateStatus = useMutation({
     mutationFn: (statusData) => adminUserApi.updateSellerStatus(statusData),
     onSuccess: (data) => {
-      console.log("Status updated successfully:", data);
       // Invalidate the sellers query
       queryClient.invalidateQueries(["admin", "sellers"]);
     },

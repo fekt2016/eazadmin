@@ -17,7 +17,7 @@ const StatusBadge = styled.span`
       case 'rejected':
         return '#fee2e2'; // red-100
       case 'completed':
-        return '#dbeafe'; // blue-100
+        return 'var(--color-primary-100)'; // blue-100
       case 'processing':
         return '#e0e7ff'; // indigo-100
       default:
@@ -33,7 +33,7 @@ const StatusBadge = styled.span`
       case 'rejected':
         return '#991b1b'; // red-800
       case 'completed':
-        return '#1e40af'; // blue-800
+        return 'var(--color-primary-700)'; // blue-800
       case 'processing':
         return '#3730a3'; // indigo-800
       default:

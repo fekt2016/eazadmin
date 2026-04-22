@@ -1,195 +1,228 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FaStore, FaTimes, FaUserAlt, FaUserShield } from "react-icons/fa";
 import styled from "styled-components";
+import { toast } from "react-toastify";
 
-const AddUserModal = ({ onClose, onCreate }) => {
-  const [activeTab, setActiveTab] = useState("user");
+const ADMIN_ROLES = [
+  { value: "admin", label: "Admin" },
+  { value: "superadmin", label: "Superadmin" },
+  { value: "support_agent", label: "Support Agent" },
+];
 
+/**
+ * @param {object} props
+ * @param {() => void} props.onClose
+ * @param {(payload: { accountType: 'user'|'seller'|'admin'; name: string; email: string; shopName?: string; role?: string; referral: string }) => Promise<void>} props.onSubmit
+ * @param {string} [props.defaultReferral]
+ * @param {boolean} [props.canCreateAdmin]
+ * @param {'user'|'seller'|'admin'} [props.initialAccountType]
+ */
+const AddUserModal = ({
+  onClose,
+  onSubmit,
+  defaultReferral = "",
+  canCreateAdmin = false,
+  initialAccountType = "user",
+}) => {
+  const [activeTab, setActiveTab] = useState(initialAccountType);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    password: "",
-    role: "user",
     shopName: "",
-    category: "",
     adminRole: "admin",
-    permissions: [],
+    referral: defaultReferral,
   });
+
+  useEffect(() => {
+    setActiveTab(initialAccountType);
+  }, [initialAccountType]);
+
+  useEffect(() => {
+    setFormData((prev) => ({ ...prev, referral: defaultReferral }));
+  }, [defaultReferral]);
+
+  useEffect(() => {
+    if (activeTab === "admin" && !canCreateAdmin) {
+      setActiveTab("user");
+    }
+  }, [activeTab, canCreateAdmin]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handlePermissionChange = (e) => {
-    const { value, checked } = e.target;
-    setFormData((prev) => {
-      const permissions = checked
-        ? [...prev.permissions, value]
-        : prev.permissions.filter((p) => p !== value);
-      return { ...prev, permissions };
-    });
-  };
+  const handleSubmit = async () => {
+    const name = formData.name.trim();
+    const email = formData.email.trim();
+    if (!name || !email) {
+      toast.error("Name and email are required");
+      return;
+    }
+    if (activeTab === "seller" && !formData.shopName.trim()) {
+      toast.error("Store name is required for sellers");
+      return;
+    }
+    if (activeTab === "admin" && !canCreateAdmin) {
+      toast.error("Only a superadmin can create admin accounts");
+      return;
+    }
 
-  const handleSubmit = () => {
-    const userData = {
-      ...formData,
-      role: activeTab,
-      status: "active",
+    const payload = {
+      accountType: activeTab,
+      name,
+      email,
+      referral: formData.referral.trim(),
     };
-    onCreate(userData);
+    if (activeTab === "seller") {
+      payload.shopName = formData.shopName.trim();
+    }
+    if (activeTab === "admin") {
+      payload.role = formData.adminRole;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await onSubmit(payload);
+    } catch {
+      // Parent / API layer surfaces errors
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <ModalOverlay>
-      <ModalContainer>
+    <ModalOverlay role="presentation" onClick={onClose}>
+      <ModalContainer
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-user-modal-title"
+        onClick={(e) => e.stopPropagation()}
+      >
         <ModalHeader>
-          <h2>Create New Account</h2>
-          <CloseButton onClick={onClose}>
+          <h2 id="add-user-modal-title">Create New Account</h2>
+          <CloseButton type="button" onClick={onClose} aria-label="Close">
             <FaTimes />
           </CloseButton>
         </ModalHeader>
         <ModalBody>
           <ModalTabs>
             <ModalTab
-              active={activeTab === "user"}
+              $active={activeTab === "user"}
               onClick={() => setActiveTab("user")}
+              type="button"
             >
               <FaUserAlt /> User
             </ModalTab>
             <ModalTab
-              active={activeTab === "seller"}
+              $active={activeTab === "seller"}
               onClick={() => setActiveTab("seller")}
+              type="button"
             >
               <FaStore /> Seller
             </ModalTab>
-            <ModalTab
-              active={activeTab === "admin"}
-              onClick={() => setActiveTab("admin")}
-            >
-              <FaUserShield /> Admin
-            </ModalTab>
+            {canCreateAdmin && (
+              <ModalTab
+                $active={activeTab === "admin"}
+                onClick={() => setActiveTab("admin")}
+                type="button"
+              >
+                <FaUserShield /> Admin
+              </ModalTab>
+            )}
           </ModalTabs>
 
+          <Hint>
+            A secure password is generated on the server and emailed to this
+            address. It is not shown in the admin panel. Ask them to change it
+            after first sign-in.
+          </Hint>
+
           <FormGroup>
-            <Label>Full Name</Label>
+            <Label htmlFor="add-user-name">Full Name</Label>
             <Input
+              id="add-user-name"
               type="text"
               name="name"
               value={formData.name}
               onChange={handleChange}
               placeholder="Enter full name"
+              autoComplete="name"
             />
           </FormGroup>
 
           <FormGroup>
-            <Label>Email Address</Label>
-
+            <Label htmlFor="add-user-email">Email Address</Label>
             <Input
+              id="add-user-email"
               type="email"
               name="email"
               value={formData.email}
               onChange={handleChange}
               placeholder="Enter email address"
+              autoComplete="email"
             />
           </FormGroup>
 
           <FormGroup>
-            <Label>Password</Label>
-
+            <Label htmlFor="add-user-referral">Referral</Label>
             <Input
-              type="password"
-              name="password"
-              value={formData.password}
+              id="add-user-referral"
+              type="text"
+              name="referral"
+              value={formData.referral}
               onChange={handleChange}
-              placeholder="Create password"
+              placeholder="Referring admin or note"
+              autoComplete="off"
             />
           </FormGroup>
 
           {activeTab === "seller" && (
             <FormGroup>
-              <Label>Store Name</Label>
+              <Label htmlFor="add-user-shop">Store Name</Label>
               <Input
+                id="add-user-shop"
                 type="text"
                 name="shopName"
                 value={formData.shopName}
                 onChange={handleChange}
                 placeholder="Enter store name"
+                autoComplete="organization"
               />
             </FormGroup>
           )}
 
-          {activeTab === "admin" && (
-            <Form>
-              <FormGroup>
-                <Label>Admin Role</Label>
-                <Select
-                  name="adminRole"
-                  value={formData.adminRole}
-                  onChange={handleChange}
-                >
-                  <option value="admin">Administrator</option>
-                  <option value="super">Super Administrator</option>
-                  <option value="content">Content Admin</option>
-                  <option value="support">Support Admin</option>
-                </Select>
-              </FormGroup>
-
-              <FormGroup>
-                <Label>Permissions</Label>
-                <CheckboxGroup>
-                  <CheckboxLabel>
-                    <input
-                      type="checkbox"
-                      value="user_management"
-                      checked={formData.permissions.includes("user_management")}
-                      onChange={handlePermissionChange}
-                    />
-                    User Management
-                  </CheckboxLabel>
-
-                  <CheckboxLabel>
-                    <input
-                      type="checkbox"
-                      value="content_management"
-                      checked={formData.permissions.includes(
-                        "content_management"
-                      )}
-                      onChange={handlePermissionChange}
-                    />
-                    Content Management
-                  </CheckboxLabel>
-
-                  <CheckboxLabel>
-                    <input
-                      type="checkbox"
-                      value="settings"
-                      checked={formData.permissions.includes("settings")}
-                      onChange={handlePermissionChange}
-                    />
-                    System Settings
-                  </CheckboxLabel>
-
-                  <CheckboxLabel>
-                    <input
-                      type="checkbox"
-                      value="analytics"
-                      checked={formData.permissions.includes("analytics")}
-                      onChange={handlePermissionChange}
-                    />
-                    Analytics & Reporting
-                  </CheckboxLabel>
-                </CheckboxGroup>
-              </FormGroup>
-            </Form>
+          {activeTab === "admin" && canCreateAdmin && (
+            <FormGroup>
+              <Label htmlFor="add-user-admin-role">Admin Role</Label>
+              <Select
+                id="add-user-admin-role"
+                name="adminRole"
+                value={formData.adminRole}
+                onChange={handleChange}
+              >
+                {ADMIN_ROLES.map((r) => (
+                  <option key={r.value} value={r.value}>
+                    {r.label}
+                  </option>
+                ))}
+              </Select>
+            </FormGroup>
           )}
         </ModalBody>
         <ModalFooter>
-          <Button secondary onClick={onClose}>
+          <Button type="button" $secondary onClick={onClose} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button primary onClick={handleSubmit}>
-            Create Account
+          <Button
+            type="button"
+            $primary
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            aria-busy={isSubmitting}
+          >
+            {isSubmitting ? "Creating…" : "Create Account"}
           </Button>
         </ModalFooter>
       </ModalContainer>
@@ -197,7 +230,6 @@ const AddUserModal = ({ onClose, onCreate }) => {
   );
 };
 
-// Add these styled components at the bottom of your styled components
 const ModalOverlay = styled.div`
   position: fixed;
   top: 0;
@@ -234,7 +266,7 @@ const ModalHeader = styled.div`
     margin: 0;
   }
 `;
-const Form = styled.form``;
+
 const CloseButton = styled.button`
   background: none;
   border: none;
@@ -244,12 +276,23 @@ const CloseButton = styled.button`
   transition: all 0.2s;
 
   &:hover {
-    color: #4361ee;
+    color: #bb6c02;
   }
 `;
 
 const ModalBody = styled.div`
   padding: 25px;
+`;
+
+const Hint = styled.p`
+  margin: 0 0 20px;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #475569;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
 `;
 
 const ModalTabs = styled.div`
@@ -258,20 +301,25 @@ const ModalTabs = styled.div`
   margin-bottom: 25px;
 `;
 
-const ModalTab = styled.div`
-  padding: 12px 25px;
+const ModalTab = styled.button`
+  flex: 1;
+  padding: 12px 16px;
   cursor: pointer;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   font-weight: 500;
+  border: none;
   border-bottom: 3px solid transparent;
-  color: ${({ active }) => (active ? "#4361EE" : "#8D99AE")};
-  border-bottom-color: ${({ active }) => (active ? "#4361EE" : "transparent")};
+  background: transparent;
+  color: ${({ $active }) => ($active ? "#bb6c02" : "#8D99AE")};
+  border-bottom-color: ${({ $active }) =>
+    $active ? "#bb6c02" : "transparent"};
   transition: all 0.3s;
 
   &:hover {
-    color: #4361ee;
+    color: #bb6c02;
   }
 `;
 
@@ -296,10 +344,11 @@ const Input = styled.input`
   font-size: 14px;
   color: #2b2d42;
   transition: all 0.3s;
+  box-sizing: border-box;
 
   &:focus {
-    border-color: #4361ee;
-    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+    border-color: #bb6c02;
+    box-shadow: 0 0 0 3px rgba(187, 108, 2, 0.1);
     outline: none;
   }
 `;
@@ -318,32 +367,12 @@ const Select = styled.select`
   background-position: right 1rem center;
   background-size: 1em;
   transition: all 0.3s;
+  box-sizing: border-box;
 
   &:focus {
-    border-color: #4361ee;
-    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+    border-color: #bb6c02;
+    box-shadow: 0 0 0 3px rgba(187, 108, 2, 0.1);
     outline: none;
-  }
-`;
-
-const CheckboxGroup = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 15px;
-  border: 1px solid #e9ecef;
-  border-radius: 10px;
-`;
-
-const CheckboxLabel = styled.label`
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  cursor: pointer;
-
-  input {
-    margin: 0;
   }
 `;
 
@@ -363,27 +392,32 @@ const Button = styled.button`
   transition: all 0.3s;
   border: none;
 
-  ${({ primary }) =>
-    primary &&
+  ${({ $primary }) =>
+    $primary &&
     `
-    background: #4361ee;
+    background: #bb6c02;
     color: white;
 
-    &:hover {
-      background: #3a56d4;
+    &:hover:not(:disabled) {
+      background: #9a5a02;
     }
   `}
 
-  ${({ secondary }) =>
-    secondary &&
+  ${({ $secondary }) =>
+    $secondary &&
     `
     background: #f8f9fa;
     color: #2b2d42;
 
-    &:hover {
+    &:hover:not(:disabled) {
       background: #e9ecef;
     }
   `}
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 `;
 
 export default AddUserModal;

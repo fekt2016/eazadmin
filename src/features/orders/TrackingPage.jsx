@@ -19,6 +19,32 @@ import {
 import { LoadingSpinner } from "../../shared/components/LoadingSpinner";
 import { toast } from "react-toastify";
 import { useGetOrderByTrackingNumber, useAddTrackingUpdate } from "../../shared/hooks/useOrder";
+import useAuth from "../../shared/hooks/useAuth";
+import {
+  PageHeader as SharedPageHeader,
+  PageTitle,
+} from "../../shared/components/page/PageHeader";
+
+const T = {
+  border: "var(--color-border)",
+  cardBg: "var(--color-card-bg)",
+  bodyBg: "var(--color-body-bg)",
+  radius: "var(--border-radius-xl)",
+  shadow: "var(--shadow-sm)",
+};
+
+const DetailPageHeader = styled(SharedPageHeader)`
+  align-items: center;
+  justify-content: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: ${T.cardBg};
+  border: 1px solid ${T.border};
+  border-radius: ${T.radius};
+  box-shadow: ${T.shadow};
+`;
 
 const TrackingPage = () => {
   const { trackingNumber } = useParams();
@@ -34,6 +60,14 @@ const TrackingPage = () => {
 
   // Use React Query mutation for adding tracking updates
   const addTrackingUpdateMutation = useAddTrackingUpdate();
+
+  const { adminData } = useAuth();
+  const admin =
+    adminData?.data?.data?.data ||
+    adminData?.data?.data ||
+    adminData?.data ||
+    adminData;
+  const isSupportAgentReadOnly = admin?.role === "support_agent";
 
   // Extract error message from query error
   const error = queryError?.message || (queryError ? "Failed to load tracking information" : null);
@@ -129,10 +163,25 @@ const TrackingPage = () => {
       .join(" ");
   };
 
-  const trackingHistory = orderData.trackingHistory || [];
-  const currentStatus = orderData.currentStatus || "pending_payment";
+  const rawHistory = orderData.trackingHistory || [];
+  const rawCurrentStatus = orderData.currentStatus || "pending_payment";
+  const rawPaymentStatus = orderData.paymentStatus || "pending";
+
+  const trackingHistory = isSupportAgentReadOnly
+    ? rawHistory.map((e) => ({
+        ...e,
+        status: e?.status === "refunded" ? "cancelled" : e.status,
+        message: e?.status === "refunded" ? "Order closed." : e.message,
+      }))
+    : rawHistory;
+  const currentStatus =
+    isSupportAgentReadOnly && rawCurrentStatus === "refunded" ? "cancelled" : rawCurrentStatus;
+  const paymentStatus =
+    isSupportAgentReadOnly &&
+    ["refunded", "partial_refund"].includes(String(rawPaymentStatus).toLowerCase())
+      ? "completed"
+      : rawPaymentStatus;
   const orderItems = orderData.orderItems || [];
-  const paymentStatus = orderData.paymentStatus || "pending";
 
   // Define all possible tracking steps in order
   const ALL_TRACKING_STEPS = [
@@ -266,19 +315,19 @@ const TrackingPage = () => {
 
   return (
     <PageContainer>
-      <Header>
+      <DetailPageHeader>
         <BackButton onClick={() => navigate(-1)}>
           <FaArrowLeft />
           Back
         </BackButton>
-        <Title>Order Tracking</Title>
-        {orderData && orderData.currentStatus !== 'delivered' && (
+        <PageTitle>Order Tracking</PageTitle>
+        {orderData && orderData.currentStatus !== 'delivered' && !isSupportAgentReadOnly && (
           <UpdateTrackingButton onClick={() => setShowUpdateModal(true)}>
             <FaPlus />
             Update Tracking
           </UpdateTrackingButton>
         )}
-      </Header>
+      </DetailPageHeader>
 
       <ContentGrid>
         {/* Main Tracking Card */}
@@ -518,8 +567,8 @@ const TrackingPage = () => {
               <InfoRow>
                 <InfoLabel>Payment Status</InfoLabel>
                 <InfoValue>
-                  <PaymentBadge $paid={orderData.paymentStatus === 'paid' || orderData.paymentStatus === 'completed'}>
-                    {(orderData.paymentStatus === 'paid' || orderData.paymentStatus === 'completed') ? 'Paid' : 'Pending'}
+                  <PaymentBadge $paid={paymentStatus === 'paid' || paymentStatus === 'completed'}>
+                    {(paymentStatus === 'paid' || paymentStatus === 'completed') ? 'Paid' : 'Pending'}
                   </PaymentBadge>
                 </InfoValue>
               </InfoRow>
@@ -648,7 +697,7 @@ const TrackingPage = () => {
       </ContentGrid>
 
       {/* Update Tracking Modal */}
-      {showUpdateModal && orderData && (
+      {showUpdateModal && orderData && !isSupportAgentReadOnly && (
         <UpdateTrackingModal
           orderId={orderData._id}
           trackingNumber={trackingNumber}
@@ -668,15 +717,8 @@ export default TrackingPage;
 // Styled Components
 const PageContainer = styled.div`
   min-height: 100vh;
-  background: #f7fafc;
+  background: ${T.bodyBg};
   padding: 2rem;
-`;
-
-const Header = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 2rem;
 `;
 
 const BackButton = styled.button`
@@ -684,25 +726,19 @@ const BackButton = styled.button`
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1.5rem;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  background: var(--color-card-bg);
+  border: 1px solid ${T.border};
+  border-radius: var(--border-radius-md);
   cursor: pointer;
   font-size: 1rem;
-  color: #4a5568;
+  color: var(--color-grey-700);
   transition: all 0.2s;
+  flex-shrink: 0;
 
   &:hover {
-    background: #f7fafc;
-    border-color: #cbd5e0;
+    background: var(--color-grey-50);
+    border-color: var(--color-grey-300);
   }
-`;
-
-const Title = styled.h1`
-  font-size: 2rem;
-  font-weight: 700;
-  color: #1a202c;
-  margin: 0;
 `;
 
 const ContentGrid = styled.div`
@@ -784,13 +820,13 @@ const EstimatedDeliveryHeader = styled.div`
   display: flex;
   align-items: center;
   padding: 0.75rem 1rem;
-  background: #f0f9ff;
-  border-left: 4px solid #3182ce;
-  border-radius: 4px;
+  background: var(--color-primary-50);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-md);
   margin-top: 0.5rem;
 
   strong {
-    color: #1e40af;
+    color: var(--color-primary-700);
     font-weight: 700;
     margin-left: 0.25rem;
   }
@@ -828,7 +864,11 @@ const StatusBadge = styled.div`
 const DeliveryEstimateSection = styled.div`
   margin-bottom: 2rem;
   padding: 1.5rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-primary-600) 0%,
+    var(--color-primary-800) 100%
+  );
   border-radius: 12px;
   color: white;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -1127,7 +1167,7 @@ const PaymentBadge = styled.span`
 const PickupMapLink = styled.a`
   display: inline-flex;
   align-items: center;
-  color: #3182ce;
+  color: var(--color-primary-600);
   text-decoration: none;
   font-weight: 500;
   transition: color 0.2s;
@@ -1358,7 +1398,7 @@ const Select = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #3182ce;
+    border-color: var(--color-primary-600);
     box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1);
   }
 `;
@@ -1375,7 +1415,7 @@ const TextArea = styled.textarea`
 
   &:focus {
     outline: none;
-    border-color: #3182ce;
+    border-color: var(--color-primary-600);
     box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1);
   }
 `;
@@ -1390,7 +1430,7 @@ const Input = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #3182ce;
+    border-color: var(--color-primary-600);
     box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1);
   }
 `;
@@ -1428,7 +1468,7 @@ const SubmitButton = styled.button`
   padding: 0.75rem 1.5rem;
   border: none;
   border-radius: 8px;
-  background: #3182ce;
+  background: var(--color-primary-600);
   color: white;
   font-size: 1rem;
   font-weight: 600;
@@ -1450,7 +1490,7 @@ const UpdateTrackingButton = styled.button`
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1.5rem;
-  background: #3182ce;
+  background: var(--color-primary-600);
   color: white;
   border: none;
   border-radius: 8px;

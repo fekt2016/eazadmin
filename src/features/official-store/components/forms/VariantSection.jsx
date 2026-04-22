@@ -67,8 +67,6 @@ export default function VariantSection({ variantAttributes = [], seller }) {
     );
 
     if (!validAttributes || validAttributes.length === 0) {
-      console.warn("No valid attributes found. Please add attributes with values first.");
-      // You could also show a toast notification here
       return;
     }
 
@@ -96,7 +94,6 @@ export default function VariantSection({ variantAttributes = [], seller }) {
     }, []);
 
     if (combinations.length === 0) {
-      console.warn("No combinations generated. Please check your attribute values.");
       return;
     }
 
@@ -131,7 +128,6 @@ export default function VariantSection({ variantAttributes = [], seller }) {
 
     // Replace existing variants with the new generated ones
     replace(newVariants);
-    console.log(`Generated ${newVariants.length} variants from ${validAttributes.length} attributes`);
   };
 
   // Add a single variant manually
@@ -469,7 +465,7 @@ const GenerateButton = styled.button`
 
 const AddVariantButton = styled.button`
   padding: 0.75rem 1.5rem;
-  background: #2196f3;
+  background: var(--color-primary-600);
   color: white;
   border: none;
   border-radius: 6px;
@@ -478,7 +474,7 @@ const AddVariantButton = styled.button`
   transition: background 0.2s;
 
   &:hover {
-    background: #1976d2;
+    background: var(--color-primary-700);
   }
 `;
 
@@ -682,7 +678,7 @@ const Input = styled.input`
   
   &:focus {
     outline: none;
-    border-color: ${props => props.$hasError ? '#e53e3e' : '#3182ce'};
+    border-color: ${props => props.$hasError ? '#e53e3e' : 'var(--color-primary-600)'};
     box-shadow: 0 0 0 2px ${props => props.$hasError ? 'rgba(229, 62, 62, 0.1)' : 'rgba(49, 130, 206, 0.1)'};
   }
   
@@ -701,7 +697,7 @@ const Select = styled.select`
   
   &:focus {
     outline: none;
-    border-color: ${props => props.$hasError ? '#e53e3e' : '#3182ce'};
+    border-color: ${props => props.$hasError ? '#e53e3e' : 'var(--color-primary-600)'};
     box-shadow: 0 0 0 2px ${props => props.$hasError ? 'rgba(229, 62, 62, 0.1)' : 'rgba(49, 130, 206, 0.1)'};
   }
 `;
@@ -742,7 +738,7 @@ const TotalQuantityLabel = styled.div`
 const TotalQuantityValue = styled.div`
   font-size: 1.5rem;
   font-weight: 700;
-  color: #3182ce;
+  color: var(--color-primary-600);
 `;
 
 // Variant Image Upload Component - one image per variant only
@@ -835,7 +831,7 @@ const VariantImageUploadArea = styled.div`
   background: #f8fafc;
 
   &:hover {
-    border-color: #3182ce;
+    border-color: var(--color-primary-600);
     background: #edf2f7;
   }
 `;

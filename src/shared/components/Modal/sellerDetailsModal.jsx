@@ -28,11 +28,6 @@ const SellerDetailsModal = ({ seller, onClose }) => {
 
   const sellerBalance = balanceData?.data?.seller || balanceData?.data || seller;
 
-  // Debug: Log balance data
-  console.log('[SellerDetailsModal] Balance data:', balanceData);
-  console.log('[SellerDetailsModal] Seller balance:', sellerBalance);
-  console.log('[SellerDetailsModal] Locked balance:', sellerBalance?.lockedBalance || seller?.lockedBalance);
-
   // Check if seller has all required documents
   const hasAllRequiredDocuments = () => {
     const docs = seller.verificationDocuments || {};
@@ -290,7 +285,7 @@ const SellerDetailsModal = ({ seller, onClose }) => {
               {seller.paymentMethods?.bankAccount && (
                 <Value style={{ marginBottom: '0.5rem' }}>
                   <PaymentMethodCard>
-                    <FaBuilding style={{ marginRight: '0.5rem', color: '#007bff' }} />
+                    <FaBuilding style={{ marginRight: '0.5rem', color: 'var(--color-primary-600)' }} />
                     <div>
                       <strong>Bank Account</strong>
                       <div style={{ fontSize: '0.9rem', color: '#666', marginTop: '0.25rem' }}>
@@ -683,7 +678,7 @@ const Documents = styled.div`
 `;
 
 const DocumentLink = styled.a`
-  color: #007bff;
+  color: var(--color-primary-600);
   text-decoration: none;
   display: inline-block;
   padding: 0.25rem 0.5rem;
@@ -843,7 +838,7 @@ const ResetInput = styled.input`
   
   &:focus {
     outline: none;
-    border-color: #007bff;
+    border-color: var(--color-primary-600);
   }
 `;
 
@@ -858,7 +853,7 @@ const ResetTextarea = styled.textarea`
   
   &:focus {
     outline: none;
-    border-color: #007bff;
+    border-color: var(--color-primary-600);
   }
 `;
 

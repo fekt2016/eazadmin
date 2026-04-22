@@ -62,7 +62,6 @@ export default function CategoryForm({
         .map((v) => v.trim())
         .filter((v) => v),
     };
-    console.log("attributes", newAttribute);
 
     setFormData((prev) => ({
       ...prev,
@@ -566,7 +565,7 @@ const AttributeName = styled.span`
 const AttributeTypeBadge = styled.span`
   background: ${({ $type }) =>
     $type === "color"
-      ? "#dbeafe"
+      ? "var(--color-primary-100)"
       : $type === "enum"
         ? "#ede9fe"
         : $type === "boolean"
@@ -574,7 +573,7 @@ const AttributeTypeBadge = styled.span`
           : "#e5e7eb"};
   color: ${({ $type }) =>
     $type === "color"
-      ? "#3b82f6"
+      ? "var(--color-primary-600)"
       : $type === "enum"
         ? "#8b5cf6"
         : $type === "boolean"
@@ -676,7 +675,7 @@ const FormInput = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #3498db;
+    border-color: var(--color-primary-600);
     box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
   }
 `;
@@ -692,7 +691,7 @@ const FormTextArea = styled.textarea`
 
   &:focus {
     outline: none;
-    border-color: #3498db;
+    border-color: var(--color-primary-600);
     box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
   }
 `;
@@ -706,7 +705,7 @@ const FormSelect = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #3498db;
+    border-color: var(--color-primary-600);
     box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
   }
 `;
@@ -742,7 +741,7 @@ const StatusOption = styled.div`
   font-weight: ${(props) => (props.$active ? "500" : "normal")};
 
   &:hover {
-    border-color: ${(props) => (props.$active ? "#219653" : "#3498db")};
+    border-color: ${(props) => (props.$active ? "#219653" : "var(--color-primary-600)")};
     background-color: ${(props) =>
     props.$active ? "rgba(33, 150, 83, 0.15)" : "#f8f9fa"};
   }
@@ -762,7 +761,7 @@ const FormActions = styled.div`
 
 const PrimaryButton = styled.button`
   padding: 0.8rem 1.8rem;
-  background-color: #3498db;
+  background-color: var(--color-primary-600);
   color: white;
   border: none;
   border-radius: 8px;

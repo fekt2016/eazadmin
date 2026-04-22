@@ -1,5 +1,14 @@
 import { useState, useEffect } from "react";
 import styled from "styled-components";
+import {
+  PageHeader,
+  PageTitle,
+  PageSub,
+} from "../../shared/components/page/PageHeader";
+
+const T = {
+  bodyBg: "var(--color-body-bg)",
+};
 
 // Mock data - replace with API calls in a real application
 const mockLogs = [
@@ -138,12 +147,12 @@ export default function UsersActivityPage() {
 
   return (
     <Container>
-      <Header>
-        <Title>Activity Logs</Title>
-        <Description>
-          Track all system activities and vendor actions
-        </Description>
-      </Header>
+      <PageHeader>
+        <div>
+          <PageTitle>Activity Logs</PageTitle>
+          <PageSub>Track all system activities and vendor actions</PageSub>
+        </div>
+      </PageHeader>
 
       <FiltersContainer>
         <FilterGroup>
@@ -247,23 +256,8 @@ export default function UsersActivityPage() {
 // Styled Components
 const Container = styled.div`
   padding: 2rem;
-  background-color: #f8f9fa;
+  background: ${T.bodyBg};
   min-height: 100vh;
-`;
-
-const Header = styled.div`
-  margin-bottom: 2rem;
-`;
-
-const Title = styled.h1`
-  color: #333;
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
-`;
-
-const Description = styled.p`
-  color: #6c757d;
-  font-size: 1rem;
 `;
 
 const FiltersContainer = styled.div`

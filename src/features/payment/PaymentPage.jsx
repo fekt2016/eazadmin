@@ -8,6 +8,23 @@ import styled from "styled-components";
 import { useGetWithdrawalRequests, useApproveWithdrawalRequest, useRejectWithdrawalRequest, useVerifyTransferStatus } from "../../shared/hooks/usePayout";
 import { PATHS } from "../../routes/routePath";
 import { toast } from "react-toastify";
+import { PageHeader, PageTitle, PageSub } from "../../shared/components/page/PageHeader";
+
+const T = {
+  primary: "var(--color-primary-600)",
+  primaryLight: "var(--color-primary-500)",
+  primaryBg: "var(--color-primary-100)",
+  border: "var(--color-border)",
+  cardBg: "var(--color-card-bg)",
+  bodyBg: "var(--color-body-bg)",
+  text: "var(--color-grey-900)",
+  textMuted: "var(--color-grey-500)",
+  textLight: "var(--color-grey-400)",
+  radius: "var(--border-radius-xl)",
+  radiusSm: "var(--border-radius-md)",
+  shadow: "var(--shadow-sm)",
+  shadowMd: "var(--shadow-md)",
+};
 // import {  FaFilter, FaFileExport, FaSync, FaCheck, ,, FaMoneyBillWave, ,, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import {
   FaCheck,
@@ -271,10 +288,12 @@ export default function PaymentPage() {
 
   return (
     <PageContainer>
-      <Header>
-        <Title>Withdrawal Requests</Title>
-        <Description>View and manage withdrawal requests from sellers</Description>
-      </Header>
+      <PageHeader>
+        <div>
+          <PageTitle>Withdrawal Requests</PageTitle>
+          <PageSub>View and manage withdrawal requests from sellers</PageSub>
+        </div>
+      </PageHeader>
       <StatsContainer>
         <StatCard $type="pending">
           <StatIcon $type="pending">
@@ -569,24 +588,8 @@ export default function PaymentPage() {
 
 const PageContainer = styled.div`
   padding: 2rem;
-  background-color: #f8fafc;
+  background-color: ${T.bodyBg};
   min-height: 100vh;
-`;
-
-const Header = styled.div`
-  margin-bottom: 2rem;
-`;
-
-const Title = styled.h1`
-  font-size: 2rem;
-  font-weight: 700;
-  color: #1e293b;
-  margin-bottom: 0.5rem;
-`;
-
-const Description = styled.p`
-  color: #64748b;
-  font-size: 1rem;
 `;
 
 const StatsContainer = styled.div`
@@ -597,25 +600,13 @@ const StatsContainer = styled.div`
 `;
 
 const StatCard = styled.div`
-  background: white;
-  border-radius: 0.75rem;
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-xl);
   padding: 1.5rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
   display: flex;
   align-items: center;
-  border-left: 4px solid
-    ${(props) =>
-    props.$type === "pending"
-      ? "#f59e0b"
-      : props.$type === "approved"
-        ? "#3b82f6"
-        : props.$type === "paid"
-          ? "#10b981"
-          : props.$type === "totalAmount"
-            ? "#8b5cf6"
-            : props.$type === "rejected"
-              ? "#ef4444"
-              : "#94a3b8"};
 `;
 
 const StatIcon = styled.div`
@@ -631,7 +622,7 @@ const StatIcon = styled.div`
     props.$type === "pending"
       ? "#f59e0b"
       : props.$type === "approved"
-        ? "#3b82f6"
+        ? "var(--color-primary-600)"
         : props.$type === "paid"
           ? "#10b981"
           : props.$type === "totalAmount"
@@ -643,7 +634,7 @@ const StatIcon = styled.div`
     props.$type === "pending"
       ? "#fef3c7"
       : props.$type === "approved"
-        ? "#dbeafe"
+        ? "var(--color-primary-100)"
         : props.$type === "paid"
           ? "#d1fae5"
           : props.$type === "totalAmount"
@@ -661,19 +652,20 @@ const StatContent = styled.div`
 const StatValue = styled.div`
   font-size: 1.75rem;
   font-weight: 700;
-  color: #1e293b;
+  color: ${T.text};
 `;
 
 const StatLabel = styled.div`
-  color: #64748b;
+  color: ${T.textMuted};
   font-size: 0.875rem;
 `;
 
 const FiltersContainer = styled.div`
-  background: white;
-  border-radius: 0.75rem;
+  background: ${T.cardBg};
+  border: 1px solid ${T.border};
+  border-radius: ${T.radius};
   padding: 1.5rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  box-shadow: ${T.shadow};
   margin-bottom: 2rem;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -688,7 +680,7 @@ const FilterGroup = styled.div`
 const FilterLabel = styled.label`
   font-size: 0.875rem;
   font-weight: 500;
-  color: #334155;
+  color: ${T.text};
   margin-bottom: 0.5rem;
 `;
 
@@ -700,21 +692,23 @@ const SearchInput = styled.div`
   svg {
     position: absolute;
     left: 0.75rem;
-    color: #94a3b8;
+    color: ${T.textLight};
   }
 
   input {
     width: 100%;
     padding: 0.75rem 1rem 0.75rem 2.5rem;
-    border: 1px solid #cbd5e1;
-    border-radius: 0.5rem;
+    border: 1.5px solid ${T.border};
+    border-radius: ${T.radiusSm};
     font-size: 0.875rem;
-    transition: all 0.2s;
+    background: ${T.cardBg};
+    color: ${T.text};
+    transition: border-color 0.2s, box-shadow 0.2s;
 
     &:focus {
       outline: none;
-      border-color: #3b82f6;
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+      border-color: ${T.primary};
+      box-shadow: 0 0 0 3px ${T.primaryBg};
     }
   }
 `;
@@ -722,10 +716,11 @@ const SearchInput = styled.div`
 const Select = styled.select`
   width: 100%;
   padding: 0.75rem 1rem;
-  border: 1px solid #cbd5e1;
-  border-radius: 0.5rem;
+  border: 1.5px solid ${T.border};
+  border-radius: ${T.radiusSm};
   font-size: 0.875rem;
-  background-color: white;
+  background-color: ${T.cardBg};
+  color: ${T.text};
   appearance: none;
   background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
   background-repeat: no-repeat;
@@ -734,8 +729,8 @@ const Select = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    border-color: ${T.primary};
+    box-shadow: 0 0 0 3px ${T.primaryBg};
   }
 `;
 
@@ -757,20 +752,22 @@ const ActionButton = styled.button`
   font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.2s;
-  background-color: ${(props) => (props.$primary ? "#3b82f6" : "white")};
+  background-color: ${(props) => (props.$primary ? "var(--color-primary-600)" : "white")};
   color: ${(props) => (props.$primary ? "white" : "#334155")};
-  border: ${(props) => (props.$primary ? "none" : "1px solid #cbd5e1")};
+  border: ${(props) => (props.$primary ? "none" : `1.5px solid ${T.border}`)};
 
   &:hover {
-    background-color: ${(props) => (props.$primary ? "#2563eb" : "#f1f5f9")};
+    background-color: ${(props) =>
+      props.$primary ? "var(--color-primary-700)" : T.bodyBg};
   }
 `;
 
 const TableContainer = styled.div`
-  background: white;
-  border-radius: 0.75rem;
+  background: ${T.cardBg};
+  border: 1px solid ${T.border};
+  border-radius: ${T.radius};
   overflow: hidden;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  box-shadow: ${T.shadow};
   margin-bottom: 2rem;
   overflow-x: auto;
 `;
@@ -782,32 +779,34 @@ const Table = styled.table`
 `;
 
 const TableHeader = styled.th`
-  padding: 1rem 1.5rem;
+  padding: 1rem 1.4rem;
   text-align: left;
-  background-color: #f1f5f9;
-  color: #334155;
-  font-size: 0.875rem;
+  background-color: ${T.bodyBg};
+  color: ${T.textMuted};
+  font-size: var(--text-xs);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.025em;
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid ${T.border};
 `;
 
 const TableRow = styled.tr`
-  border-bottom: 1px solid #e2e8f0;
-
-  &:nth-child(even) {
-    background-color: #f8fafc;
-  }
+  transition: background 0.15s;
 
   &:hover {
-    background-color: #f1f5f9;
+    background-color: ${T.bodyBg};
+  }
+
+  &:last-child td {
+    border-bottom: none;
   }
 `;
 
 const TableCell = styled.td`
   padding: 1rem 1.5rem;
-  color: #334155;
+  color: ${T.text};
   font-size: 0.875rem;
+  border-bottom: 1px solid ${T.border};
 `;
 
 const StatusBadge = styled.span`
@@ -822,7 +821,7 @@ const StatusBadge = styled.span`
     props.$status === "pending"
       ? "#fef3c7"
       : props.$status === "approved"
-        ? "#dbeafe"
+        ? "var(--color-primary-100)"
         : props.$status === "paid"
           ? "#d1fae5"
           : props.$status === "rejected"
@@ -835,7 +834,7 @@ const StatusBadge = styled.span`
     props.$status === "pending"
       ? "#b45309"
       : props.$status === "approved"
-        ? "#1d4ed8"
+        ? "var(--color-primary-700)"
         : props.$status === "paid"
           ? "#047857"
           : props.$status === "rejected"
@@ -858,8 +857,8 @@ const ViewDetailButton = styled.button`
   padding: 0.5rem 0.75rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #1d4ed8;
-  background-color: #dbeafe;
+  color: var(--color-primary-700);
+  background-color: var(--color-primary-100);
   border: 1px solid #93c5fd;
   border-radius: 0.5rem;
   cursor: pointer;
@@ -867,7 +866,7 @@ const ViewDetailButton = styled.button`
 
   &:hover {
     background-color: #bfdbfe;
-    color: #1e40af;
+    color: var(--color-primary-700);
   }
 
   svg {
@@ -924,7 +923,7 @@ const ActionIcon = styled.button`
       : props.$type === "reject"
         ? "#fee2e2"
         : props.$type === "pay"
-          ? "#dbeafe"
+          ? "var(--color-primary-100)"
           : props.$type === "download"
             ? "#ede9fe"
             : props.$type === "delete"
@@ -937,7 +936,7 @@ const ActionIcon = styled.button`
       : props.$type === "reject"
         ? "#b91c1c"
         : props.$type === "pay"
-          ? "#1d4ed8"
+          ? "var(--color-primary-700)"
           : props.$type === "download"
             ? "#7e22ce"
             : props.$type === "delete"
@@ -985,7 +984,7 @@ const NoResults = styled.div`
 
 const ResetButton = styled.button`
   padding: 0.75rem 1.5rem;
-  background-color: #3b82f6;
+  background-color: var(--color-primary-600);
   color: white;
   border: none;
   border-radius: 0.5rem;
@@ -994,7 +993,7 @@ const ResetButton = styled.button`
   transition: background-color 0.2s;
 
   &:hover {
-    background-color: #2563eb;
+    background-color: var(--color-primary-600);
   }
 `;
 
@@ -1027,12 +1026,12 @@ const PaginationButton = styled.button`
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s;
-  background-color: ${(props) => (props.$active ? "#3b82f6" : "white")};
+  background-color: ${(props) => (props.$active ? "var(--color-primary-600)" : "white")};
   color: ${(props) => (props.$active ? "white" : "#334155")};
   border: ${(props) => (props.$active ? "none" : "1px solid #cbd5e1")};
 
   &:hover:not(:disabled) {
-    background-color: ${(props) => (props.$active ? "#2563eb" : "#f1f5f9")};
+    background-color: ${(props) => (props.$active ? "var(--color-primary-600)" : "#f1f5f9")};
   }
 
   &:disabled {

@@ -216,7 +216,7 @@ const NeighborhoodModal = ({ isOpen, onClose, neighborhood = null }) => {
 
   const getZoneColor = (zone) => {
     const colors = {
-      A: { bg: '#e3f2fd', color: '#1976d2' },
+      A: { bg: 'var(--color-primary-50)', color: 'var(--color-primary-600)' },
       B: { bg: '#e8f5e9', color: '#388e3c' },
       C: { bg: '#fff3e0', color: '#f57c00' },
       D: { bg: '#fce4ec', color: '#c2185b' },
@@ -440,7 +440,7 @@ const NeighborhoodModal = ({ isOpen, onClose, neighborhood = null }) => {
                       <span><strong>Origin:</strong> HRH2+R22, Al-Waleed bin Talal Highway, Accra, Ghana</span>
                     </MapInfoItem>
                     <MapInfoItem>
-                      <FaMapMarkerAlt style={{ color: '#4361ee' }} />
+                      <FaMapMarkerAlt style={{ color: '#bb6c02' }} />
                       <span><strong>Destination:</strong> {formData.name}</span>
                     </MapInfoItem>
                     {mapData.data.distance && (
@@ -614,7 +614,7 @@ const SectionTitle = styled.h3`
     content: '';
     width: 4px;
     height: 20px;
-    background: #4361ee;
+    background: #bb6c02;
     border-radius: 2px;
   }
 `;
@@ -656,10 +656,10 @@ const Input = styled.input`
   transition: all 0.2s;
 
   &:focus {
-    border-color: ${(props) => (props.$error ? '#e63946' : '#4361ee')};
+    border-color: ${(props) => (props.$error ? '#e63946' : '#bb6c02')};
     outline: none;
     box-shadow: 0 0 0 3px
-      ${(props) => (props.$error ? 'rgba(230, 57, 70, 0.1)' : 'rgba(67, 97, 238, 0.1)')};
+      ${(props) => (props.$error ? 'rgba(230, 57, 70, 0.1)' : 'rgba(187, 108, 2, 0.1)')};
   }
 
   &:disabled {
@@ -680,10 +680,10 @@ const Select = styled.select`
   transition: all 0.2s;
 
   &:focus {
-    border-color: ${(props) => (props.$error ? '#e63946' : '#4361ee')};
+    border-color: ${(props) => (props.$error ? '#e63946' : '#bb6c02')};
     outline: none;
     box-shadow: 0 0 0 3px
-      ${(props) => (props.$error ? 'rgba(230, 57, 70, 0.1)' : 'rgba(67, 97, 238, 0.1)')};
+      ${(props) => (props.$error ? 'rgba(230, 57, 70, 0.1)' : 'rgba(187, 108, 2, 0.1)')};
   }
 
   &:disabled {
@@ -734,12 +734,12 @@ const ActionButton = styled.button`
   gap: 0.5rem;
   transition: all 0.2s;
   background: ${(props) => {
-    if (props.$primary) return '#e3f2fd';
+    if (props.$primary) return 'var(--color-primary-50)';
     if (props.$secondary) return '#f3e5f5';
     return '#f5f5f5';
   }};
   color: ${(props) => {
-    if (props.$primary) return '#1976d2';
+    if (props.$primary) return 'var(--color-primary-600)';
     if (props.$secondary) return '#7b1fa2';
     return '#666';
   }};
@@ -748,7 +748,7 @@ const ActionButton = styled.button`
     transform: translateY(-1px);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     background: ${(props) => {
-    if (props.$primary) return '#bbdefb';
+    if (props.$primary) return 'var(--color-primary-100)';
     if (props.$secondary) return '#e1bee7';
     return '#e0e0e0';
   }};
@@ -789,7 +789,7 @@ const InfoLabel = styled.div`
 const InfoValue = styled.div`
   font-size: 1.5rem;
   font-weight: 700;
-  color: #4361ee;
+  color: #bb6c02;
 `;
 
 const ZoneBadge = styled.span`
@@ -812,7 +812,7 @@ const Checkbox = styled.input`
   width: 20px;
   height: 20px;
   cursor: pointer;
-  accent-color: #4361ee;
+  accent-color: #bb6c02;
 `;
 
 const CheckboxLabel = styled.label`
@@ -909,7 +909,7 @@ const ModalFooter = styled.div`
 
 const PrimaryButton = styled.button`
   padding: 12px 24px;
-  background: #4361ee;
+  background: #bb6c02;
   color: white;
   border: none;
   border-radius: 8px;

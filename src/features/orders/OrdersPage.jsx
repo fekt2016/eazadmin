@@ -17,8 +17,35 @@ import {
 } from "react-icons/fa";
 import { ConfirmationModal } from '../../shared/components/Modal/ConfirmationModal';
 import { toast } from 'react-toastify';
+import { PATHS } from '../../routes/routePath';
+import { PageHeader, PageTitle, PageSub } from '../../shared/components/page/PageHeader';
+import useAuth from '../../shared/hooks/useAuth';
+
+const T = {
+  primary: 'var(--color-primary-600)',
+  primaryLight: 'var(--color-primary-500)',
+  primaryBg: 'var(--color-primary-100)',
+  border: 'var(--color-border)',
+  cardBg: 'var(--color-card-bg)',
+  bodyBg: 'var(--color-body-bg)',
+  text: 'var(--color-grey-900)',
+  textMuted: 'var(--color-grey-500)',
+  textLight: 'var(--color-grey-400)',
+  radius: 'var(--border-radius-xl)',
+  radiusSm: 'var(--border-radius-md)',
+  shadow: 'var(--shadow-sm)',
+  shadowMd: 'var(--shadow-md)',
+};
 
 export default function OrdersPage() {
+  const { adminData } = useAuth();
+  const admin =
+    adminData?.data?.data?.data ||
+    adminData?.data?.data ||
+    adminData?.data ||
+    adminData;
+  const isSupportAgentReadOnly = admin?.role === 'support_agent';
+
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -102,12 +129,11 @@ export default function OrdersPage() {
   };
 
   const handleStatusChange = (order) => {
-    console.log("Selected order for status change:", order);
     // Navigate to the dedicated status page so admin can use
     // the full status flow (including international statuses)
     const orderId = order._id ?? order.id;
     if (orderId) {
-      navigate(`/dashboard/orders/status/${orderId.toString()}`);
+      navigate(`${PATHS.DASHBOARD}/order-status/${orderId.toString()}`);
     }
   };
 
@@ -233,21 +259,27 @@ export default function OrdersPage() {
       return "confirmed";
     }
 
+    if (isSupportAgentReadOnly && rawStatus === "refunded") {
+      return "cancelled";
+    }
+
     return rawStatus;
   };
 
   return (
     <Container>
-      <Header>
-        <Title>
-          <FaShoppingBag /> Order Management
-        </Title>
-        <Description>Manage and track customer orders</Description>
-      </Header>
+      <PageHeader>
+        <div>
+          <PageTitle>
+            <FaShoppingBag /> Order Management
+          </PageTitle>
+          <PageSub>Manage and track customer orders</PageSub>
+        </div>
+      </PageHeader>
 
       <StatsContainer>
         <StatCard>
-          <StatIcon $color="#3498db">
+          <StatIcon $color="var(--color-primary-600)">
             <FaShoppingBag />
           </StatIcon>
           <StatContent>
@@ -267,7 +299,7 @@ export default function OrdersPage() {
         </StatCard>
 
         <StatCard>
-          <StatIcon $color="#3498db">
+          <StatIcon $color="var(--color-primary-600)">
             <FaShoppingBag />
           </StatIcon>
           <StatContent>
@@ -396,7 +428,8 @@ export default function OrdersPage() {
                   </TableCell>
                   <TableCell>{calculateTotalQuantity(order)}</TableCell>
                   <TableCell>
-                    Gh₵{(order.totalPrice ?? order.total ?? 0).toFixed(2)}
+                    Gh₵
+                    {Number(order.totalPrice ?? order.total ?? 0).toFixed(2)}
                   </TableCell>
                   <TableCell>
                     <StatusBadge $color={getStatusColor(displayStatus)}>
@@ -408,7 +441,7 @@ export default function OrdersPage() {
                   <TableCell>
                     <ActionButtons>
                       <ActionIcon
-                        $color="#3498db"
+                        $color="var(--color-primary-600)"
                         title="View details"
                         to={`detail/${orderIdStr}`}
                       >
@@ -538,27 +571,8 @@ export default function OrdersPage() {
 // Styled Components
 const Container = styled.div`
   padding: 2rem;
-  background-color: #f8fafc;
+  background-color: ${T.bodyBg};
   min-height: 100vh;
-`;
-
-const Header = styled.div`
-  margin-bottom: 2rem;
-`;
-
-const Title = styled.h1`
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  font-size: 2rem;
-  font-weight: 700;
-  color: #2c3e50;
-  margin-bottom: 0.5rem;
-`;
-
-const Description = styled.p`
-  color: #7f8c8d;
-  font-size: 1rem;
 `;
 
 const StatsContainer = styled.div`
@@ -569,12 +583,19 @@ const StatsContainer = styled.div`
 `;
 
 const StatCard = styled.div`
-  background: white;
-  border-radius: 10px;
-  padding: 1.5rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  background: ${T.cardBg};
+  border: 1px solid ${T.border};
+  border-radius: ${T.radius};
+  padding: 2rem;
+  box-shadow: ${T.shadow};
   display: flex;
   align-items: center;
+  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+
+  &:hover {
+    box-shadow: ${T.shadowMd};
+    transform: translateY(-2px);
+  }
 `;
 
 const StatIcon = styled.div`
@@ -587,7 +608,7 @@ const StatIcon = styled.div`
   margin-right: 1rem;
   font-size: 1.5rem;
   color: white;
-  background-color: ${(props) => props.$color || "#3498db"};
+  background-color: ${(props) => props.$color || "var(--color-primary-600)"};
 `;
 
 const StatContent = styled.div`
@@ -598,19 +619,20 @@ const StatContent = styled.div`
 const StatValue = styled.div`
   font-size: 1.5rem;
   font-weight: 700;
-  color: #2c3e50;
+  color: ${T.text};
 `;
 
 const StatLabel = styled.div`
-  color: #7f8c8d;
+  color: ${T.textMuted};
   font-size: 0.9rem;
 `;
 
 const ControlsContainer = styled.div`
-  background: white;
-  border-radius: 10px;
+  background: ${T.cardBg};
+  border: 1px solid ${T.border};
+  border-radius: ${T.radius};
   padding: 1.5rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  box-shadow: ${T.shadow};
   margin-bottom: 2rem;
   display: flex;
   flex-wrap: wrap;
@@ -624,8 +646,9 @@ const SearchContainer = styled.div`
   display: flex;
   align-items: center;
   padding: 0.75rem 1rem;
-  background: #f8f9fa;
-  border-radius: 8px;
+  background: ${T.bodyBg};
+  border: 1px solid ${T.border};
+  border-radius: ${T.radiusSm};
   gap: 0.75rem;
 `;
 
@@ -652,68 +675,81 @@ const FilterGroup = styled.div`
 const FilterLabel = styled.label`
   font-size: 0.875rem;
   font-weight: 500;
-  color: #2c3e50;
+  color: ${T.text};
   margin-bottom: 0.25rem;
 `;
 
 const FilterSelect = styled.select`
   padding: 0.75rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  border: 1.5px solid ${T.border};
+  border-radius: ${T.radiusSm};
   font-size: 0.9rem;
   min-width: 150px;
+  background: ${T.cardBg};
+  color: ${T.text};
+
+  &:focus {
+    outline: none;
+    border-color: ${T.primary};
+    box-shadow: 0 0 0 3px ${T.primaryBg};
+  }
 `;
 
 const OrdersTable = styled.table`
   width: 100%;
   border-collapse: collapse;
-  background: white;
-  border-radius: 10px;
+  background: ${T.cardBg};
+  border: 1px solid ${T.border};
+  border-radius: ${T.radius};
   overflow: hidden;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  box-shadow: ${T.shadow};
   margin-bottom: 1.5rem;
 `;
 
 const TableHeader = styled.thead`
-  background-color: #f8fafc;
+  background-color: ${T.bodyBg};
 `;
 
 const TableRow = styled.tr`
-  border-bottom: 1px solid #e2e8f0;
-
-  &:nth-child(even) {
-    background-color: #f8fafc;
-  }
+  transition: background 0.15s;
 
   &:hover {
-    background-color: #f1f5f9;
+    background-color: ${T.bodyBg};
+  }
+
+  &:last-child td {
+    border-bottom: none;
   }
 `;
 
 const HeaderCell = styled.th`
-  padding: 1rem 1.5rem;
+  padding: 1rem 1.4rem;
   text-align: left;
   font-weight: 600;
-  color: #4a5568;
-  font-size: 0.875rem;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: ${T.textMuted};
+  border-bottom: 1px solid ${T.border};
 `;
 
 const TableBody = styled.tbody``;
 
 const TableCell = styled.td`
   padding: 1rem 1.5rem;
-  color: #2c3e50;
+  color: ${T.text};
+  border-bottom: 1px solid ${T.border};
 `;
 
 const TrackingLink = styled.span`
-  color: #3498db;
+  color: var(--color-primary-600);
   cursor: pointer;
   text-decoration: underline;
   font-weight: 500;
   transition: color 0.2s;
 
   &:hover {
-    color: #2980b9;
+    color: var(--color-primary-700);
   }
 `;
 
@@ -726,13 +762,13 @@ const StatusBadge = styled.span`
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  font-size: 0.875rem;
-  font-weight: 500;
+  padding: 0.4rem 1rem;
+  border-radius: var(--border-radius-cir);
+  font-size: var(--text-xs);
+  font-weight: 600;
   background-color: ${(props) =>
-    props.$color ? `${props.$color}20` : "#f1f5f9"};
-  color: ${(props) => props.$color || "#4a5568"};
+    props.$color ? `${props.$color}18` : 'rgba(107, 114, 128, 0.18)'};
+  color: ${(props) => props.$color || T.textMuted};
 `;
 
 const ActionButtons = styled.div`
@@ -786,10 +822,11 @@ const PaginationContainer = styled.div`
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
-  background: white;
-  border-radius: 10px;
+  background: ${T.cardBg};
+  border: 1px solid ${T.border};
+  border-radius: ${T.radius};
   padding: 1rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  box-shadow: ${T.shadow};
   margin-top: 1rem;
 
   @media (min-width: 768px) {
@@ -810,13 +847,21 @@ const PageSizeControl = styled.div`
 
 const PageSizeSelect = styled.select`
   padding: 0.5rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
+  border: 1.5px solid ${T.border};
+  border-radius: ${T.radiusSm};
   font-size: 0.9rem;
+  background: ${T.cardBg};
+  color: ${T.text};
+
+  &:focus {
+    outline: none;
+    border-color: ${T.primary};
+    box-shadow: 0 0 0 3px ${T.primaryBg};
+  }
 `;
 
 const PaginationInfo = styled.div`
-  color: #7f8c8d;
+  color: ${T.textMuted};
   font-size: 0.9rem;
   margin-bottom: 1rem;
   text-align: center;
@@ -835,7 +880,7 @@ const PaginationControls = styled.div`
 const PageInfo = styled.div`
   padding: 0.5rem 1rem;
   font-size: 0.9rem;
-  color: #4a5568;
+  color: ${T.textMuted};
 `;
 
 const PaginationButton = styled.button`
@@ -844,16 +889,16 @@ const PaginationButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
+  border-radius: ${T.radiusSm};
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
-  background-color: white;
-  color: #2c3e50;
-  border: 1px solid #e2e8f0;
+  transition: background var(--transition-fast);
+  background-color: ${T.cardBg};
+  color: ${T.text};
+  border: 1.5px solid ${T.border};
 
   &:hover:not(:disabled) {
-    background-color: #f8f9fa;
+    background-color: ${T.bodyBg};
   }
 
   &:disabled {
@@ -869,12 +914,12 @@ const LoadingContainer = styled.div`
   justify-content: center;
   min-height: 300px;
   font-size: 1.2rem;
-  color: #3498db;
+  color: var(--color-primary-600);
 `;
 
 const LoaderSpinner = styled.div`
   border: 4px solid rgba(0, 0, 0, 0.1);
-  border-top: 4px solid #3498db;
+  border-top: 4px solid var(--color-primary-600);
   border-radius: 50%;
   width: 40px;
   height: 40px;
@@ -898,19 +943,20 @@ const ErrorContainer = styled.div`
   justify-content: center;
   text-align: center;
   padding: 2rem;
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  background: ${T.cardBg};
+  border: 1px solid ${T.border};
+  border-radius: ${T.radius};
+  box-shadow: ${T.shadow};
   max-width: 600px;
   margin: 2rem auto;
 
   h3 {
-    color: #e74c3c;
+    color: var(--error);
     margin: 1rem 0 0.5rem;
   }
 
   p {
-    color: #7f8c8d;
+    color: ${T.textMuted};
     font-size: 1rem;
     margin: 0.25rem 0;
   }

@@ -4,6 +4,15 @@ import { FaSave, FaInfoCircle } from "react-icons/fa";
 import { useOfficialStore } from "../../shared/hooks/useOfficialStore";
 import { LoadingSpinner } from "../../shared/components/LoadingSpinner";
 import { toast } from "react-toastify";
+import {
+  PageHeader,
+  PageTitle,
+  PageSub,
+} from "../../shared/components/page/PageHeader";
+
+const T = {
+  bodyBg: "var(--color-body-bg)",
+};
 
 export default function OfficialStoreShippingFeesPage() {
   const { useGetOfficialStoreShippingFees, useUpdateOfficialStoreShippingFees } = useOfficialStore();
@@ -54,12 +63,12 @@ export default function OfficialStoreShippingFeesPage() {
 
   return (
     <DashboardContainer>
-      <Header>
-        <TitleContainer>
-          <Title>Official Store Shipping Fees</Title>
-          <Subtitle>Manage shipping fees for Official Store (company store)</Subtitle>
-        </TitleContainer>
-      </Header>
+      <PageHeader>
+        <div>
+          <PageTitle>Official Store Shipping Fees</PageTitle>
+          <PageSub>Manage shipping fees for Official Store (company store)</PageSub>
+        </div>
+      </PageHeader>
 
       <FormContainer>
         <Form onSubmit={handleSubmit}>
@@ -183,29 +192,8 @@ export default function OfficialStoreShippingFeesPage() {
 // Styled Components
 const DashboardContainer = styled.div`
   padding: 2rem;
-  background-color: #f8fafc;
+  background: ${T.bodyBg};
   min-height: 100vh;
-`;
-
-const Header = styled.div`
-  margin-bottom: 2rem;
-`;
-
-const TitleContainer = styled.div`
-  flex: 1;
-`;
-
-const Title = styled.h1`
-  font-size: 1.8rem;
-  color: #1e293b;
-  margin: 0 0 0.5rem 0;
-  font-weight: 700;
-`;
-
-const Subtitle = styled.p`
-  font-size: 0.9rem;
-  color: #64748b;
-  margin: 0;
 `;
 
 const FormContainer = styled.div`
@@ -308,7 +296,11 @@ const SaveButton = styled.button`
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 2rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-primary-600) 0%,
+    var(--color-primary-800) 100%
+  );
   color: white;
   border: none;
   border-radius: 8px;
@@ -319,7 +311,7 @@ const SaveButton = styled.button`
 
   &:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 4px 12px rgba(187, 108, 2, 0.35);
   }
 
   &:active:not(:disabled) {

@@ -26,28 +26,15 @@ const useReview = () => {
                           !Array.isArray(admin) &&
                           (admin.id || admin._id) &&
                           (admin.email || admin.name) &&
-                          (admin.role === 'admin' || admin.role === 'superadmin' || admin.role === 'moderator');
+                          (admin.role === 'admin' || admin.role === 'superadmin');
     
     const isEnabled = Boolean(!isAdminLoading && hasValidAdmin);
-    
-    // Debug logging in development
-    if (process.env.NODE_ENV === 'development') {
-      console.debug('[useGetAllReviews] Auth check:', {
-        isAdminLoading,
-        hasAdmin: !!admin,
-        hasValidAdmin,
-        isEnabled,
-        adminId: admin?._id || admin?.id,
-        adminRole: admin?.role,
-      });
-    }
     
     return useQuery({
       queryKey: ["reviews", params],
       queryFn: async () => {
         // Double-check authentication before making the request
         if (!admin || (!admin._id && !admin.id)) {
-          console.warn('[useGetAllReviews] Query function called but admin not authenticated');
           return { results: [], total: 0 };
         }
         
@@ -77,11 +64,6 @@ const useReview = () => {
           // #endregion
           // If 401, user is not authenticated - return empty data instead of throwing
           if (error?.response?.status === 401) {
-            console.warn('[useGetAllReviews] 401 error - admin not authenticated', {
-              adminId: admin?._id || admin?.id,
-              isEnabled,
-              isAdminLoading,
-            });
             return { results: [], total: 0 };
           }
           console.error("Failed to fetch reviews:", error);
@@ -93,9 +75,6 @@ const useReview = () => {
       retry: (failureCount, error) => {
         // Don't retry on 401 errors (auth failure)
         if (error?.response?.status === 401) {
-          if (process.env.NODE_ENV === 'development') {
-            console.warn('[useGetAllReviews] Not retrying 401 error');
-          }
           return false;
         }
         return failureCount < 2;

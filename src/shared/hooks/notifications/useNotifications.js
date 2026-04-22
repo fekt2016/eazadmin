@@ -15,17 +15,6 @@ export const useNotifications = (params = {}) => {
     queryKey: ['notifications', params],
     queryFn: async () => {
       const data = await getNotifications(params);
-      
-      // Debug logging
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[Admin useNotifications] Fetched notifications:', {
-          params,
-          data,
-          notificationsCount: data?.data?.notifications?.length || 0,
-          total: data?.total || 0
-        });
-      }
-      
       return data;
     },
     staleTime: 30000, // 30 seconds
@@ -43,14 +32,8 @@ export const useUnreadCount = () => {
   const query = useQuery({
     queryKey: ['notifications', 'unread'],
     queryFn: async () => {
-      console.log('[EazAdmin useUnreadCount] 🔄 Query function called');
       try {
         const data = await getUnreadCount();
-        console.log('[EazAdmin useUnreadCount] ✅ Query function returned:', {
-          data,
-          unreadCount: data?.data?.unreadCount,
-          status: data?.status,
-        });
         return data;
       } catch (error) {
         // On timeout or network error, return safe fallback instead of throwing.
@@ -60,7 +43,6 @@ export const useUnreadCount = () => {
           error?.code === 'ECONNABORTED' ||
           error?.message?.includes('timeout')
         ) {
-          console.warn('[EazAdmin useUnreadCount] ⏱️ Request timed out, using fallback unreadCount=0');
           return {
             status: 'success',
             data: { unreadCount: 0 },
@@ -82,18 +64,6 @@ export const useUnreadCount = () => {
     throwOnError: false,
   });
 
-  // Debug logging
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[EazAdmin useUnreadCount] 📊 Query state:', {
-      isLoading: query.isLoading,
-      isError: query.isError,
-      error: query.error,
-      data: query.data,
-      unreadCount: query.data?.data?.unreadCount,
-      status: query.status,
-    });
-  }
-
   return query;
 };
 
@@ -107,8 +77,6 @@ export const useMarkAsRead = () => {
   return useMutation({
     mutationFn: markAsRead,
     onSuccess: (data, notificationId) => {
-      console.log('[Admin useMarkAsRead] ✅ Notification marked as read:', notificationId, data);
-      
       // FIX: Optimistically update unread count immediately
       queryClient.setQueryData(['notifications', 'unread'], (oldData) => {
         if (!oldData) return oldData;
@@ -162,8 +130,6 @@ export const useMarkAllAsRead = () => {
   return useMutation({
     mutationFn: markAllAsRead,
     onSuccess: (data) => {
-      console.log('[Admin useMarkAllAsRead] ✅ All notifications marked as read:', data);
-      
       // FIX: Optimistically update unread count to 0 immediately
       queryClient.setQueryData(['notifications', 'unread'], (oldData) => {
         if (!oldData) return oldData;
@@ -214,8 +180,6 @@ export const useDeleteNotification = () => {
   return useMutation({
     mutationFn: deleteNotification,
     onSuccess: (data, notificationId) => {
-      console.log('[Admin useDeleteNotification] ✅ Notification deleted:', notificationId, data);
-      
       // FIX: Check if deleted notification was unread and update count optimistically
       queryClient.setQueriesData({ queryKey: ['notifications'] }, (oldData) => {
         if (!oldData) return oldData;

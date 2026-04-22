@@ -76,7 +76,6 @@ const useProduct = () => {
 
   // Get all products by seller
   const useGetAllProductBySeller = (sellerId) => {
-    console.log(" product hooksellerId", sellerId);
     return useQuery({
       queryKey: ["products", sellerId],
       queryFn: async () => {
@@ -130,7 +129,6 @@ const useProduct = () => {
 
     onSuccess: () => {
       queryClient.invalidateQueries(["product"]);
-      console.log("product updated successfully!!!");
     },
     onError: (error) => {
       console.error("Update error:", error);
@@ -145,7 +143,6 @@ const useProduct = () => {
       // React Query will refetch when component needs the data
       queryClient.invalidateQueries({ queryKey: ["product"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
-      console.log("product deleted successfully!!!");
     },
     onError: (error) => {
       console.error("Delete product error:", error);
@@ -157,7 +154,6 @@ const useProduct = () => {
     queryFn: () => productService.getProductCountByCategory(),
     onSuccess: () => {
       queryClient.invalidateQueries(["productCountByCategory"]);
-      console.log("product count by category updated successfully!!!");
     },
   });
 
@@ -214,10 +210,8 @@ const useProduct = () => {
   // Approve product mutation
   const approveProduct = useMutation({
     mutationFn: async ({ productId, notes }) => {
-      console.log('[useProduct] Approving product:', { productId, notes });
       try {
         const result = await productService.approveProduct(productId, notes);
-        console.log('[useProduct] ✅ Product approved successfully:', result);
         return result;
       } catch (error) {
         console.error('[useProduct] ❌ Error approving product:', {
@@ -229,8 +223,7 @@ const useProduct = () => {
         throw error;
       }
     },
-    onSuccess: (data, variables) => {
-      console.log('[useProduct] Approval success, invalidating queries:', variables);
+    onSuccess: () => {
       // Invalidate and refetch products to get updated data
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["pendingProducts"] });
@@ -256,7 +249,7 @@ const useProduct = () => {
   });
 
   // Get pending products query
-  const getPendingProducts = (params = {}) => {
+  const useGetPendingProducts = (params = {}) => {
     return useQuery({
       queryKey: ["pendingProducts", params],
       queryFn: () => productService.getPendingProducts(params),
@@ -272,7 +265,8 @@ const useProduct = () => {
     useGetAllPublicProductBySeller,
     getProductCountByCategory,
     useSimilarProduct,
-    getPendingProducts,
+    getPendingProducts: useGetPendingProducts,
+    useGetPendingProducts,
     createProduct: {
       mutate: createProduct.mutate,
       isPending: createProduct.isPending,

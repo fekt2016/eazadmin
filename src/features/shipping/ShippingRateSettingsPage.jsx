@@ -3,6 +3,15 @@ import styled from 'styled-components';
 import { useGetShippingRate, useUpdateShippingRate } from '../../hooks/useShipping';
 import { FaPercentage, FaSave, FaExclamationCircle } from 'react-icons/fa';
 import Button from '../../components/ui/Button';
+import {
+  PageHeader,
+  PageTitle,
+  PageSub,
+} from '../../shared/components/page/PageHeader';
+
+const T = {
+  bodyBg: 'var(--color-body-bg)',
+};
 
 export default function ShippingRateSettingsPage({ embedded = false }) {
   const { data: currentRateData, isLoading } = useGetShippingRate();
@@ -86,12 +95,14 @@ export default function ShippingRateSettingsPage({ embedded = false }) {
 
   return (
     <Container>
-      <Header>
-        <Title>
-          <FaPercentage /> Shipping Rate Settings
-        </Title>
-        <Description>Configure the platform's percentage cut on all shipping charges</Description>
-      </Header>
+      <PageHeader>
+        <div>
+          <PageTitle>
+            <FaPercentage /> Shipping Rate Settings
+          </PageTitle>
+          <PageSub>Configure the platform&apos;s percentage cut on all shipping charges</PageSub>
+        </div>
+      </PageHeader>
       {content}
     </Container>
   );
@@ -100,27 +111,8 @@ export default function ShippingRateSettingsPage({ embedded = false }) {
 // Styled Components
 const Container = styled.div`
   padding: 2rem;
-  background-color: #f8fafc;
+  background: ${T.bodyBg};
   min-height: 100vh;
-`;
-
-const Header = styled.div`
-  margin-bottom: 2rem;
-`;
-
-const Title = styled.h1`
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  font-size: 2rem;
-  font-weight: 700;
-  color: #2c3e50;
-  margin-bottom: 0.5rem;
-`;
-
-const Description = styled.p`
-  color: #7f8c8d;
-  font-size: 1rem;
 `;
 
 const SettingsCard = styled.div`
@@ -137,14 +129,14 @@ const CurrentRateInfo = styled.div`
   align-items: flex-start;
   gap: 1rem;
   padding: 1rem;
-  background-color: #ebf5ff;
-  border-left: 4px solid #3b82f6;
-  border-radius: 4px;
+  background-color: var(--color-primary-50);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-md);
   margin-bottom: 2rem;
 `;
 
 const InfoIcon = styled.div`
-  color: #3b82f6;
+  color: var(--color-primary-600);
   font-size: 1.25rem;
   margin-top: 0.125rem;
 `;
@@ -191,8 +183,8 @@ const Input = styled.input`
   transition: border-color 0.2s;
 
   &:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: var(--color-primary-600);
+    box-shadow: 0 0 0 3px rgba(187, 108, 2, 0.1);
   }
 `;
 

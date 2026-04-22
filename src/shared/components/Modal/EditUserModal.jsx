@@ -185,7 +185,7 @@ const CloseButton = styled.button`
 
   &:hover {
     background: #f5f7fb;
-    color: #4361ee;
+    color: #bb6c02;
   }
 `;
 
@@ -221,9 +221,9 @@ const Input = styled.input`
   color: #2b2d42;
 
   &:focus {
-    border-color: #4361ee;
+    border-color: #bb6c02;
     outline: none;
-    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+    box-shadow: 0 0 0 3px rgba(187, 108, 2, 0.18);
   }
 `;
 
@@ -236,15 +236,15 @@ const Select = styled.select`
   color: #2b2d42;
 
   &:focus {
-    border-color: #4361ee;
+    border-color: #bb6c02;
     outline: none;
-    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+    box-shadow: 0 0 0 3px rgba(187, 108, 2, 0.18);
   }
 `;
 
 const PrimaryButton = styled.button`
   padding: 12px 25px;
-  background: #4361ee;
+  background: #bb6c02;
   color: white;
   border: none;
   border-radius: 10px;
@@ -261,7 +261,7 @@ const PrimaryButton = styled.button`
 const SecondaryButton = styled.button`
   padding: 12px 25px;
   background: #f8f9fa;
-  color: #4361ee;
+  color: #bb6c02;
   border: 1px solid #e9ecef;
   border-radius: 10px;
   font-weight: 500;

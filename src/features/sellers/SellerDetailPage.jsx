@@ -32,6 +32,39 @@ import { PATHS } from '../../routes/routePath';
 import { LoadingSpinner } from '../../shared/components/LoadingSpinner';
 import { toast } from 'react-toastify';
 import useAuth from '../../shared/hooks/useAuth';
+import {
+  PageHeader as SharedPageHeader,
+  PageTitle as SellerPageTitle,
+  PageSub,
+  HeaderActions,
+} from '../../shared/components/page/PageHeader';
+
+const T = {
+  primary: 'var(--color-primary-600)',
+  primaryLight: 'var(--color-primary-500)',
+  primaryBg: 'var(--color-primary-100)',
+  border: 'var(--color-border)',
+  cardBg: 'var(--color-card-bg)',
+  bodyBg: 'var(--color-body-bg)',
+  text: 'var(--color-grey-900)',
+  textMuted: 'var(--color-grey-500)',
+  textLight: 'var(--color-grey-400)',
+  radius: 'var(--border-radius-xl)',
+  radiusSm: 'var(--border-radius-md)',
+  shadow: 'var(--shadow-sm)',
+  shadowMd: 'var(--shadow-md)',
+};
+
+const DetailPageHeader = styled(SharedPageHeader)`
+  justify-content: space-between;
+  align-items: flex-start;
+  background: ${T.cardBg};
+  padding: 2rem;
+  border-radius: ${T.radius};
+  margin-bottom: 2rem;
+  border: 1px solid ${T.border};
+  box-shadow: ${T.shadow};
+`;
 
 /**
  * Normalizes seller data from any admin API response structure
@@ -331,6 +364,17 @@ const SellerDetailPage = () => {
       paymentMethods: paymentMethods,
     }
     : null, [sellerCore, sellerBalanceData, sellerPayoutData, paymentMethods, derivedPayoutStatus]);
+
+  const referralDisplay = useMemo(() => {
+    if (!seller) return 'N/A';
+
+    const referralValue =
+      (typeof seller.referral === 'string' && seller.referral.trim()) ||
+      (typeof seller.referredBy === 'string' && seller.referredBy.trim()) ||
+      (typeof seller.referrer === 'string' && seller.referrer.trim());
+
+    return referralValue || 'N/A';
+  }, [seller]);
 
   // Collect all unique admin IDs that verified payment methods (after seller is defined)
   const adminIds = useMemo(() => {
@@ -672,12 +716,13 @@ const SellerDetailPage = () => {
         <FaArrowLeft /> Back to Users
       </BackButton>
 
-      <PageHeader>
+      <DetailPageHeader>
         <HeaderLeft>
-          <PageTitle>{seller.shopName}</PageTitle>
-          <PageSubtitle>{seller.email}</PageSubtitle>
+          <SellerPageTitle>{seller.shopName}</SellerPageTitle>
+          <PageSub>{seller.email}</PageSub>
+          <PageSub>Referral: {referralDisplay}</PageSub>
         </HeaderLeft>
-        <HeaderRight>
+        <HeaderActions>
           {seller.active === false && (
             <ActionButton
               $variant="success"
@@ -688,8 +733,8 @@ const SellerDetailPage = () => {
               {reactivateSellerMutation.isPending ? "Reactivating…" : "Reactivate this seller"}
             </ActionButton>
           )}
-        </HeaderRight>
-      </PageHeader>
+        </HeaderActions>
+      </DetailPageHeader>
 
       <ContentGrid>
         {/* Basic Information */}
@@ -721,6 +766,10 @@ const SellerDetailPage = () => {
                 <FaPhone /> Phone
               </InfoLabel>
               <InfoValue>{seller.phone || 'N/A'}</InfoValue>
+            </InfoRow>
+            <InfoRow>
+              <InfoLabel>Referral</InfoLabel>
+              <InfoValue>{referralDisplay}</InfoValue>
             </InfoRow>
             <InfoRow>
               <InfoLabel>
@@ -1527,7 +1576,7 @@ const SellerDetailPage = () => {
                             )}
                             {/* Show Verified By if verified, otherwise show Verify Button */}
                             {pm.verificationStatus === 'verified' && pm.verifiedBy ? (
-                              <PaymentMethodDetail style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: '#f0f9ff', borderRadius: '0.5rem' }}>
+                              <PaymentMethodDetail style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: 'var(--color-primary-50)', borderRadius: '0.5rem' }}>
                                 <strong>Verified By:</strong> {getAdminDisplay(pm.verifiedBy)}
                                 {pm.verifiedAt && (
                                   <span style={{ marginLeft: '0.5rem', fontSize: '0.9rem', color: '#64748b' }}>
@@ -1828,7 +1877,7 @@ const Container = styled.div`
   margin: 0 auto;
   padding: 2rem;
   min-height: 100vh;
-  background: #f8f9fa;
+  background: ${T.bodyBg};
 `;
 
 const BackButton = styled.button`
@@ -1847,41 +1896,12 @@ const BackButton = styled.button`
 
   &:hover {
     background: #f8f9fa;
-    border-color: #4361ee;
-    color: #4361ee;
+    border-color: #bb6c02;
+    color: #bb6c02;
   }
 `;
 
-const PageHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  background: white;
-  padding: 2rem;
-  border-radius: 12px;
-  margin-bottom: 2rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-`;
-
 const HeaderLeft = styled.div``;
-
-const PageTitle = styled.h1`
-  font-size: 2rem;
-  font-weight: 700;
-  color: #2b2d42;
-  margin: 0 0 0.5rem 0;
-`;
-
-const PageSubtitle = styled.p`
-  font-size: 1rem;
-  color: #8d99ae;
-  margin: 0;
-`;
-
-const HeaderRight = styled.div`
-  display: flex;
-  gap: 1rem;
-`;
 
 const ContentGrid = styled.div`
   display: grid;
@@ -1891,16 +1911,17 @@ const ContentGrid = styled.div`
 `;
 
 const InfoCard = styled.div`
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  background: ${T.cardBg};
+  border: 1px solid ${T.border};
+  border-radius: ${T.radius};
+  box-shadow: ${T.shadow};
   overflow: hidden;
 `;
 
 const CardHeader = styled.div`
   padding: 1.5rem;
-  border-bottom: 1px solid #e9ecef;
-  background: #f8f9fa;
+  border-bottom: 1px solid ${T.border};
+  background: ${T.bodyBg};
 `;
 
 const CardTitle = styled.h3`
@@ -1979,7 +2000,7 @@ const DocumentItem = styled.div`
 
 const DocumentIcon = styled.div`
   font-size: 1.5rem;
-  color: #4361ee;
+  color: #bb6c02;
 `;
 
 const DocumentInfo = styled.div`
@@ -2017,7 +2038,7 @@ const DocumentLink = styled.a`
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  background: #4361ee;
+  background: #bb6c02;
   color: white;
   border-radius: 6px;
   text-decoration: none;
@@ -2144,8 +2165,8 @@ const PaymentMethodCard = styled.div`
   transition: all 0.2s;
 
   &:hover {
-    border-color: #4361ee;
-    box-shadow: 0 2px 8px rgba(67, 97, 238, 0.1);
+    border-color: #bb6c02;
+    box-shadow: 0 2px 8px rgba(187, 108, 2, 0.1);
   }
 
   &:last-child {
@@ -2155,7 +2176,7 @@ const PaymentMethodCard = styled.div`
 
 const PaymentMethodIcon = styled.div`
   font-size: 2rem;
-  color: #4361ee;
+  color: #bb6c02;
   flex-shrink: 0;
 `;
 
@@ -2278,7 +2299,7 @@ const InfoText = styled.p`
 const DefaultBadge = styled.span`
   display: inline-block;
   padding: 0.25rem 0.5rem;
-  background: #4361ee;
+  background: #bb6c02;
   color: white;
   border-radius: 4px;
   font-size: 0.75rem;
@@ -2436,7 +2457,7 @@ const CloseButton = styled.button`
 
   &:hover {
     background: #f5f7fb;
-    color: #4361ee;
+    color: #bb6c02;
   }
 `;
 
@@ -2485,9 +2506,9 @@ const ResetInput = styled.input`
   font-family: inherit;
 
   &:focus {
-    border-color: #4361ee;
+    border-color: #bb6c02;
     outline: none;
-    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+    box-shadow: 0 0 0 3px rgba(187, 108, 2, 0.1);
   }
 `;
 
@@ -2502,9 +2523,9 @@ const ResetTextarea = styled.textarea`
   min-height: 80px;
 
   &:focus {
-    border-color: #4361ee;
+    border-color: #bb6c02;
     outline: none;
-    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+    box-shadow: 0 0 0 3px rgba(187, 108, 2, 0.1);
   }
 `;
 

@@ -23,7 +23,7 @@ export const HeroSection = styled(motion.section)`
   padding: var(--spacing-3xl) var(--spacing-xl) var(--spacing-2xl);
   margin-bottom: var(--spacing-3xl);
   background: linear-gradient(135deg, 
-    rgba(59, 130, 246, 0.1) 0%, 
+    rgba(187, 108, 2, 0.1) 0%, 
     var(--color-white-0) 100%
   );
   border-radius: var(--border-radius-xl);
@@ -38,8 +38,8 @@ export const HeroSection = styled(motion.section)`
     right: 0;
     height: 4px;
     background: linear-gradient(90deg, 
-      #3B82F6 0%, 
-      #2563EB 100%
+      var(--color-primary-600) 0%, 
+      var(--color-primary-600) 100%
     );
   }
   
@@ -107,8 +107,8 @@ export const SearchInput = styled.input`
   
   &:focus {
     outline: none;
-    border-color: #3B82F6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: var(--color-primary-600);
+    box-shadow: 0 0 0 3px rgba(187, 108, 2, 0.1);
   }
   
   &::placeholder {
@@ -185,12 +185,12 @@ export const SitemapLink = styled.a`
     left: 0;
     width: 0;
     height: 2px;
-    background: #3B82F6;
+    background: var(--color-primary-600);
     transition: width var(--transition-base);
   }
   
   &:hover {
-    color: #3B82F6;
+    color: var(--color-primary-600);
     padding-left: var(--spacing-sm);
     
     &::after {
@@ -252,13 +252,13 @@ export const CTAButton = styled.a`
   justify-content: center;
   padding: var(--spacing-md) var(--spacing-xl);
   background: ${props => props.$variant === 'primary' 
-    ? '#3B82F6' 
+    ? 'var(--color-primary-600)' 
     : 'var(--color-white-0)'};
   color: ${props => props.$variant === 'primary' 
     ? 'var(--color-white-0)' 
     : 'var(--color-grey-700)'};
   border: 2px solid ${props => props.$variant === 'primary' 
-    ? '#3B82F6' 
+    ? 'var(--color-primary-600)' 
     : 'var(--color-grey-300)'};
   border-radius: var(--border-radius-md);
   font-size: var(--font-size-md);
@@ -272,10 +272,10 @@ export const CTAButton = styled.a`
     transform: translateY(-2px);
     box-shadow: var(--shadow-md);
     background: ${props => props.$variant === 'primary' 
-      ? '#2563EB' 
+      ? 'var(--color-primary-600)' 
       : 'var(--color-grey-50)'};
     border-color: ${props => props.$variant === 'primary' 
-      ? '#2563EB' 
+      ? 'var(--color-primary-600)' 
       : 'var(--color-grey-400)'};
   }
   

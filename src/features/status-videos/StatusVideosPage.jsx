@@ -4,6 +4,15 @@ import { FaVideo, FaSyncAlt, FaChevronDown, FaChevronRight, FaPlay, FaEye, FaTim
 import { LoadingSpinner } from "../../shared/components/LoadingSpinner";
 import { useGetStatusFeed } from "../../shared/hooks/useStatusFeed";
 import { getOptimizedImageUrl, IMAGE_SLOTS } from "../../shared/utils/cloudinaryConfig";
+import {
+  PageHeader,
+  PageTitle,
+  HeaderActions as SharedHeaderActions,
+} from "../../shared/components/page/PageHeader";
+
+const T = {
+  bodyBg: "var(--color-body-bg)",
+};
 
 function findStatusInGroups(groups, statusId) {
   if (!groups || !statusId) return null;
@@ -71,9 +80,9 @@ export default function StatusVideosPage() {
   if (error) {
     return (
       <DashboardContainer>
-        <Header>
-          <Title>Status Videos</Title>
-        </Header>
+        <PageHeader>
+          <PageTitle>Status Videos</PageTitle>
+        </PageHeader>
         <ErrorBox>Failed to load status videos: {error.message}</ErrorBox>
       </DashboardContainer>
     );
@@ -81,12 +90,12 @@ export default function StatusVideosPage() {
 
   return (
     <DashboardContainer>
-      <Header>
-        <Title>
+      <PageHeader>
+        <PageTitle>
           <FaVideo style={{ marginRight: "0.5rem" }} />
           Status Videos
-        </Title>
-        <HeaderActions>
+        </PageTitle>
+        <SharedHeaderActions>
           <SearchInput
             type="text"
             placeholder="Search by seller name..."
@@ -97,8 +106,8 @@ export default function StatusVideosPage() {
             <FaSyncAlt className={isFetching ? "spin" : ""} />
             {isFetching ? " Refreshing..." : " Refresh"}
           </RefreshButton>
-        </HeaderActions>
-      </Header>
+        </SharedHeaderActions>
+      </PageHeader>
 
       <SummaryBar>
         <SummaryItem>
@@ -314,30 +323,9 @@ export default function StatusVideosPage() {
 const DashboardContainer = styled.div`
   max-width: 1200px;
   margin: 0 auto;
-`;
-
-const Header = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-`;
-
-const Title = styled.h1`
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--color-grey-800, #1e293b);
-  margin: 0;
-  display: flex;
-  align-items: center;
-`;
-
-const HeaderActions = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
+  padding: 2rem 1rem;
+  min-height: 100vh;
+  background: ${T.bodyBg};
 `;
 
 const SearchInput = styled.input`
@@ -353,7 +341,7 @@ const RefreshButton = styled.button`
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  background: var(--color-primary, #2563eb);
+  background: var(--color-primary-600);
   color: white;
   border: none;
   border-radius: 8px;
@@ -530,7 +518,7 @@ const ViewVideoButton = styled.button`
   gap: 0.35rem;
   padding: 0.35rem 0.6rem;
   font-size: 0.75rem;
-  background: var(--color-primary, #2563eb);
+  background: var(--color-primary-600);
   color: white;
   border: none;
   border-radius: 6px;

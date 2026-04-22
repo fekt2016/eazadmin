@@ -24,6 +24,31 @@ import { useGetWithdrawalRequest, useVerifyPaystackOtp, useResendPaystackOtp } f
 import { PATHS } from "../../routes/routePath";
 import { LoadingSpinner } from "../../shared/components/LoadingSpinner";
 import { useApproveWithdrawalRequest, useRejectWithdrawalRequest, useVerifyTransferStatus } from "../../shared/hooks/usePayout";
+import {
+  PageHeader as SharedPageHeader,
+  PageTitle,
+} from "../../shared/components/page/PageHeader";
+
+const T = {
+  border: "var(--color-border)",
+  cardBg: "var(--color-card-bg)",
+  bodyBg: "var(--color-body-bg)",
+  radius: "var(--border-radius-xl)",
+  shadow: "var(--shadow-sm)",
+};
+
+const DetailPageHeader = styled(SharedPageHeader)`
+  align-items: center;
+  justify-content: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: ${T.cardBg};
+  border: 1px solid ${T.border};
+  border-radius: ${T.radius};
+  box-shadow: ${T.shadow};
+`;
 
 const PaymentRequestDetail = () => {
   const { id: requestId } = useParams();
@@ -76,7 +101,7 @@ const PaymentRequestDetail = () => {
   const getStatusBadge = (status) => {
     const statusMap = {
       pending: { color: "#f39c12", bg: "#fef3c7", icon: FaClock, text: "Pending" },
-      processing: { color: "#3498db", bg: "#dbeafe", icon: FaClock, text: "Processing" },
+      processing: { color: "var(--color-primary-600)", bg: "var(--color-primary-100)", icon: FaClock, text: "Processing" },
       approved: { color: "#27ae60", bg: "#d1fae5", icon: FaCheck, text: "Approved" },
       paid: { color: "#27ae60", bg: "#d1fae5", icon: FaCheck, text: "Paid" },
       success: { color: "#27ae60", bg: "#d1fae5", icon: FaCheck, text: "Success" },
@@ -259,12 +284,12 @@ const PaymentRequestDetail = () => {
 
   return (
     <Container>
-      <Header>
+      <DetailPageHeader>
         <BackButton onClick={() => navigate(`/dashboard/${PATHS.PAYMENTS}`)}>
           <FaArrowLeft /> Back to Withdrawal Requests
         </BackButton>
-        <Title>Withdrawal Request Details</Title>
-      </Header>
+        <PageTitle>Withdrawal Request Details</PageTitle>
+      </DetailPageHeader>
 
       {successMessage && (
         <SuccessBanner>
@@ -925,13 +950,8 @@ const Container = styled.div`
   padding: 2rem;
   max-width: 1400px;
   margin: 0 auto;
-`;
-
-const Header = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 2rem;
+  min-height: 100vh;
+  background: ${T.bodyBg};
 `;
 
 const BackButton = styled.button`
@@ -939,26 +959,20 @@ const BackButton = styled.button`
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1.5rem;
-  background: #f8f9fa;
-  border: 1px solid #dee2e6;
-  border-radius: 8px;
-  color: #495057;
+  background: var(--color-card-bg);
+  border: 1px solid ${T.border};
+  border-radius: var(--border-radius-md);
+  color: var(--color-grey-700);
   font-size: 0.95rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
+  flex-shrink: 0;
 
   &:hover {
-    background: #e9ecef;
-    border-color: #adb5bd;
+    background: var(--color-grey-50);
+    border-color: var(--color-grey-300);
   }
-`;
-
-const Title = styled.h1`
-  font-size: 2rem;
-  font-weight: 700;
-  color: #1e293b;
-  margin: 0;
 `;
 
 const SuccessBanner = styled.div`
@@ -1272,8 +1286,8 @@ const ModalTextarea = styled.textarea`
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: var(--color-primary-600);
+    box-shadow: 0 0 0 3px rgba(187, 108, 2, 0.1);
   }
 `;
 

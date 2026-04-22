@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",
+    "test:run": "vitest run",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
     "test:watch": "vitest --watch"
@@ -16,6 +17,7 @@
   "dependencies": {
     "@tanstack/react-query": "^5.83.0",
     "@tanstack/react-query-devtools": "^5.83.0",
+    "@testing-library/dom": "^10.4.1",
     "axios": "^1.11.0",
     "framer-motion": "^12.23.25",
     "jwt-decode": "^4.0.0",
@@ -26,6 +28,7 @@
     "react-router-dom": "^7.7.0",
     "react-toastify": "^11.0.5",
     "react-window": "^1.8.11",
+    "socket.io-client": "^4.8.3",
     "styled-components": "^6.1.19"
   },
   "devDependencies": {

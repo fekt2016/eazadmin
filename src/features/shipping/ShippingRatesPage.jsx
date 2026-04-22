@@ -25,6 +25,23 @@ import ShippingRateSettingsPage from './ShippingRateSettingsPage';
 import ShippingDashboardPage from './ShippingDashboardPage';
 import { ConfirmationModal } from '../../shared/components/Modal/ConfirmationModal';
 import { toast } from 'react-toastify';
+import { PageHeader, PageTitle, PageSub } from '../../shared/components/page/PageHeader';
+
+const T = {
+  primary: 'var(--color-primary-600)',
+  primaryLight: 'var(--color-primary-500)',
+  primaryBg: 'var(--color-primary-100)',
+  border: 'var(--color-border)',
+  cardBg: 'var(--color-card-bg)',
+  bodyBg: 'var(--color-body-bg)',
+  text: 'var(--color-grey-900)',
+  textMuted: 'var(--color-grey-500)',
+  textLight: 'var(--color-grey-400)',
+  radius: 'var(--border-radius-xl)',
+  radiusSm: 'var(--border-radius-md)',
+  shadow: 'var(--shadow-sm)',
+  shadowMd: 'var(--shadow-md)',
+};
 
 const ShippingRatesPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -119,9 +136,6 @@ const ShippingRatesPage = () => {
     } else if (Array.isArray(shippingZonesData)) {
       zones = shippingZonesData;
     }
-
-    console.log('📊 [ShippingRatesPage] Raw data:', shippingZonesData);
-    console.log('📊 [ShippingRatesPage] Extracted zones:', zones);
 
     return zones;
   }, [shippingZonesData]);
@@ -272,10 +286,12 @@ const ShippingRatesPage = () => {
   return (
     <PageContainer>
       <PageHeader>
-        <HeaderTitle>
-          <h1>Shipping Activities</h1>
-          <p>Manage shipping dashboard, local zones, international charges, and platform settings.</p>
-        </HeaderTitle>
+        <div>
+          <PageTitle>Shipping Activities</PageTitle>
+          <PageSub>
+            Manage shipping dashboard, local zones, international charges, and platform settings.
+          </PageSub>
+        </div>
       </PageHeader>
 
       <TabsContainer>
@@ -716,29 +732,8 @@ const PageContainer = styled.div`
   padding: 2rem;
   max-width: 1400px;
   margin: 0 auto;
-`;
-
-const PageHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
-  gap: 1rem;
-`;
-
-const HeaderTitle = styled.div`
-  h1 {
-    font-size: 2rem;
-    font-weight: 600;
-    color: #1a1a1a;
-    margin-bottom: 0.5rem;
-  }
-
-  p {
-    color: #666;
-    font-size: 0.95rem;
-  }
+  min-height: 100vh;
+  background-color: ${T.bodyBg};
 `;
 
 const TabsContainer = styled.div`
@@ -765,17 +760,17 @@ const TabButton = styled.button`
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.2s ease;
-  background: ${(props) => (props.$active ? '#4361ee' : '#ffffff')};
-  border: 1px solid ${(props) => (props.$active ? '#4361ee' : '#e0e0e0')};
+  background: ${(props) => (props.$active ? '#bb6c02' : '#ffffff')};
+  border: 1px solid ${(props) => (props.$active ? '#bb6c02' : '#e0e0e0')};
   color: ${(props) => (props.$active ? '#ffffff' : '#374151')};
   font-size: 0.9rem;
   font-weight: ${(props) => (props.$active ? '600' : '500')};
   white-space: nowrap;
-  box-shadow: ${(props) => (props.$active ? '0 4px 12px rgba(67, 97, 238, 0.3)' : 'none')};
+  box-shadow: ${(props) => (props.$active ? '0 4px 12px rgba(187, 108, 2, 0.25)' : 'none')};
 
   &:hover {
-    background: ${(props) => (props.$active ? '#4361ee' : '#f9fafb')};
-    border-color: ${(props) => (props.$active ? '#4361ee' : '#d1d5db')};
+    background: ${(props) => (props.$active ? '#bb6c02' : '#f9fafb')};
+    border-color: ${(props) => (props.$active ? '#bb6c02' : '#d1d5db')};
   }
 `;
 
@@ -784,7 +779,7 @@ const AddButton = styled.button`
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1.5rem;
-  background: #4361ee;
+  background: #bb6c02;
   color: white;
   border: none;
   border-radius: 8px;
@@ -849,7 +844,7 @@ const Select = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #4361ee;
+    border-color: #bb6c02;
   }
 `;
 
@@ -1104,7 +1099,7 @@ const Input = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #4361ee;
+    border-color: #bb6c02;
   }
 `;
 
@@ -1206,7 +1201,7 @@ const CancelButton = styled.button`
 
 const SubmitButton = styled.button`
   padding: 0.75rem 1.5rem;
-  background: #4361ee;
+  background: #bb6c02;
   color: white;
   border: none;
   border-radius: 8px;

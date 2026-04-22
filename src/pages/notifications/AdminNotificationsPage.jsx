@@ -21,38 +21,27 @@ import { LoadingSpinner } from '../../shared/components/LoadingSpinner';
 import Button from '../../shared/components/Button';
 import { PATHS } from '../../routes/routePaths';
 import { ConfirmationModal } from '../../shared/components/Modal/ConfirmationModal';
+import {
+  PageHeader,
+  PageTitle,
+  PageSub,
+  HeaderActions,
+} from '../../shared/components/page/PageHeader';
+
+const T = {
+  bodyBg: 'var(--color-body-bg)',
+};
 
 const Container = styled.div`
   padding: 2rem;
   max-width: 1600px;
   margin: 0 auto;
-`;
-
-const Header = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-`;
-
-const TitleSection = styled.div`
-  h1 {
-    font-size: 2rem;
-    font-weight: 600;
-    color: #2c3e50;
-    margin: 0 0 0.5rem 0;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-  p {
-    color: #7f8c8d;
-    margin: 0;
-  }
+  min-height: 100vh;
+  background: ${T.bodyBg};
 `;
 
 const UnreadBadge = styled.span`
-  background: var(--color-primary-500, #007bff);
+  background: var(--color-primary-600);
   color: white;
   padding: 0.25rem 0.75rem;
   border-radius: 12px;
@@ -71,7 +60,7 @@ const FilterSection = styled.div`
 const FilterButton = styled.button`
   padding: 0.5rem 1rem;
   border: 1px solid #ddd;
-  background: ${props => props.active ? 'var(--color-primary-500, #007bff)' : 'white'};
+  background: ${props => props.active ? 'var(--color-primary-600)' : 'white'};
   color: ${props => props.active ? 'white' : '#333'};
   border-radius: 6px;
   cursor: pointer;
@@ -79,7 +68,7 @@ const FilterButton = styled.button`
   transition: all 0.2s;
   
   &:hover {
-    border-color: var(--color-primary-500, #007bff);
+    border-color: var(--color-primary-600);
   }
 `;
 
@@ -102,8 +91,8 @@ const NotificationItem = styled.div`
   position: relative;
   
   ${props => !props.read && `
-    border-left: 4px solid var(--color-primary-500, #007bff);
-    background: #f8f9ff;
+    border: 1px solid var(--color-border);
+    background: var(--color-primary-50);
   `}
   
   &:hover {
@@ -199,8 +188,8 @@ const MarkReadButton = styled.button`
   opacity: 0.7;
 
   &:hover {
-    background: #dbeafe;
-    color: #007bff;
+    background: var(--color-primary-100);
+    color: var(--color-primary-600);
     opacity: 1;
   }
 
@@ -248,8 +237,8 @@ const CategoryTab = styled.button`
   padding: 0.75rem 1.5rem;
   border: none;
   background: transparent;
-  color: ${props => props.active ? 'var(--color-primary-500, #007bff)' : '#666'};
-  border-bottom: 3px solid ${props => props.active ? 'var(--color-primary-500, #007bff)' : 'transparent'};
+  color: ${props => props.active ? 'var(--color-primary-600)' : '#666'};
+  border-bottom: 3px solid ${props => props.active ? 'var(--color-primary-600)' : 'transparent'};
   cursor: pointer;
   font-size: 0.9rem;
   font-weight: ${props => props.active ? '600' : '400'};
@@ -257,7 +246,7 @@ const CategoryTab = styled.button`
   transition: all 0.2s;
   
   &:hover {
-    color: var(--color-primary-500, #007bff);
+    color: var(--color-primary-600);
   }
 `;
 
@@ -323,7 +312,7 @@ const AdminNotificationsPage = () => {
   const getNotificationColor = (type) => {
     switch (type) {
       case 'order':
-        return '#007bff';
+        return 'var(--color-primary-600)';
       case 'delivery':
         return '#17a2b8';
       case 'payout':
@@ -406,7 +395,6 @@ const AdminNotificationsPage = () => {
     if (notificationToDelete) {
       deleteNotification.mutate(notificationToDelete, {
         onSuccess: () => {
-          console.log('Notification deleted successfully');
         },
         onError: (error) => {
           console.error('Error deleting notification:', error);
@@ -429,26 +417,28 @@ const AdminNotificationsPage = () => {
 
   return (
     <Container>
-      <Header>
-        <TitleSection>
-          <h1>
+      <PageHeader>
+        <div>
+          <PageTitle>
             <FaBell />
             Notifications
             {unreadCount > 0 && <UnreadBadge>{unreadCount} unread</UnreadBadge>}
-          </h1>
-          <p>Manage your platform notifications</p>
-        </TitleSection>
-        {notifications.length > 0 && unreadCount > 0 && (
-          <Button
-            onClick={() => markAllAsRead.mutate()}
-            disabled={markAllAsRead.isPending}
-            loading={markAllAsRead.isPending}
-            leftIcon={<FaCheckDouble />}
-          >
-            Mark All as Read
-          </Button>
-        )}
-      </Header>
+          </PageTitle>
+          <PageSub>Manage your platform notifications</PageSub>
+        </div>
+        <HeaderActions>
+          {notifications.length > 0 && unreadCount > 0 && (
+            <Button
+              onClick={() => markAllAsRead.mutate()}
+              disabled={markAllAsRead.isPending}
+              loading={markAllAsRead.isPending}
+              leftIcon={<FaCheckDouble />}
+            >
+              Mark All as Read
+            </Button>
+          )}
+        </HeaderActions>
+      </PageHeader>
 
       <CategoryTabs>
         <CategoryTab

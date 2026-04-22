@@ -180,7 +180,7 @@ const PayoutVerificationModal = ({ seller, paymentMethodType: propPaymentMethodT
           <ModalHeader>
             <HeaderTitle>
               {paymentMethodType === 'bank' ? (
-                <FaBuilding style={{ marginRight: '0.5rem', color: '#007bff' }} />
+                <FaBuilding style={{ marginRight: '0.5rem', color: 'var(--color-primary-600)' }} />
               ) : (
                 <FaMobileAlt style={{ marginRight: '0.5rem', color: '#28a745' }} />
               )}
@@ -260,7 +260,7 @@ const PayoutVerificationModal = ({ seller, paymentMethodType: propPaymentMethodT
                 </InfoLabel>
                 {paymentMethodType === 'bank' ? (
                   <PaymentMethodCard>
-                    <FaBuilding style={{ fontSize: '2rem', color: '#007bff', marginRight: '1rem', flexShrink: 0 }} />
+                    <FaBuilding style={{ fontSize: '2rem', color: 'var(--color-primary-600)', marginRight: '1rem', flexShrink: 0 }} />
                     <PaymentMethodInfo>
                       <PaymentMethodTitle>Bank Account Verification</PaymentMethodTitle>
                       <PaymentMethodDetail>
@@ -417,7 +417,7 @@ const PayoutVerificationModal = ({ seller, paymentMethodType: propPaymentMethodT
             <ModalHeader>
               <HeaderTitle>
                 {paymentMethodType === 'bank' ? (
-                  <FaBuilding style={{ marginRight: '0.5rem', color: '#007bff' }} />
+                  <FaBuilding style={{ marginRight: '0.5rem', color: 'var(--color-primary-600)' }} />
                 ) : (
                   <FaMobileAlt style={{ marginRight: '0.5rem', color: '#28a745' }} />
                 )}
@@ -438,7 +438,7 @@ const PayoutVerificationModal = ({ seller, paymentMethodType: propPaymentMethodT
                 <InfoValue>
                   {paymentMethodType === 'bank' ? (
                     <span>
-                      <FaBuilding style={{ marginRight: '0.5rem', color: '#007bff' }} />
+                      <FaBuilding style={{ marginRight: '0.5rem', color: 'var(--color-primary-600)' }} />
                       Bank Account: {seller.paymentMethods?.bankAccount?.accountNumber || 'N/A'}
                     </span>
                   ) : (
@@ -543,7 +543,7 @@ const CloseButton = styled.button`
 
   &:hover {
     background: #f5f7fb;
-    color: #4361ee;
+    color: #bb6c02;
   }
 `;
 
@@ -669,7 +669,7 @@ const WarningBox = styled.div`
 `;
 
 const SecurityInfoBox = styled.div`
-  background: #f0f9ff;
+  background: var(--color-primary-50);
   border: 1px solid #bae6fd;
   border-radius: 12px;
   padding: 20px;
@@ -715,7 +715,7 @@ const ActionButton = styled.button`
         ? "#ef4444"
         : variant === "secondary"
           ? "#6c757d"
-          : "#4361ee"};
+          : "#bb6c02"};
   color: white;
   opacity: ${({ disabled }) => (disabled ? 0.6 : 1)};
   pointer-events: ${({ disabled }) => (disabled ? "none" : "auto")};
@@ -756,9 +756,9 @@ const RejectionTextarea = styled.textarea`
   min-height: 100px;
 
   &:focus {
-    border-color: #4361ee;
+    border-color: #bb6c02;
     outline: none;
-    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+    box-shadow: 0 0 0 3px rgba(187, 108, 2, 0.1);
   }
 `;
 

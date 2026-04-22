@@ -1,5 +1,6 @@
 import styled from "styled-components";
 import { FaSearch, FaLayerGroup, FaList, FaPlus, FaFilter } from "react-icons/fa";
+import { PageTitle, PageSub } from "../page/PageHeader";
 
 export default function HeaderSection({
   filters,
@@ -97,11 +98,15 @@ export default function HeaderSection({
 }
 
 const Header = styled.div`
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-primary-600) 0%,
+    var(--color-primary-800) 100%
+  );
   border-radius: 16px;
   padding: 2.5rem;
   margin-bottom: 2rem;
-  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 10px 30px rgba(187, 108, 2, 0.25);
   color: white;
 `;
 
@@ -118,30 +123,32 @@ const HeaderTop = styled.div`
 `;
 
 const TitleSection = styled.div`
-  flex: 1;
+  min-width: 0;
 `;
 
-const Title = styled.h1`
-  color: white;
-  font-size: 2.5rem;
-  margin-bottom: 0.5rem;
-  font-weight: 700;
-  letter-spacing: -0.5px;
+const HeroTitle = styled(PageTitle)`
+  color: #ffffff;
+  font-size: clamp(1.75rem, 2.5vw, 2.25rem);
+  margin: 0 0 0.5rem 0;
+  letter-spacing: -0.02em;
 `;
 
-const Description = styled.p`
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 1.1rem;
+const HeroSub = styled(PageSub)`
+  color: rgba(255, 255, 255, 0.92);
+  font-size: var(--text-base, 1rem);
   line-height: 1.6;
   margin: 0;
 `;
+
+const Title = HeroTitle;
+const Description = HeroSub;
 
 const AddButton = styled.button`
   display: flex;
   align-items: center;
   gap: 0.5rem;
   background-color: white;
-  color: #667eea;
+  color: var(--color-primary-600);
   border: none;
   border-radius: 12px;
   padding: 0.875rem 1.75rem;
@@ -183,7 +190,7 @@ const SearchWrapper = styled.div`
   background: white;
   padding: 0.75rem 1rem;
   border-radius: 10px;
-  color: #667eea;
+  color: var(--color-primary-600);
 
   svg {
     flex-shrink: 0;
@@ -220,7 +227,7 @@ const FilterWrapper = styled.div`
 `;
 
 const FilterIcon = styled.div`
-  color: #667eea;
+  color: var(--color-primary-600);
   display: flex;
   align-items: center;
 `;
@@ -249,7 +256,8 @@ const ViewOption = styled.button`
   gap: 0.5rem;
   padding: 0.625rem 1rem;
   border: none;
-  background: ${(props) => (props.$active ? "#667eea" : "transparent")};
+  background: ${(props) =>
+    props.$active ? "var(--color-primary-600)" : "transparent"};
   color: ${(props) => (props.$active ? "white" : "#2c3e50")};
   border-radius: 6px;
   font-size: 0.9rem;
@@ -258,7 +266,10 @@ const ViewOption = styled.button`
   transition: all 0.2s ease;
 
   &:hover {
-    background: ${(props) => (props.$active ? "#667eea" : "rgba(102, 126, 234, 0.1)")};
+    background: ${(props) =>
+      props.$active
+        ? "var(--color-primary-700)"
+        : "rgba(187, 108, 2, 0.12)"};
   }
 `;
 

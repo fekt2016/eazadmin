@@ -19,6 +19,23 @@ import {
 import { PATHS } from '../../routes/routePath';
 import RefundStatusBadge from './components/RefundStatusBadge';
 import { LoadingSpinner } from '../../shared/components/LoadingSpinner';
+import { PageHeader, PageTitle, PageSub } from '../../shared/components/page/PageHeader';
+
+const T = {
+  primary: 'var(--color-primary-600)',
+  primaryLight: 'var(--color-primary-500)',
+  primaryBg: 'var(--color-primary-100)',
+  border: 'var(--color-border)',
+  cardBg: 'var(--color-card-bg)',
+  bodyBg: 'var(--color-body-bg)',
+  text: 'var(--color-grey-900)',
+  textMuted: 'var(--color-grey-500)',
+  textLight: 'var(--color-grey-400)',
+  radius: 'var(--border-radius-xl)',
+  radiusSm: 'var(--border-radius-md)',
+  shadow: 'var(--shadow-sm)',
+  shadowMd: 'var(--shadow-md)',
+};
 
 export default function RefundsPage() {
   const navigate = useNavigate();
@@ -198,22 +215,22 @@ export default function RefundsPage() {
 
   return (
     <Container>
-      <Header>
-        <TitleSection>
+      <PageHeader>
+        <RefundHeaderLead>
           <TitleIcon>
             <FaUndo />
           </TitleIcon>
           <div>
-            <Title>Refunds & Returns Management</Title>
-            <Subtitle>Manage order refunds and return requests</Subtitle>
+            <PageTitle>Refunds & Returns Management</PageTitle>
+            <PageSub>Manage order refunds and return requests</PageSub>
           </div>
-        </TitleSection>
-      </Header>
+        </RefundHeaderLead>
+      </PageHeader>
 
       {/* Stats Cards */}
       <StatsGrid>
         <StatCard>
-          <StatIcon $color="#3b82f6">
+          <StatIcon $color="var(--color-primary-600)">
             <FaUndo />
           </StatIcon>
           <StatContent>
@@ -415,13 +432,11 @@ const Container = styled.div`
   padding: 2rem;
   max-width: 1400px;
   margin: 0 auto;
+  background-color: ${T.bodyBg};
+  min-height: 100vh;
 `;
 
-const Header = styled.div`
-  margin-bottom: 2rem;
-`;
-
-const TitleSection = styled.div`
+const RefundHeaderLead = styled.div`
   display: flex;
   align-items: center;
   gap: 1.5rem;
@@ -430,26 +445,18 @@ const TitleSection = styled.div`
 const TitleIcon = styled.div`
   width: 5rem;
   height: 5rem;
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
-  border-radius: 1.2rem;
+  background: linear-gradient(
+    135deg,
+    var(--color-primary-500) 0%,
+    var(--color-primary-700) 100%
+  );
+  border-radius: ${T.radius};
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   font-size: 2.4rem;
-`;
-
-const Title = styled.h1`
-  font-size: 2.8rem;
-  font-weight: 700;
-  color: #1f2937;
-  margin: 0;
-`;
-
-const Subtitle = styled.p`
-  font-size: 1.5rem;
-  color: #6b7280;
-  margin: 0.5rem 0 0 0;
+  flex-shrink: 0;
 `;
 
 const StatsGrid = styled.div`
@@ -460,22 +467,28 @@ const StatsGrid = styled.div`
 `;
 
 const StatCard = styled.div`
-  background: white;
-  border-radius: 1.2rem;
+  background: ${T.cardBg};
+  border-radius: ${T.radius};
   padding: 2rem;
   display: flex;
   align-items: center;
   gap: 1.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e5e7eb;
+  box-shadow: ${T.shadow};
+  border: 1px solid ${T.border};
+  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+
+  &:hover {
+    box-shadow: ${T.shadowMd};
+    transform: translateY(-2px);
+  }
 `;
 
 const StatIcon = styled.div`
   width: 5rem;
   height: 5rem;
-  border-radius: 1rem;
-  background: ${props => props.$color}20;
-  color: ${props => props.$color};
+  border-radius: ${T.radiusSm};
+  background: color-mix(in srgb, ${(props) => props.$color} 18%, transparent);
+  color: ${(props) => props.$color};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -489,14 +502,14 @@ const StatContent = styled.div`
 const StatValue = styled.div`
   font-size: 2.4rem;
   font-weight: 700;
-  color: #1f2937;
+  color: ${T.text};
   line-height: 1;
   margin-bottom: 0.5rem;
 `;
 
 const StatLabel = styled.div`
   font-size: 1.4rem;
-  color: #6b7280;
+  color: ${T.textMuted};
 `;
 
 const FiltersSection = styled.div`

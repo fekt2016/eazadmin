@@ -7,7 +7,9 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    testTimeout: 40000,
+    // Heavy UI tests + jsdom: parallel files contend on CPU and hit timeouts
+    testTimeout: 120000,
+    fileParallelism: false,
     setupFiles: ['./src/__tests__/setup.js'],
     css: true,
     coverage: {

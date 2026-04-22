@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   FaChartLine,
   FaFilter,
@@ -23,6 +24,7 @@ import {
   LastActiveCell,
   VerificationStatusCell,
   OrderCountCell,
+  ReferralCell,
 } from '../../shared/components/Table';
 import { FaCheckCircle, FaTimesCircle, FaUndo, FaClock, FaEye, FaWallet } from 'react-icons/fa';
 import { toast } from 'react-toastify';
@@ -31,12 +33,59 @@ import AddUserModal from '../../shared/components/Modal/AddUserModal';
 import PayoutVerificationModal from '../../shared/components/Modal/payoutVerificationModal';
 import { useResetSellerBalance } from '../../shared/hooks/useSellerBalance';
 import { ConfirmationModal } from '../../shared/components/Modal/ConfirmationModal';
+import {
+  PageHeader,
+  PageTitle,
+  PageSub,
+  HeaderActions,
+} from '../../shared/components/page/PageHeader';
+import useAuth from '../../shared/hooks/useAuth';
+import adminUserApi from '../../shared/services/adminUserApi';
+
+const T = {
+  primary: 'var(--color-primary-600)',
+  primaryLight: 'var(--color-primary-500)',
+  primaryBg: 'var(--color-primary-100)',
+  border: 'var(--color-border)',
+  cardBg: 'var(--color-card-bg)',
+  bodyBg: 'var(--color-body-bg)',
+  text: 'var(--color-grey-900)',
+  textMuted: 'var(--color-grey-500)',
+  textLight: 'var(--color-grey-400)',
+  radius: 'var(--border-radius-xl)',
+  radiusSm: 'var(--border-radius-md)',
+  shadow: 'var(--shadow-sm)',
+  shadowMd: 'var(--shadow-md)',
+};
+
+/** Matches `adminModel.role` in the API — not the same as a single literal `"admin"`. */
+const ADMIN_TABLE_ROLES = ['admin', 'superadmin', 'support_agent'];
+const isAdminTableRow = (u) => u && ADMIN_TABLE_ROLES.includes(u.role);
+
+const VALID_USER_TABS = new Set(['users', 'sellers', 'admins']);
 
 // Dynamic Table Component
 
 export default function UsersPage() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("users");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const activeTab = VALID_USER_TABS.has(tabParam) ? tabParam : 'users';
+
+  const setActiveTab = useCallback(
+    (tab) => {
+      if (!VALID_USER_TABS.has(tab)) return;
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.set('tab', tab);
+          return next;
+        },
+        { replace: true }
+      );
+    },
+    [setSearchParams]
+  );
   const [filterOpen, setFilterOpen] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [verificationStatusFilter, setVerificationStatusFilter] = useState("all"); // For sellers tab
@@ -60,6 +109,57 @@ export default function UsersPage() {
   // Reset balance mutation
   const resetBalanceMutation = useResetSellerBalance();
 
+  const queryClient = useQueryClient();
+  const { adminData } = useAuth();
+  const currentAdmin = useMemo(() => {
+    if (!adminData) return null;
+    const fromMe = adminData.data?.data?.data;
+    if (fromMe) return fromMe;
+    if (adminData.role && (adminData.email || adminData.name)) return adminData;
+    if (adminData.data?.role) return adminData.data;
+    return null;
+  }, [adminData]);
+  const defaultReferral = currentAdmin
+    ? [currentAdmin.name, currentAdmin.email].filter(Boolean).join(' — ')
+    : '';
+  const canManageAdmins = currentAdmin?.role === 'superadmin';
+
+  const provisionAccountMutation = useMutation({
+    mutationFn: async ({ accountType, name, email, shopName, role, referral }) => {
+      if (accountType === 'admin' && !canManageAdmins) {
+        throw new Error('Only a superadmin can create administrator accounts.');
+      }
+      const body = { name, email, referral };
+      if (accountType === 'user') {
+        return (await adminUserApi.provisionBuyerAccount(body)).data;
+      }
+      if (accountType === 'seller') {
+        return (await adminUserApi.provisionSellerAccount({ ...body, shopName })).data;
+      }
+      return (await adminUserApi.provisionAdminAccount({ ...body, role })).data;
+    },
+    onSuccess: (data) => {
+      toast.success(
+        data?.message ||
+          'Account created. Sign-in instructions were emailed to the user.',
+      );
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'sellers'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'admins'] });
+      setIsAddUserModalOpen(false);
+    },
+    onError: (err) => {
+      toast.error(
+        err.response?.data?.message ||
+          err.message ||
+          'Could not create this account.',
+      );
+    },
+  });
+
+  const handleProvisionAccount = (payload) =>
+    provisionAccountMutation.mutateAsync(payload);
+
   // Pagination state
   const [pagination, setPagination] = useState({
     users: { page: 1, limit: 10, total: 0 },
@@ -73,6 +173,7 @@ export default function UsersPage() {
     sellers,
     isSellerLoading,
     totalSellers,
+    error: sellersError,
     approveVerification,
     rejectVerification,
     approvePayout,
@@ -96,7 +197,15 @@ export default function UsersPage() {
     admins: adminsData,
     isLoading: isAdminLoading,
     totalAdmins,
-  } = useAdminsAdmin(pagination.admins.page, pagination.admins.limit);
+  } = useAdminsAdmin(pagination.admins.page, pagination.admins.limit, {
+    enabled: canManageAdmins,
+  });
+
+  useEffect(() => {
+    if (activeTab === "admins" && !canManageAdmins) {
+      setActiveTab("users");
+    }
+  }, [activeTab, canManageAdmins, setActiveTab]);
 
   // Update pagination totals when data changes
   useEffect(() => {
@@ -194,10 +303,12 @@ export default function UsersPage() {
         active: activeSellers,
       };
     } else if (activeTab === "admins") {
-      const admins = allAdmins.filter((u) => u.role === "admin");
+      const admins = allAdmins.filter(isAdminTableRow);
       const activeAdmins = admins.filter((u) => u.status === "active").length;
-      const inactiveAdmins = admins.filter((u) => u.status === "inactive").length;
-      const superAdmins = admins.filter((u) => u.role === "super_admin" || u.permissions?.includes("all")).length;
+      const inactiveAdmins = admins.filter(
+        (u) => u.status === "inactive" || u.status === "deactive"
+      ).length;
+      const superAdmins = admins.filter((u) => u.role === "superadmin").length;
 
       return {
         total: admins.length,
@@ -222,6 +333,7 @@ export default function UsersPage() {
       { Header: "Registration", accessor: "createdAt", Cell: DateCell },
       { Header: "Seller", accessor: "name", Cell: UserCell },
       { Header: "Store", accessor: "shopName" },
+      { Header: "Referral", accessor: "referral", Cell: ReferralCell },
       { Header: "Verification", accessor: "verificationStatus", Cell: VerificationStatusCell },
       { Header: "Orders", accessor: "orderCount", Cell: OrderCountCell },
       { Header: "Last Active", accessor: "lastLogin", Cell: LastActiveCell },
@@ -278,7 +390,7 @@ export default function UsersPage() {
           lastLogin: seller.lastLogin || generateLastLogin(seller.createdAt),
         })),
       admins: allAdmins
-        .filter((u) => u.role === "admin")
+        .filter(isAdminTableRow)
         .map((admin) => ({
           ...admin,
           // Ensure id points to _id (MongoDB ObjectId) if _id exists
@@ -286,6 +398,10 @@ export default function UsersPage() {
           lastLogin: admin.lastLogin || generateLastLogin(admin.createdAt),
         })),
     };
+
+    if (activeTab === "admins" && !canManageAdmins) {
+      return [];
+    }
 
     let tabData = data[activeTab] || [];
 
@@ -336,12 +452,8 @@ export default function UsersPage() {
   };
 
   const handleViewDetails = (item) => {
-    console.log('[handleViewDetails] Called with item:', item);
-    console.log('[handleViewDetails] Active tab:', activeTab);
-
     // Navigate to detail page based on active tab
     const userId = item._id || item.id;
-    console.log('[handleViewDetails] User ID:', userId);
 
     if (userId) {
       // Validate that it's not a simple sequential number (like 1, 2, 3)
@@ -350,12 +462,11 @@ export default function UsersPage() {
         let path = '';
         if (activeTab === "sellers") {
           path = `/dashboard/${PATHS.SELLERDETAIL.replace(':id', userId)}`;
-        } else if (activeTab === "admins") {
+        } else if (activeTab === "admins" && canManageAdmins) {
           path = `/dashboard/${PATHS.ADMINDETAIL.replace(':id', userId)}`;
         } else {
           path = `/dashboard/${PATHS.USERDETAIL.replace(':id', userId)}`;
         }
-        console.log('[handleViewDetails] Navigating to:', path);
         navigate(path);
       } else {
         console.error('Invalid user ID format (appears to be sequential number):', userId, item);
@@ -369,41 +480,49 @@ export default function UsersPage() {
     setIsAddUserModalOpen(false);
   };
 
-  if (isSellerLoading || isUsersLoading || isAdminLoading) {
+  if (
+    isSellerLoading ||
+    isUsersLoading ||
+    (canManageAdmins && isAdminLoading)
+  ) {
     return <div>Loading...</div>;
   }
   return (
     <UserManagementContainer>
-      <Header>
-        <TitleSection>
-          <h1>User Management</h1>
-          <p>Manage all users, vendors, and administrators</p>
-        </TitleSection>
-        <ActionButton onClick={() => setIsAddUserModalOpen(true)}>
-          <FaUserPlus /> Add New User
-        </ActionButton>
-      </Header>
+      <PageHeader>
+        <div>
+          <PageTitle>User Management</PageTitle>
+          <PageSub>Manage all users, vendors, and administrators</PageSub>
+        </div>
+        <HeaderActions>
+          <ActionButton onClick={() => setIsAddUserModalOpen(true)}>
+            <FaUserPlus /> Add New User
+          </ActionButton>
+        </HeaderActions>
+      </PageHeader>
 
       {/* Tabs Section */}
       <TabsContainer>
         <Tab
-          active={activeTab === "users"}
+          $active={activeTab === "users"}
           onClick={() => setActiveTab("users")}
         >
           <FaUserAlt /> Users
         </Tab>
         <Tab
-          active={activeTab === "sellers"}
+          $active={activeTab === "sellers"}
           onClick={() => setActiveTab("sellers")}
         >
           <FaStore /> Sellers
         </Tab>
-        <Tab
-          active={activeTab === "admins"}
-          onClick={() => setActiveTab("admins")}
-        >
-          <FaUserShield /> Admins
-        </Tab>
+        {canManageAdmins && (
+          <Tab
+            $active={activeTab === "admins"}
+            onClick={() => setActiveTab("admins")}
+          >
+            <FaUserShield /> Admins
+          </Tab>
+        )}
       </TabsContainer>
 
       <ControlsSection>
@@ -411,7 +530,11 @@ export default function UsersPage() {
           <FaSearch style={{ color: "#8D99AE" }} />
           <input
             type="text"
-            placeholder={`Search ${activeTab} by name, email, or vendor...`}
+            placeholder={
+              activeTab === 'sellers'
+                ? 'Search sellers by name, email, shop, or referral...'
+                : `Search ${activeTab} by name, email, or vendor...`
+            }
             value={activeTab === "sellers" ? sellerSearchValue : ""}
             onChange={(e) => {
               if (activeTab === "sellers") {
@@ -425,7 +548,7 @@ export default function UsersPage() {
           <SortContainer>
             <SortLabel>Sort:</SortLabel>
             <SortButton
-              active={sellerSort.startsWith("createdAt")}
+              $active={sellerSort.startsWith("createdAt")}
               onClick={() => {
                 const [currentField, currentOrder] = sellerSort.split(":");
                 const newOrder = currentField === "createdAt" && currentOrder === "asc" ? "desc" : "asc";
@@ -437,7 +560,7 @@ export default function UsersPage() {
               Date {sellerSort === "createdAt:asc" ? "↑" : "↓"}
             </SortButton>
             <SortButton
-              active={sellerSort.startsWith("name")}
+              $active={sellerSort.startsWith("name")}
               onClick={() => {
                 const [currentField, currentOrder] = sellerSort.split(":");
                 const newOrder = currentField === "name" && currentOrder === "asc" ? "desc" : "asc";
@@ -449,7 +572,7 @@ export default function UsersPage() {
               Name {sellerSort === "name:asc" ? "↑" : "↓"}
             </SortButton>
             <SortButton
-              active={sellerSort.startsWith("shopName")}
+              $active={sellerSort.startsWith("shopName")}
               onClick={() => {
                 const [currentField, currentOrder] = sellerSort.split(":");
                 const newOrder = currentField === "shopName" && currentOrder === "asc" ? "desc" : "asc";
@@ -515,7 +638,7 @@ export default function UsersPage() {
       {activeTab === "users" && (
         <StatsSummary>
           <StatCard>
-            <StatIcon style={{ background: "#4361EE20", color: "#4361EE" }}>
+            <StatIcon style={{ background: "rgba(187, 108, 2, 0.13)", color: "#bb6c02" }}>
               <FaUserAlt />
             </StatIcon>
             <StatInfo>
@@ -569,7 +692,7 @@ export default function UsersPage() {
       {activeTab === "sellers" && (
         <StatsSummary>
           <StatCard>
-            <StatIcon style={{ background: "#4361EE20", color: "#4361EE" }}>
+            <StatIcon style={{ background: "rgba(187, 108, 2, 0.13)", color: "#bb6c02" }}>
               <FaStore />
             </StatIcon>
             <StatInfo>
@@ -609,7 +732,7 @@ export default function UsersPage() {
           </StatCard>
 
           <StatCard>
-            <StatIcon style={{ background: "#3B82F620", color: "#3B82F6" }}>
+            <StatIcon style={{ background: "rgba(187, 108, 2, 0.13)", color: "var(--color-primary-600)" }}>
               <FaChartLine />
             </StatIcon>
             <StatInfo>
@@ -620,10 +743,10 @@ export default function UsersPage() {
         </StatsSummary>
       )}
 
-      {activeTab === "admins" && (
+      {canManageAdmins && activeTab === "admins" && (
         <StatsSummary>
           <StatCard>
-            <StatIcon style={{ background: "#4361EE20", color: "#4361EE" }}>
+            <StatIcon style={{ background: "rgba(187, 108, 2, 0.13)", color: "#bb6c02" }}>
               <FaUserShield />
             </StatIcon>
             <StatInfo>
@@ -664,6 +787,21 @@ export default function UsersPage() {
         </StatsSummary>
       )}
 
+      {/* Seller fetch error banner */}
+      {activeTab === "sellers" && sellersError && (
+        <div style={{
+          padding: "0.75rem 1rem",
+          marginBottom: "1rem",
+          background: "#fff1f0",
+          border: "1px solid #ffa39e",
+          borderRadius: "6px",
+          color: "#cf1322",
+          fontSize: "0.875rem",
+        }}>
+          Failed to load sellers: {sellersError?.response?.data?.message || sellersError?.message || "Unknown error"}
+        </div>
+      )}
+
       {/* Dynamic Table */}
       <Table
         data={filteredData}
@@ -695,11 +833,14 @@ export default function UsersPage() {
       )}
       {isAddUserModalOpen && (
         <AddUserModal
-          setIsAddUserModalOpen={setIsAddUserModalOpen}
-          // selectedUser={selectedUser}
+          key={activeTab}
           onClose={handleClose}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
+          onSubmit={handleProvisionAccount}
+          defaultReferral={defaultReferral}
+          canCreateAdmin={canManageAdmins}
+          initialAccountType={
+            activeTab === 'users' ? 'user' : activeTab === 'sellers' ? 'seller' : 'admin'
+          }
         />
       )}
 
@@ -982,7 +1123,7 @@ export default function UsersPage() {
           return pagesToShow.map((pageNum) => (
             <PaginationButton
               key={pageNum}
-              active={pageNum === currentPagination.page}
+              $active={pageNum === currentPagination.page}
               onClick={() => handlePageChange(pageNum)}
             >
               {pageNum}
@@ -1016,65 +1157,35 @@ export default function UsersPage() {
     </UserManagementContainer>
   );
 }
+/* Spacing comes from DashboardLayout MainContentContainer (--layout-content-padding). */
 const UserManagementContainer = styled.div`
-  padding: 30px;
-  background-color: #f5f7fb;
-  min-height: 100vh;
-
-  @media (max-width: 768px) {
-    padding: 20px 15px;
-  }
+  padding: 0;
+  background-color: ${T.bodyBg};
+  min-height: 100%;
 `;
-
-const Header = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 30px;
-  flex-wrap: wrap;
-  gap: 20px;
-
-  @media (max-width: 768px) {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-`;
-
-const TitleSection = styled.div`
-  h1 {
-    font-size: 28px;
-    color: #2b2d42;
-    margin-bottom: 8px;
-  }
-
-  p {
-    color: #8d99ae;
-    font-size: 16px;
-  }
-`;
-
 
 const TabsContainer = styled.div`
   display: flex;
-  border-bottom: 1px solid #e9ecef;
-  margin-bottom: 25px;
-  padding: 0 5px;
+  border-bottom: 1px solid ${T.border};
+  margin-bottom: var(--layout-section-gap);
+  padding: 0 var(--layout-tight-gap);
 `;
 
 const Tab = styled.div`
-  padding: 12px 25px;
+  padding: var(--space-sm) var(--space-lg);
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--layout-inline-gap);
   font-weight: 500;
   border-bottom: 3px solid transparent;
-  color: ${({ active }) => (active ? "#4361EE" : "#8D99AE")};
-  border-bottom-color: ${({ active }) => (active ? "#4361EE" : "transparent")};
+  color: ${({ $active }) => ($active ? "#bb6c02" : "#8D99AE")};
+  border-bottom-color: ${({ $active }) =>
+    $active ? "#bb6c02" : "transparent"};
   transition: all 0.3s;
 
   &:hover {
-    color: #4361ee;
+    color: #bb6c02;
   }
 `;
 
@@ -1082,8 +1193,8 @@ const ControlsSection = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  gap: 15px;
+  margin-bottom: var(--layout-section-gap);
+  gap: var(--layout-stack-gap);
   flex-wrap: wrap;
 
   @media (max-width: 768px) {
@@ -1095,16 +1206,17 @@ const ControlsSection = styled.div`
 const SearchBar = styled.div`
   display: flex;
   align-items: center;
-  background: white;
-  border-radius: 10px;
-  padding: 12px 20px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  background: ${T.cardBg};
+  border: 1px solid ${T.border};
+  border-radius: ${T.radius};
+  padding: var(--space-sm) var(--space-md);
+  box-shadow: ${T.shadow};
   flex: 1;
   max-width: 500px;
 
   input {
     border: none;
-    padding: 5px 10px;
+    padding: var(--layout-tight-gap) var(--layout-inline-gap);
     width: 100%;
     outline: none;
     font-size: 15px;
@@ -1119,31 +1231,33 @@ const SearchBar = styled.div`
 const FilterButton = styled.button`
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 20px;
-  background: white;
-  color: #4361ee;
-  border: none;
-  border-radius: 10px;
-  font-weight: 500;
+  gap: var(--layout-inline-gap);
+  padding: var(--space-sm) var(--space-md);
+  background: ${T.cardBg};
+  color: ${T.primary};
+  border: 1.5px solid ${T.border};
+  border-radius: ${T.radiusSm};
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+  box-shadow: ${T.shadow};
 
   &:hover {
-    background: #f0f2ff;
+    background: ${T.primaryBg};
+    border-color: ${T.primary};
   }
 `;
 
 const FiltersPanel = styled.div`
-  background: white;
-  border-radius: 16px;
-  padding: 25px;
-  margin-bottom: 25px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+  background: ${T.cardBg};
+  border: 1px solid ${T.border};
+  border-radius: ${T.radius};
+  padding: var(--layout-section-gap);
+  margin-bottom: var(--layout-section-gap);
+  box-shadow: ${T.shadow};
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
+  gap: var(--layout-section-gap);
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
@@ -1153,59 +1267,79 @@ const FiltersPanel = styled.div`
 const FilterGroup = styled.div`
   label {
     display: block;
-    margin-bottom: 8px;
-    font-weight: 500;
-    color: #2b2d42;
-    font-size: 14px;
+    margin-bottom: 0.6rem;
+    font-weight: 600;
+    color: ${T.textMuted};
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
   }
 `;
 
 const Select = styled.select`
   width: 100%;
-  padding: 14px;
-  border-radius: 10px;
-  border: 1px solid #e9ecef;
-  background: white;
-  font-size: 14px;
-  color: #2b2d42;
+  padding: 0.9rem 1.2rem;
+  border-radius: ${T.radiusSm};
+  border: 1.5px solid ${T.border};
+  background: ${T.cardBg};
+  font-size: var(--text-sm);
+  color: ${T.text};
   appearance: none;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
   background-repeat: no-repeat;
   background-position: right 1rem center;
   background-size: 1em;
+  transition: border-color var(--transition-fast);
+
+  &:focus {
+    outline: none;
+    border-color: ${T.primary};
+    box-shadow: 0 0 0 3px ${T.primaryBg};
+  }
 `;
 
 const DateRangeSelector = styled.div`
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 0.8rem;
 
   input {
     flex: 1;
-    padding: 14px;
-    border-radius: 10px;
-    border: 1px solid #e9ecef;
-    font-size: 14px;
+    padding: 0.9rem 1.2rem;
+    border-radius: ${T.radiusSm};
+    border: 1.5px solid ${T.border};
+    font-size: var(--text-sm);
+    color: ${T.text};
+    background: ${T.cardBg};
+    transition: border-color var(--transition-fast);
+
+    &:focus {
+      outline: none;
+      border-color: ${T.primary};
+      box-shadow: 0 0 0 3px ${T.primaryBg};
+    }
   }
 
   span {
-    color: #8d99ae;
+    color: ${T.textLight};
+    font-size: var(--text-sm);
   }
 `;
 
 const ApplyFiltersButton = styled.button`
-  background: #4361ee;
-  color: white;
+  background: ${T.primary};
+  color: #fff;
   border: none;
-  padding: 14px 20px;
-  border-radius: 10px;
-  font-weight: 500;
+  padding: 1rem 2rem;
+  border-radius: ${T.radiusSm};
+  font-size: var(--text-sm);
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: background var(--transition-fast);
   align-self: flex-end;
 
   &:hover {
-    background: #3a56d4;
+    background: var(--color-primary-700);
   }
 
   @media (max-width: 768px) {
@@ -1215,82 +1349,117 @@ const ApplyFiltersButton = styled.button`
 
 const StatsSummary = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 20px;
-  margin-bottom: 30px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1.2rem;
+  margin-bottom: 1.8rem;
 `;
 
 const StatCard = styled.div`
-  background: white;
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+  background: ${T.cardBg};
+  border: 1px solid ${T.border};
+  border-radius: ${T.radius};
+  padding: 1.2rem 1.4rem;
+  box-shadow: ${T.shadow};
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 1rem;
+  transition: box-shadow 0.2s, transform 0.2s;
+
+  &:hover {
+    box-shadow: ${T.shadowMd};
+    transform: translateY(-2px);
+  }
 `;
 
 const StatIcon = styled.div`
-  width: 50px;
-  height: 50px;
-  border-radius: 12px;
+  width: 2.8rem;
+  height: 2.8rem;
+  border-radius: 0.8rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 1.4rem;
+  flex-shrink: 0;
 `;
 
 const StatInfo = styled.div``;
 
 const StatValue = styled.div`
-  font-size: 24px;
+  font-size: var(--text-xl);
   font-weight: 700;
-  color: #2b2d42;
-  margin-bottom: 5px;
+  color: ${T.text};
+  margin-bottom: 0.2rem;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
 `;
 
 const StatLabel = styled.div`
-  color: #8d99ae;
-  font-size: 14px;
+  color: ${T.textMuted};
+  font-size: var(--text-xs);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1.25;
 `;
 
 const Pagination = styled.div`
   display: flex;
   justify-content: center;
-  gap: 8px;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 2rem 0 1rem;
+  flex-wrap: wrap;
 `;
 
 const PaginationButton = styled.button`
-  min-width: 40px;
-  padding: 0 15px;
-  height: 40px;
-  border-radius: 10px;
-  border: none;
-  background: ${({ active }) => (active ? "#4361ee" : "white")};
-  color: ${({ active }) => (active ? "white" : "#2b2d42")};
+  min-width: 3.6rem;
+  padding: 0 1.4rem;
+  height: 3.6rem;
+  border-radius: ${T.radiusSm};
+  border: 1.5px solid ${({ $active }) => ($active ? T.primary : T.border)};
+  background: ${({ $active }) => ($active ? T.primary : T.cardBg)};
+  color: ${({ $active }) => ($active ? '#fff' : T.text)};
+  font-size: var(--text-sm);
+  font-weight: ${({ $active }) => ($active ? '700' : '500')};
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-  font-weight: 500;
+  transition: all var(--transition-fast);
 
-  &:hover {
-    background: ${({ active }) => (active ? "#3a56d4" : "#f0f2ff")};
+  &:hover:not(:disabled) {
+    background: ${({ $active }) =>
+      $active ? 'var(--color-primary-700)' : T.primaryBg};
+    border-color: ${T.primary};
+    color: ${({ $active }) => ($active ? '#fff' : T.primary)};
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
 `;
 const PageInfo = styled.span`
-  padding: 8px 12px;
-  color: #6c757d;
+  padding: 0.6rem 1rem;
+  color: ${T.textMuted};
+  font-size: var(--text-sm);
 `;
 
 const ItemsPerPageSelect = styled.select`
-  margin-left: 15px;
-  padding: 8px 12px;
-  border-radius: 6px;
-  border: 1px solid #dee2e6;
-  background-color: white;
+  margin-left: 0.8rem;
+  padding: 0.7rem 1rem;
+  border-radius: ${T.radiusSm};
+  border: 1.5px solid ${T.border};
+  background: ${T.cardBg};
+  color: ${T.text};
+  font-size: var(--text-sm);
   cursor: pointer;
+  transition: border-color var(--transition-fast);
+
+  &:focus {
+    outline: none;
+    border-color: ${T.primary};
+  }
 `;
 
 // Reject Modal Styles
@@ -1308,54 +1477,57 @@ const ModalOverlay = styled.div`
 `;
 
 const ModalContent = styled.div`
-  background: white;
-  border-radius: 16px;
-  padding: 2rem;
+  background: ${T.cardBg};
+  border-radius: ${T.radius};
+  padding: 2.4rem;
   width: 90%;
   max-width: 500px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1rem 4rem rgba(0, 0, 0, 0.18);
 `;
 
 const ModalHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
-  border-bottom: 1px solid #e9ecef;
-  padding-bottom: 1rem;
+  margin-bottom: 1.6rem;
+  border-bottom: 1px solid ${T.border};
+  padding-bottom: 1.2rem;
 
   h3 {
     margin: 0;
-    font-size: 1.5rem;
-    color: #2b2d42;
+    font-size: var(--text-lg);
+    font-weight: 700;
+    color: ${T.text};
   }
 `;
 
 const CloseButton = styled.button`
   background: none;
   border: none;
-  font-size: 1.5rem;
+  font-size: 1.8rem;
   cursor: pointer;
-  color: #666;
-  padding: 0;
-  width: 30px;
-  height: 30px;
+  color: ${T.textMuted};
+  width: 3.2rem;
+  height: 3.2rem;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
+  transition: background var(--transition-fast);
 
   &:hover {
-    background: #f8f9fa;
+    background: ${T.bodyBg};
+    color: ${T.text};
   }
 `;
 
 const ModalBody = styled.div`
-  margin: 1.5rem 0;
+  margin: 1.6rem 0;
 
   p {
     margin: 0.5rem 0;
-    color: #666;
+    color: ${T.textMuted};
+    font-size: var(--text-sm);
   }
 `;
 
@@ -1428,7 +1600,7 @@ const ViewDetailsButton = styled.button`
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  background: #4361ee;
+  background: #bb6c02;
   color: white;
   border: none;
   border-radius: 6px;
@@ -1438,7 +1610,7 @@ const ViewDetailsButton = styled.button`
   transition: all 0.2s;
 
   &:hover:not(:disabled) {
-    background: #3a56d4;
+    background: var(--color-primary-700);
     transform: translateY(-1px);
   }
 
@@ -1496,11 +1668,10 @@ const ActionButton = styled.button`
         `;
       case 'secondary':
         return `
-          background: #e9ecef;
-          color: #495057;
-          &:hover {
-            background: #dee2e6;
-          }
+          background: ${T.bodyBg};
+          color: ${T.textMuted};
+          border: 1.5px solid ${T.border};
+          &:hover { background: ${T.border}; color: ${T.text}; }
         `;
       case 'warning':
         return `
@@ -1512,10 +1683,11 @@ const ActionButton = styled.button`
         `;
       default:
         return `
-          background: #4361ee;
+          background: ${T.primary};
           color: white;
+          border-radius: ${T.radiusSm};
           &:hover {
-            background: #3a56d4;
+            background: var(--color-primary-700);
           }
         `;
     }
@@ -1535,25 +1707,26 @@ const SortContainer = styled.div`
 `;
 
 const SortLabel = styled.span`
-  color: #666;
-  font-size: 0.9rem;
+  color: ${T.textMuted};
+  font-size: var(--text-sm);
   font-weight: 500;
 `;
 
 const SortButton = styled.button`
   padding: 0.5rem 1rem;
-  border: 1px solid ${(props) => (props.active ? "#4361ee" : "#ddd")};
+  border: 1px solid ${(props) => (props.$active ? "#bb6c02" : "#ddd")};
   border-radius: 6px;
-  background: ${(props) => (props.active ? "#4361ee20" : "white")};
-  color: ${(props) => (props.active ? "#4361ee" : "#666")};
+  background: ${(props) =>
+    props.$active ? "rgba(187, 108, 2, 0.13)" : "white"};
+  color: ${(props) => (props.$active ? "#bb6c02" : "#666")};
   cursor: pointer;
   transition: all 0.2s;
   font-size: 0.9rem;
   font-weight: 500;
 
   &:hover {
-    border-color: #4361ee;
-    color: #4361ee;
-    background: #4361ee10;
+    border-color: #bb6c02;
+    color: #bb6c02;
+    background: rgba(187, 108, 2, 0.06);
   }
 `;

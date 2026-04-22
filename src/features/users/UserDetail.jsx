@@ -8,6 +8,31 @@ import { PATHS } from '../../routes/routePath';
 import { LoadingSpinner } from '../../shared/components/LoadingSpinner';
 import adminSellerApi from '../../shared/services/adminSellerApi';
 import { ConfirmationModal } from '../../shared/components/Modal/ConfirmationModal';
+import {
+  PageHeader as SharedPageHeader,
+  PageTitle,
+  PageSub,
+} from '../../shared/components/page/PageHeader';
+
+const T = {
+  border: 'var(--color-border)',
+  cardBg: 'var(--color-card-bg)',
+  bodyBg: 'var(--color-body-bg)',
+  radius: 'var(--border-radius-xl)',
+  shadow: 'var(--shadow-sm)',
+};
+
+const DetailPageHeader = styled(SharedPageHeader)`
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: ${T.cardBg};
+  border: 1px solid ${T.border};
+  border-radius: ${T.radius};
+  box-shadow: ${T.shadow};
+`;
 
 const UserDetail = () => {
   const { id: userId } = useParams();
@@ -146,11 +171,11 @@ const UserDetail = () => {
 
     return (
       <Container>
-        <Header>
+        <DetailPageHeader>
           <BackButton onClick={() => navigate(getBackPath())}>
             <FaArrowLeft /> Back to Users
           </BackButton>
-        </Header>
+        </DetailPageHeader>
         <ErrorMessage>{errorMessage}</ErrorMessage>
       </Container>
     );
@@ -162,11 +187,11 @@ const UserDetail = () => {
   if (!selectedUser || (!selectedUser.id && !selectedUser._id)) {
     return (
       <Container>
-        <Header>
+        <DetailPageHeader>
           <BackButton onClick={() => navigate(getBackPath())}>
             <FaArrowLeft /> Back to Users
           </BackButton>
-        </Header>
+        </DetailPageHeader>
         <ErrorMessage>User not found</ErrorMessage>
       </Container>
     );
@@ -244,15 +269,13 @@ const UserDetail = () => {
 
   return (
     <Container>
-      <Header>
+      <DetailPageHeader>
         <BackButton onClick={() => navigate(getBackPath())}>
           <FaArrowLeft /> Back to Users
         </BackButton>
-        <TitleSection>
-          <h1>User Details</h1>
-          <p>View complete information about this user</p>
-        </TitleSection>
-      </Header>
+        <PageTitle>User Details</PageTitle>
+        <PageSub>View complete information about this user</PageSub>
+      </DetailPageHeader>
 
       <Content>
         {successMessage && (
@@ -803,12 +826,8 @@ export default UserDetail;
 // Styled Components
 const Container = styled.div`
   padding: 2rem;
-  background-color: #f8f9fa;
+  background: ${T.bodyBg};
   min-height: 100vh;
-`;
-
-const Header = styled.div`
-  margin-bottom: 2rem;
 `;
 
 const BackButton = styled.button`
@@ -816,32 +835,17 @@ const BackButton = styled.button`
   align-items: center;
   gap: 8px;
   padding: 10px 20px;
-  background: white;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  color: #4361ee;
+  background: var(--color-card-bg);
+  border: 1px solid ${T.border};
+  border-radius: var(--border-radius-md);
+  color: var(--color-primary-600);
   font-weight: 500;
   cursor: pointer;
-  margin-bottom: 1rem;
   transition: all 0.3s;
 
   &:hover {
-    background: #f8f9fa;
-    border-color: #4361ee;
-  }
-`;
-
-const TitleSection = styled.div`
-  h1 {
-    margin: 0 0 0.5rem 0;
-    font-size: 2rem;
-    color: #2b2d42;
-  }
-
-  p {
-    margin: 0;
-    color: #8d99ae;
-    font-size: 1rem;
+    background: var(--color-grey-50);
+    border-color: var(--color-primary-500);
   }
 `;
 
@@ -865,7 +869,7 @@ const UserAvatar = styled.div`
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: #4361ee;
+  background: #bb6c02;
   color: white;
   display: flex;
   align-items: center;
@@ -935,8 +939,8 @@ const DetailIcon = styled.div`
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  background: #4361ee20;
-  color: #4361ee;
+  background: rgba(187, 108, 2, 0.13);
+  color: #bb6c02;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -970,11 +974,23 @@ const RoleBadge = styled.span`
   background: ${({ role }) =>
     role === "admin"
       ? "#4CC9F020"
-      : role === "seller"
-        ? "#F8961E20"
-        : "#4361EE20"};
+      : role === "superadmin"
+        ? "#8e44ad20"
+        : role === "support_agent" || role === "moderator"
+          ? "#3498db20"
+          : role === "seller"
+            ? "#F8961E20"
+            : "rgba(187, 108, 2, 0.13)"};
   color: ${({ role }) =>
-    role === "admin" ? "#4CC9F0" : role === "seller" ? "#F8961E" : "#4361EE"};
+    role === "admin"
+      ? "#4CC9F0"
+      : role === "superadmin"
+        ? "#8e44ad"
+        : role === "support_agent" || role === "moderator"
+          ? "#3498db"
+          : role === "seller"
+            ? "#F8961E"
+            : "#bb6c02"};
 `;
 
 const StatusBadge = styled.span`
@@ -1025,7 +1041,7 @@ const SectionTitle = styled.h2`
   font-weight: 700;
 
   svg {
-    color: #4361ee;
+    color: #bb6c02;
   }
 `;
 
@@ -1118,8 +1134,8 @@ const DocumentIcon = styled.div`
   align-items: center;
   justify-content: center;
   font-size: 24px;
-  background: #4361ee20;
-  color: #4361ee;
+  background: rgba(187, 108, 2, 0.13);
+  color: #bb6c02;
   flex-shrink: 0;
 `;
 
@@ -1137,7 +1153,7 @@ const DocumentLabel = styled.div`
 const DocumentLink = styled.a`
   font-size: 16px;
   font-weight: 600;
-  color: #4361ee;
+  color: #bb6c02;
   text-decoration: none;
   transition: all 0.3s;
 
@@ -1212,7 +1228,7 @@ const ApproveButton = styled.button`
   align-self: flex-start;
   min-width: 250px;
   padding: 12px 24px;
-  background: #4361ee;
+  background: #bb6c02;
   color: white;
   border: none;
   border-radius: 8px;
@@ -1228,7 +1244,7 @@ const ApproveButton = styled.button`
   &:hover:not(:disabled) {
     background: #3a56d4;
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
+    box-shadow: 0 4px 12px rgba(187, 108, 2, 0.25);
   }
 
   &:disabled {
@@ -1321,8 +1337,8 @@ const DocumentPreviewImage = styled.img`
   transition: all 0.3s;
 
   &:hover {
-    border-color: #4361ee;
-    box-shadow: 0 2px 8px rgba(67, 97, 238, 0.2);
+    border-color: #bb6c02;
+    box-shadow: 0 2px 8px rgba(187, 108, 2, 0.18);
   }
 `;
 
@@ -1337,7 +1353,7 @@ const DocumentViewButton = styled.a`
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  background: #4361ee;
+  background: #bb6c02;
   color: white;
   border-radius: 8px;
   text-decoration: none;
@@ -1348,7 +1364,7 @@ const DocumentViewButton = styled.a`
   &:hover {
     background: #3a56d4;
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
+    box-shadow: 0 4px 12px rgba(187, 108, 2, 0.25);
   }
 
   svg {
@@ -1605,8 +1621,8 @@ const RejectReasonTextarea = styled.textarea`
 
   &:focus {
     outline: none;
-    border-color: #4361ee;
-    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+    border-color: #bb6c02;
+    box-shadow: 0 0 0 3px rgba(187, 108, 2, 0.1);
   }
 `;
 

@@ -114,7 +114,7 @@ const SubNavLink = styled(NavLink)`
   }
 
   &.active {
-    background: var(--color-primary, #2563eb);
+    background: var(--color-primary-600);
     color: white;
   }
 `;

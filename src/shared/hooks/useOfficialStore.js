@@ -13,35 +13,24 @@ export const useOfficialStore = () => {
           const response = await officialStoreService.getOfficialStoreProducts();
 
           if (response?.data?.products && Array.isArray(response.data.products)) {
-            console.log('✅ [useOfficialStore] Found products at response.data.products:', response.data.products.length);
             return response.data.products;
           }
           // Fallback: maybe response.data is the products array directly
           if (response?.data && Array.isArray(response.data)) {
-            console.log('✅ [useOfficialStore] Response.data is array:', response.data.length);
             return response.data;
           }
           // Fallback: nested data.data.products
           if (response?.data?.data?.products && Array.isArray(response.data.data.products)) {
-            console.log('✅ [useOfficialStore] Found products at response.data.data.products:', response.data.data.products.length);
             return response.data.data.products;
           }
           // Fallback: response is array
           if (Array.isArray(response)) {
-            console.log('✅ [useOfficialStore] Response is array:', response.length);
             return response;
           }
           // Fallback: direct products property
           if (response?.products && Array.isArray(response.products)) {
-            console.log('✅ [useOfficialStore] Found products at response.products:', response.products.length);
             return response.products;
           }
-          console.warn('⚠️ [useOfficialStore] No products found in response structure:', {
-            response,
-            hasData: !!response?.data,
-            dataType: typeof response?.data,
-            dataKeys: response?.data ? Object.keys(response.data) : [],
-          });
           return [];
         } catch (error) {
           console.error('❌ [useOfficialStore] Failed to fetch Official Store products:', error);

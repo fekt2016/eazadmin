@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FaHeadset, FaBook, FaComments } from 'react-icons/fa';
 import useDynamicPageTitle from '../../shared/hooks/useDynamicPageTitle';
+import useAuth from '../../shared/hooks/useAuth';
 import { PATHS } from '../../routes/routePath';
 import {
   SitemapContainer,
@@ -30,6 +31,16 @@ import {
  */
 const SitemapPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const { adminData } = useAuth();
+  const currentAdmin = useMemo(() => {
+    if (!adminData) return null;
+    const fromMe = adminData.data?.data?.data;
+    if (fromMe) return fromMe;
+    if (adminData.role && (adminData.email || adminData.name)) return adminData;
+    if (adminData.data?.role) return adminData.data;
+    return null;
+  }, [adminData]);
+  const canManageAdmins = currentAdmin?.role === 'superadmin';
 
   // SEO
   useDynamicPageTitle({
@@ -41,7 +52,7 @@ const SitemapPage = () => {
   });
 
   // Sitemap sections data
-  const sitemapSections = [
+  const sitemapSectionsBase = [
     {
       id: 'dashboard',
       title: 'Dashboard & Overview',
@@ -132,6 +143,20 @@ const SitemapPage = () => {
       ],
     },
   ];
+
+  const sitemapSections = useMemo(() => {
+    if (canManageAdmins) return sitemapSectionsBase;
+    return sitemapSectionsBase.map((section) => {
+      if (section.id !== 'users') return section;
+      return {
+        ...section,
+        links: section.links.filter(
+          (link) =>
+            link.path !== PATHS.ADMINS && link.path !== PATHS.ADMINDETAIL,
+        ),
+      };
+    });
+  }, [canManageAdmins]);
 
   // Animation variants
   const containerVariants = {

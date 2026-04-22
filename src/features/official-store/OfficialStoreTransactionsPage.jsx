@@ -4,6 +4,15 @@ import styled from "styled-components";
 import { FaHistory } from "react-icons/fa";
 import { LoadingSpinner } from "../../shared/components/LoadingSpinner";
 import api from "../../shared/services/api";
+import {
+  PageHeader,
+  PageTitle,
+  PageSub,
+} from "../../shared/components/page/PageHeader";
+
+const T = {
+  bodyBg: "var(--color-body-bg)",
+};
 
 export default function OfficialStoreTransactionsPage() {
   const [page, setPage] = useState(1);
@@ -85,15 +94,17 @@ export default function OfficialStoreTransactionsPage() {
 
   return (
     <PageContainer>
-      <Header>
-        <Title>
-          <FaHistory />
-          <h2>Official Store Transactions</h2>
-        </Title>
-        <Subtitle>
-          All revenue transactions for the Official Store company store (credits and debits).
-        </Subtitle>
-      </Header>
+      <PageHeader>
+        <div>
+          <PageTitle as="div" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <FaHistory />
+            <span>Official Store Transactions</span>
+          </PageTitle>
+          <PageSub>
+            All revenue transactions for the Official Store company store (credits and debits).
+          </PageSub>
+        </div>
+      </PageHeader>
 
       <StatsCard>
         <StatItem>
@@ -185,35 +196,8 @@ const PageContainer = styled.div`
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-`;
-
-const Header = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-`;
-
-const Title = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-
-  h2 {
-    margin: 0;
-    font-size: 1.25rem;
-    font-weight: 600;
-  }
-
-  svg {
-    font-size: 1.25rem;
-    color: var(--color-primary-600, #2563eb);
-  }
-`;
-
-const Subtitle = styled.p`
-  margin: 0;
-  font-size: 0.875rem;
-  color: var(--color-grey-600, #4b5563);
+  min-height: 100vh;
+  background: ${T.bodyBg};
 `;
 
 const StatsCard = styled.div`

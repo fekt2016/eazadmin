@@ -18,6 +18,28 @@ import { normalizeApiResponse } from '../../shared/utils/apiUtils';
 import { useGetOrderById } from '../../shared/hooks/useOrder';
 import { useUpdateOrderStatus } from '../../shared/hooks/useUpdateOrderStatus';
 import { LoadingSpinner } from '../../shared/components/LoadingSpinner';
+import {
+  PageHeader,
+  PageTitle,
+  PageSub,
+  HeaderActions,
+} from '../../shared/components/page/PageHeader';
+
+const T = {
+  primary: 'var(--color-primary-600)',
+  primaryLight: 'var(--color-primary-500)',
+  primaryBg: 'var(--color-primary-100)',
+  border: 'var(--color-border)',
+  cardBg: 'var(--color-card-bg)',
+  bodyBg: 'var(--color-body-bg)',
+  text: 'var(--color-grey-900)',
+  textMuted: 'var(--color-grey-500)',
+  textLight: 'var(--color-grey-400)',
+  radius: 'var(--border-radius-xl)',
+  radiusSm: 'var(--border-radius-md)',
+  shadow: 'var(--shadow-sm)',
+  shadowMd: 'var(--shadow-md)',
+};
 
 /**
  * AdminOrderStatusPage Component
@@ -223,11 +245,13 @@ const AdminOrderStatusPage = () => {
   return (
     <PageContainer>
       <PageHeader>
-        <HeaderTitle>
-          <h1>Update Order Status</h1>
-          <p>Order #{order.orderNumber ?? "—"}</p>
-        </HeaderTitle>
-        <BackButton onClick={() => navigate(-1)}>← Back</BackButton>
+        <div>
+          <PageTitle>Update Order Status</PageTitle>
+          <PageSub>Order #{order.orderNumber ?? "—"}</PageSub>
+        </div>
+        <HeaderActions>
+          <BackButton onClick={() => navigate(-1)}>← Back</BackButton>
+        </HeaderActions>
       </PageHeader>
 
       <ContentGrid>
@@ -398,29 +422,8 @@ const PageContainer = styled.div`
   padding: 2rem;
   max-width: 1400px;
   margin: 0 auto;
-`;
-
-const PageHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
-  gap: 1rem;
-`;
-
-const HeaderTitle = styled.div`
-  h1 {
-    font-size: 2rem;
-    font-weight: 600;
-    color: #1a1a1a;
-    margin-bottom: 0.5rem;
-  }
-
-  p {
-    color: #666;
-    font-size: 0.95rem;
-  }
+  min-height: 100vh;
+  background-color: ${T.bodyBg};
 `;
 
 const BackButton = styled.button`
@@ -452,15 +455,17 @@ const ContentGrid = styled.div`
 `;
 
 const FormCard = styled.div`
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: ${T.cardBg};
+  border: 1px solid ${T.border};
+  border-radius: ${T.radius};
+  box-shadow: ${T.shadow};
 `;
 
 const HistoryCard = styled.div`
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: ${T.cardBg};
+  border: 1px solid ${T.border};
+  border-radius: ${T.radius};
+  box-shadow: ${T.shadow};
   max-height: 600px;
   overflow-y: auto;
 `;
@@ -522,7 +527,7 @@ const Select = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #4361ee;
+    border-color: #bb6c02;
   }
 `;
 
@@ -537,7 +542,7 @@ const Textarea = styled.textarea`
 
   &:focus {
     outline: none;
-    border-color: #4361ee;
+    border-color: #bb6c02;
   }
 `;
 
@@ -550,7 +555,7 @@ const Input = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #4361ee;
+    border-color: #bb6c02;
   }
 `;
 
@@ -561,7 +566,7 @@ const SubmitButton = styled.button`
   justify-content: center;
   gap: 0.5rem;
   padding: 0.75rem 1.5rem;
-  background: #4361ee;
+  background: #bb6c02;
   color: white;
   border: none;
   border-radius: 8px;
@@ -620,7 +625,7 @@ const HistoryMessage = styled.div`
 `;
 
 const HistoryLocation = styled.div`
-  color: #4361ee;
+  color: #bb6c02;
   font-size: 0.85rem;
   margin-bottom: 0.25rem;
 `;

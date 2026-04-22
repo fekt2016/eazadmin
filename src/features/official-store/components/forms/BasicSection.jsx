@@ -131,7 +131,7 @@ const Input = styled.input`
   min-height: 44px;
   &:focus {
     outline: none;
-    border-color: ${props => props.$hasError ? '#e53e3e' : 'var(--color-primary-500, #2563eb)'};
+    border-color: ${props => props.$hasError ? '#e53e3e' : 'var(--color-primary-600)'};
     box-shadow: 0 0 0 3px ${props => props.$hasError ? 'rgba(229, 62, 62, 0.1)' : 'rgba(37, 99, 235, 0.1)'};
   }
   &::placeholder { color: #94a3b8; }
@@ -149,7 +149,7 @@ const Select = styled.select`
   min-height: 44px;
   &:focus {
     outline: none;
-    border-color: ${props => props.$hasError ? '#e53e3e' : 'var(--color-primary-500, #2563eb)'};
+    border-color: ${props => props.$hasError ? '#e53e3e' : 'var(--color-primary-600)'};
     box-shadow: 0 0 0 3px ${props => props.$hasError ? 'rgba(229, 62, 62, 0.1)' : 'rgba(37, 99, 235, 0.1)'};
   }
 `;
@@ -168,7 +168,7 @@ const TextArea = styled.textarea`
   line-height: 1.6;
   &:focus {
     outline: none;
-    border-color: var(--color-primary-500, #2563eb);
+    border-color: var(--color-primary-600);
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
   }
   &::placeholder { color: #94a3b8; }

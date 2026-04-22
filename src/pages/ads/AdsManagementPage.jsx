@@ -62,6 +62,16 @@ const resolveLink = (rawLink) => {
   if (!trimmed) return trimmed;
   // If admin enters a full URL, keep it as-is
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  // Protocol-relative URL from copy/paste
+  if (/^\/\//.test(trimmed)) return `https:${trimmed}`;
+  // Hostname without scheme (e.g. www.saiisai.com/offers/foo)
+  const firstSegment = trimmed.split("/")[0] || "";
+  if (
+    !trimmed.startsWith("/") &&
+    /^[\w.-]+\.[a-z]{2,}$/i.test(firstSegment)
+  ) {
+    return `https://${trimmed}`;
+  }
 
   // Otherwise, treat it as a path and ALWAYS convert to an absolute URL,
   // because the backend validation requires an absolute HTTP(S) URL.
@@ -325,8 +335,21 @@ const AdsManagementPage = () => {
   const handleSubmit = (event) => {
     event.preventDefault();
 
-    if (!formState.title.trim() || !formState.imageUrl.trim() || !formState.link.trim()) {
-      toast.error("Title, image and destination link are required.");
+    if (!formState.title.trim()) {
+      toast.error("Please enter a title.");
+      return;
+    }
+    if (!formState.imageUrl.trim()) {
+      toast.error("Upload an image and wait until the upload finishes.");
+      return;
+    }
+
+    const hasLink = Boolean(formState.link.trim());
+    const hasPromoKey = Boolean(formState.promotionKey.trim());
+    if (!hasLink && !hasPromoKey) {
+      toast.error(
+        "Add a destination link, or enter a promotion key (the link will use /offers/your-key).",
+      );
       return;
     }
 
@@ -376,7 +399,7 @@ const AdsManagementPage = () => {
             ) : null}
           </SectionHeader>
 
-          <Form onSubmit={handleSubmit}>
+          <Form onSubmit={handleSubmit} noValidate>
             <FormGrid>
               <FormField>
                 <Label htmlFor="title">Title</Label>
@@ -386,7 +409,6 @@ const AdsManagementPage = () => {
                   value={formState.title}
                   onChange={handleInputChange}
                   placeholder="Summer Sale Spotlight"
-                  required
                 />
               </FormField>
 
@@ -397,7 +419,6 @@ const AdsManagementPage = () => {
                   type="file"
                   accept="image/*"
                   onChange={handleImageFileChange}
-                  required={!formState.imageUrl}
                 />
                 {imageFileName && (
                   <HelpText>Selected file: {imageFileName}</HelpText>
@@ -484,7 +505,6 @@ const AdsManagementPage = () => {
                   value={formState.link}
                   onChange={handleInputChange}
                   placeholder="https://saiisai.com/offers/back-to-school or /offers/back-to-school"
-                  required
                 />
                 <HelpText>
                   Enter a full URL or a path. When left as a path (e.g.{" "}
@@ -860,7 +880,7 @@ const StatusPill = styled.span`
 const LinkPreview = styled.a`
   display: inline-block;
   max-width: 240px;
-  color: #2563eb;
+  color: var(--color-primary-600);
   text-decoration: none;
   overflow: hidden;
   text-overflow: ellipsis;

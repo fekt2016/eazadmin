@@ -44,5 +44,11 @@ const adminUserApi = {
   getAdminDetails: (adminId) => api.get(`/admin/${adminId}`),
   updateAdmin: (adminId, data) => api.patch(`/admin/${adminId}`, data),
   deleteAdmin: (adminId) => api.delete(`/admin/${adminId}`),
+  /** Admin panel: create buyer — password generated server-side; emailed to user. */
+  provisionBuyerAccount: (payload) => api.post("/admin/user/signup", payload),
+  /** Admin panel: create seller — password generated server-side; emailed to user. */
+  provisionSellerAccount: (payload) => api.post("/admin/seller/signup", payload),
+  /** Superadmin: create admin — password generated server-side; emailed to user. */
+  provisionAdminAccount: (payload) => api.post("/admin/register", payload),
 };
 export default adminUserApi;

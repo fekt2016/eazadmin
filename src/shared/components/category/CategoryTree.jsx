@@ -4,8 +4,6 @@ import { getParentName } from '../../utils/helpers';
 import useGetImmediateSubcategories from '../../hooks/useGetImmediateSubcategories';
 import { useGetSubCategoryCount } from '../../hooks/useGetSubCategoryCount';
 import { FixedSizeList as List } from "react-window";
-import useProduct from '../../hooks/useProduct';
-import { LoadingSpinner } from '../LoadingSpinner';
 import { ConfirmationModal } from '../Modal/ConfirmationModal';
 
 const CategoryTree = function ({
@@ -34,7 +32,6 @@ const CategoryTree = function ({
 
   const getImmediateSubcategories = useGetImmediateSubcategories(categories);
   const getSubCategoryCount = useGetSubCategoryCount(categories);
-  const { useGetProductsByCategory } = useProduct();
 
   const parentCategories = categoriesTree
     .filter((cat) => {
@@ -115,7 +112,6 @@ const CategoryTree = function ({
   const renderCategory = useCallback(
     ({ index, style }) => {
       const category = parentCategories[index];
-      console.log("Category:", category);
       const counts = productCounts.find(
         (item) => item.parentCategory === category.name
       );
@@ -124,14 +120,8 @@ const CategoryTree = function ({
       const subcategories = getImmediateSubcategories(category._id);
       const isActive = activeTab === category._id;
 
-      // Fetch products for this category
-      const { data: productsData, isLoading: isLoadingProducts } = useGetProductsByCategory(
-        category._id,
-        { limit: 5, page: 1 }
-      );
-
-      const products = productsData?.data?.products || productsData?.products || [];
-      const totalProducts = productsData?.data?.totalCount || productsData?.totalCount || products.length;
+      const products = [];
+      const totalProducts = counts?.count || 0;
 
       // console.log("Category Debug:", {
       //   categoryName: category.name,
@@ -147,7 +137,6 @@ const CategoryTree = function ({
           <CategoryCard
             level={level}
             onClick={() => {
-              console.log("Card clicked:", category.name);
               if (hasChildren) {
                 setActiveTab(isActive ? null : category._id);
               }
@@ -179,13 +168,7 @@ const CategoryTree = function ({
               <CategoryMeta>
                 <MetaItem>
                   <MetaLabel>Products:</MetaLabel>
-                  <MetaValue>
-                    {isLoadingProducts ? (
-                      <LoadingSpinner size="sm" />
-                    ) : (
-                      totalProducts || counts?.count || 0
-                    )}
-                  </MetaValue>
+                  <MetaValue>{totalProducts}</MetaValue>
                 </MetaItem>
 
                 <MetaItem>
@@ -214,7 +197,7 @@ const CategoryTree = function ({
               </CategoryMeta>
 
               {/* Products Section */}
-              {!isLoadingProducts && products.length > 0 && (
+              {products.length > 0 && (
                 <ProductsSection>
                   <ProductsLabel>Products ({totalProducts}):</ProductsLabel>
                   <ProductsList>
@@ -529,7 +512,7 @@ const EmptyText = styled.p`
 `;
 
 const AddButton = styled.button`
-  background: #1976d2;
+  background: var(--color-primary-600);
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -546,7 +529,7 @@ const AddButton = styled.button`
 
 const ActionButton = styled.button`
   background: #f5f5f5;
-  color: ${({ $status }) => ($status === "Active" ? "#1976d2" : "#757575")};
+  color: ${({ $status }) => ($status === "Active" ? "var(--color-primary-600)" : "#757575")};
   border: none;
   border-radius: 6px;
   padding: 0.5rem 1rem;
@@ -585,7 +568,7 @@ const ViewSubButton = styled.button`
   font-weight: 500;
   transition: background 0.2s;
   &:hover {
-    background: #dbeafe;
+    background: var(--color-primary-100);
   }
 `;
 
@@ -685,12 +668,12 @@ const CategoryDescription = styled.div`
 
 const CategoryCard = styled.div`
   background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+  border-radius: var(--border-radius-xl);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
   padding: 1.5rem;
   margin: 1rem 0;
   transition: all 0.2s;
-  border-left: 4px solid #1976d2;
   position: relative;
   display: flex;
   gap: 1.5rem;

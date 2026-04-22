@@ -1,10 +1,26 @@
 import styled from "styled-components";
 import { getOptimizedImageUrl, IMAGE_SLOTS } from '../utils/cloudinaryConfig';
 
+const T = {
+  primary:      'var(--color-primary-600)',
+  primaryLight: 'var(--color-primary-500)',
+  primaryBg:    'var(--color-primary-100)',
+  border:       'var(--color-border)',
+  cardBg:       'var(--color-card-bg)',
+  bodyBg:       'var(--color-body-bg)',
+  text:         'var(--color-grey-900)',
+  textMuted:    'var(--color-grey-500)',
+  textLight:    'var(--color-grey-400)',
+  radius:       'var(--border-radius-xl)',
+  radiusSm:     'var(--border-radius-md)',
+  shadow:       'var(--shadow-sm)',
+  shadowMd:     'var(--shadow-md)',
+};
+
 const Header = ({ user }) => {
   return (
     <Container>
-      <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "var(--layout-stack-gap)" }}>
         {/* <ToggleButton onClick={toggleSidebar}>
           <FaBars />
         </ToggleButton> */}
@@ -29,7 +45,7 @@ const Header = ({ user }) => {
             </UserAvatar>
             <div style={{ display: "flex", flexDirection: "column" }}>
               <div style={{ fontWeight: 600 }}>{user.name || 'Admin'}</div>
-              <div style={{ fontSize: "12px", color: theme.gray }}>
+              <div style={{ fontSize: "12px", color: 'var(--color-grey-500)' }}>
                 {user.shopName || user.email || 'Administrator'}
               </div>
             </div>
@@ -39,7 +55,7 @@ const Header = ({ user }) => {
             <UserAvatar>A</UserAvatar>
             <div style={{ display: "flex", flexDirection: "column" }}>
               <div style={{ fontWeight: 600 }}>Loading...</div>
-              <div style={{ fontSize: "12px", color: theme.gray }}>
+              <div style={{ fontSize: "12px", color: 'var(--color-grey-500)' }}>
                 Administrator
               </div>
             </div>
@@ -61,7 +77,7 @@ const UserAvatar = styled.div`
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: ${({ theme }) => theme.accent};
+  background: ${T.primary};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -73,7 +89,7 @@ const UserAvatar = styled.div`
 const TopbarRight = styled.div`
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: var(--layout-section-gap);
 `;
 
 // const NavItems = styled.nav`
@@ -85,49 +101,21 @@ const TopbarRight = styled.div`
 //     gap: 1rem;
 //   }
 // `;
-const theme = {
-  primaryColor: "#2563eb",
-  secondaryColor: "#1e40af",
-  textColor: "#1f2937",
-  lightText: "#6b7280",
-  sidebarWidth: "240px",
-  headerHeight: "64px",
-  borderRadius: "8px",
-  transition: "all 0.3s ease",
-};
-
-// const NavLink = styled(Link)`
-//   color: ${theme.lightText};
-//   text-decoration: none;
-//   display: flex;
-//   align-items: center;
-//   gap: 0.5rem;
-//   transition: ${theme.transition};
-
-//   &:hover {
-//     color: ${theme.primaryColor};
-//   }
-
-//   &.active {
-//     color: ${theme.primaryColor};
-//     font-weight: 500;
-//   }
-// `;
-
 const Container = styled.header`
-  height: ${theme.headerHeight};
-  background: white;
+  height: var(--header-height);
+  background: ${T.cardBg};
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 2rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 0 var(--layout-header-padding-x);
+  border-bottom: 1px solid ${T.border};
+  box-shadow: ${T.shadow};
   position: sticky;
   top: 0;
   z-index: 1000;
 
   @media (max-width: 768px) {
-    padding: 0 1rem;
+    padding: 0 var(--layout-header-padding-x-mobile);
   }
 `;
 

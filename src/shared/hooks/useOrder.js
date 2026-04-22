@@ -3,8 +3,6 @@ import { orderService } from '../services/orderApi'; // Adjust the import path a
 // import { useNavigate } from "react-router-dom";
 
 export const getOrderStructure = (orderData) => {
-  console.log("orderData structure", orderData);
-  console.log("orderData structure", orderData);
   if (!orderData) return [];
 
   if (orderData?.data?.data?.data) {
@@ -13,6 +11,7 @@ export const getOrderStructure = (orderData) => {
   if (orderData?.data?.data) {
     return orderData?.data?.data;
   }
+  return [];
 };
 // export const useGetSellerOrder = (orderId) => {
 //   console.log("useGetSellerOrder called with orderId:", orderId);
@@ -137,7 +136,6 @@ export const useGetAllOrders = (params = {}) =>
     queryKey: ["orders", params],
     queryFn: async () => {
       const response = await orderService.getAllOrders(params);
-      console.log("hook Response - getAllOrders:", response);
       return response;
     },
   });
@@ -160,7 +158,6 @@ export const useGetOrderById = (id) => {
     queryFn: async () => {
       if (!id) return null;
       const response = await orderService.getOrderById(id);
-      console.log("hook Response - getOrderById:", response);
       return response;
     },
     enabled: !!id,
@@ -247,9 +244,7 @@ export const useAddTrackingUpdate = () => {
         queryKey: ["orders"]
       });
     },
-    onError: (error) => {
-      console.error("Error adding tracking update:", error);
-    },
+    onError: () => {},
   });
 };
 
@@ -359,7 +354,7 @@ export const useConfirmPayment = () => {
       }
       return await orderService.confirmPayment(orderId);
     },
-    onSuccess: (data, orderId) => {
+    onSuccess: (_data, orderId) => {
       // Invalidate order queries to refresh data
       queryClient.invalidateQueries({
         queryKey: ["order", orderId]
@@ -367,10 +362,7 @@ export const useConfirmPayment = () => {
       queryClient.invalidateQueries({
         queryKey: ["orders"]
       });
-      console.log("Payment confirmed successfully:", data);
     },
-    onError: (error) => {
-      console.error("Error confirming payment:", error);
-    },
+    onError: () => {},
   });
 };

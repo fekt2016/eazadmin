@@ -12,6 +12,16 @@ import NeighborhoodModal from './NeighborhoodModal';
 import ButtonSpinner from '../../shared/components/ButtonSpinner';
 import { ConfirmationModal } from '../../shared/components/Modal/ConfirmationModal';
 import { toast } from 'react-toastify';
+import {
+  PageHeader,
+  PageTitle,
+  PageSub,
+  HeaderActions,
+} from '../../shared/components/page/PageHeader';
+
+const T = {
+  bodyBg: 'var(--color-body-bg)',
+};
 
 const DistanceOverviewPage = ({ embedded = false }) => {
   const [selectedZone, setSelectedZone] = useState('all');
@@ -124,23 +134,23 @@ const DistanceOverviewPage = ({ embedded = false }) => {
 
   return (
     <Container $embedded={embedded}>
-      <Header>
-        <HeaderContent>
-          <div>
-            <Title>
-              <FaMapMarkerAlt />
-              Neighborhood-Based Zoning Overview
-            </Title>
-            <Description>
-              View all neighborhoods organized by shipping zones with distance from warehouse (Nima HQ)
-            </Description>
-          </div>
+      <PageHeader>
+        <div>
+          <PageTitle>
+            <FaMapMarkerAlt />
+            Neighborhood-Based Zoning Overview
+          </PageTitle>
+          <PageSub>
+            View all neighborhoods organized by shipping zones with distance from warehouse (Nima HQ)
+          </PageSub>
+        </div>
+        <HeaderActions>
           <AddButton onClick={handleAddNeighborhood}>
             <FaPlus />
             Add Neighborhood
           </AddButton>
-        </HeaderContent>
-      </Header>
+        </HeaderActions>
+      </PageHeader>
 
       {/* Statistics Summary */}
       {statistics && Object.keys(statistics).length > 0 && (
@@ -463,7 +473,7 @@ const DistanceOverviewPage = ({ embedded = false }) => {
               `Are you sure you want to ${actionModalConfig.payload?.currentStatus ? 'deactivate' : 'activate'} this neighborhood?`
         }
         confirmText="Confirm"
-        confirmColor={actionModalConfig.type === 'toggle' && actionModalConfig.payload?.currentStatus ? '#e74c3c' : '#4361EE'}
+        confirmColor={actionModalConfig.type === 'toggle' && actionModalConfig.payload?.currentStatus ? '#e74c3c' : '#bb6c02'}
       />
     </Container>
   );
@@ -476,36 +486,8 @@ const Container = styled.div`
   padding: ${(props) => (props.$embedded ? '0' : '2rem')};
   max-width: ${(props) => (props.$embedded ? '100%' : '1600px')};
   margin: 0 auto;
-`;
-
-const Header = styled.div`
-  margin-bottom: 2rem;
-`;
-
-const HeaderContent = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 2rem;
-
-  @media (max-width: 768px) {
-    flex-direction: column;
-  }
-`;
-
-const Title = styled.h1`
-  font-size: 2rem;
-  font-weight: 700;
-  color: var(--color-grey-900);
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.5rem;
-`;
-
-const Description = styled.p`
-  color: var(--color-grey-600);
-  font-size: 1rem;
+  background: ${(props) => (props.$embedded ? 'transparent' : T.bodyBg)};
+  min-height: ${(props) => (props.$embedded ? 'auto' : '100vh')};
 `;
 
 const AddButton = styled.button`
@@ -836,14 +818,14 @@ const ActionButton = styled.button`
   transition: all 0.2s;
   font-size: 0.875rem;
   background: ${(props) => {
-    if (props.$primary) return '#e3f2fd';
+    if (props.$primary) return 'var(--color-primary-50)';
     if (props.$secondary) return '#f3e5f5';
     if (props.$edit) return '#fff3cd';
     if (props.$danger) return '#fce4ec';
     return '#f5f5f5';
   }};
   color: ${(props) => {
-    if (props.$primary) return '#1976d2';
+    if (props.$primary) return 'var(--color-primary-600)';
     if (props.$secondary) return '#7b1fa2';
     if (props.$edit) return '#856404';
     if (props.$danger) return '#c2185b';
@@ -854,7 +836,7 @@ const ActionButton = styled.button`
     transform: translateY(-1px);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     background: ${(props) => {
-    if (props.$primary) return '#bbdefb';
+    if (props.$primary) return 'var(--color-primary-100)';
     if (props.$secondary) return '#e1bee7';
     if (props.$edit) return '#ffeaa7';
     if (props.$danger) return '#f8bbd0';

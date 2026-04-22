@@ -235,7 +235,7 @@ export default function RefundActionPanel({ refund }) {
           padding: '1rem',
           borderRadius: '0.6rem',
           marginBottom: '1.5rem',
-          background: sellerRejected ? '#fee2e2' : !sellerApproved ? '#fef3c7' : !canApprove ? '#dbeafe' : '#d1fae5',
+          background: sellerRejected ? '#fee2e2' : !sellerApproved ? '#fef3c7' : !canApprove ? 'var(--color-primary-100)' : '#d1fae5',
           border: `1px solid ${sellerRejected ? '#fecaca' : !sellerApproved ? '#fde68a' : !canApprove ? '#bfdbfe' : '#a7f3d0'}`,
         }}>
           <div style={{ fontSize: '1.3rem', fontWeight: 600, marginBottom: '0.5rem', color: '#374151' }}>

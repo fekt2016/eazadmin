@@ -25,31 +25,22 @@ import { formatDate } from "../../shared/utils/helpers";
 import { toast } from "react-toastify";
 import { LoadingSpinner } from "../../shared/components/LoadingSpinner";
 import { ConfirmationModal } from "../../shared/components/Modal/ConfirmationModal";
+import {
+  PageHeader,
+  PageTitle,
+  PageSub,
+} from "../../shared/components/page/PageHeader";
+
+const T = {
+  bodyBg: "var(--color-body-bg)",
+};
 
 const Container = styled.div`
-  padding: ${(props) => (props.$embedded ? '0' : '2rem')};
-  max-width: ${(props) => (props.$embedded ? '100%' : '1600px')};
+  padding: ${(props) => (props.$embedded ? "0" : "2rem")};
+  max-width: ${(props) => (props.$embedded ? "100%" : "1600px")};
   margin: 0 auto;
-`;
-
-const Header = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-`;
-
-const TitleSection = styled.div`
-  h1 {
-    font-size: 2rem;
-    font-weight: 600;
-    color: #2c3e50;
-    margin: 0 0 0.5rem 0;
-  }
-  p {
-    color: #7f8c8d;
-    margin: 0;
-  }
+  background: ${(props) => (props.$embedded ? "transparent" : T.bodyBg)};
+  min-height: ${(props) => (props.$embedded ? "auto" : "100vh")};
 `;
 
 const StatsGrid = styled.div`
@@ -70,7 +61,7 @@ const StatCard = styled.div`
 
   .icon {
     font-size: 2rem;
-    color: ${(props) => props.color || "#3498db"};
+    color: ${(props) => props.color || "var(--color-primary-600)"};
   }
 
   .content {
@@ -129,8 +120,8 @@ const FilterButton = styled.button`
   transition: all 0.2s;
 
   &:hover {
-    border-color: #3498db;
-    color: #3498db;
+    border-color: var(--color-primary-600);
+    color: var(--color-primary-600);
   }
 `;
 
@@ -223,7 +214,7 @@ const StatusBadge = styled(Badge)`
 
 const PlatformBadge = styled(Badge)`
   background: ${(props) => {
-    if (props.platform === "eazmain") return "#3498db";
+    if (props.platform === "eazmain") return "var(--color-primary-600)";
     if (props.platform === "eazseller") return "#e67e22";
     return "#9b59b6";
   }};
@@ -296,8 +287,8 @@ const PageButton = styled.button`
   transition: all 0.2s;
 
   &:hover:not(:disabled) {
-    border-color: #3498db;
-    color: #3498db;
+    border-color: var(--color-primary-600);
+    color: var(--color-primary-600);
   }
 
   &:disabled {
@@ -306,9 +297,9 @@ const PageButton = styled.button`
   }
 
   &.active {
-    background: #3498db;
+    background: var(--color-primary-600);
     color: white;
-    border-color: #3498db;
+    border-color: var(--color-primary-600);
   }
 `;
 
@@ -369,10 +360,6 @@ export default function DeviceSessionsPage({ embedded = false }) {
   const forceLogoutDevice = useForceLogoutDevice();
   const forceLogoutUser = useForceLogoutUser();
 
-  // Debug: Log the API response
-  if (sessionsData) {
-    console.log('[DeviceSessionsPage] API Response:', sessionsData);
-  }
   if (error) {
     console.error('[DeviceSessionsPage] API Error:', error);
   }
@@ -458,7 +445,7 @@ export default function DeviceSessionsPage({ embedded = false }) {
             style={{
               marginTop: '1rem',
               padding: '0.75rem 1.5rem',
-              background: '#3498db',
+              background: 'var(--color-primary-600)',
               color: 'white',
               border: 'none',
               borderRadius: '8px',
@@ -475,12 +462,12 @@ export default function DeviceSessionsPage({ embedded = false }) {
   return (
     <Container $embedded={embedded}>
       {!embedded && (
-        <Header>
-          <TitleSection>
-            <h1>Device Sessions</h1>
-            <p>Manage and monitor all device sessions across the platform</p>
-          </TitleSection>
-        </Header>
+        <PageHeader>
+          <div>
+            <PageTitle>Device Sessions</PageTitle>
+            <PageSub>Manage and monitor all device sessions across the platform</PageSub>
+          </div>
+        </PageHeader>
       )}
 
       <StatsGrid>
@@ -522,7 +509,7 @@ export default function DeviceSessionsPage({ embedded = false }) {
             {suspiciousOnly && <div className="label" style={{ marginTop: "0.25rem", fontSize: "0.75rem" }}>Filter active</div>}
           </div>
         </StatCard>
-        <StatCard color="#3498db">
+        <StatCard color="var(--color-primary-600)">
           <div className="icon">
             <FaUserShield />
           </div>

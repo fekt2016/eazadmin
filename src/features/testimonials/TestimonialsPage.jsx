@@ -5,6 +5,21 @@ import { LoadingSpinner } from "../../shared/components/LoadingSpinner";
 import useTestimonial from "../../shared/hooks/useTestimonial";
 import { toast } from "react-toastify";
 import { ConfirmationModal } from "../../shared/components/Modal/ConfirmationModal";
+import {
+  PageHeader,
+  PageTitle,
+  PageSub,
+} from "../../shared/components/page/PageHeader";
+
+const T = {
+  bodyBg: "var(--color-body-bg)",
+};
+
+const IntroHeader = styled(PageHeader)`
+  flex-direction: column;
+  align-items: stretch;
+  margin-bottom: 1.5rem;
+`;
 
 const truncate = (text, max = 120) => {
   if (!text || typeof text !== "string") return "";
@@ -118,12 +133,12 @@ export default function TestimonialsPage() {
 
   return (
     <Wrap>
-      <Header>
-        <Title>Seller testimonials</Title>
-        <Subtitle>
+      <IntroHeader>
+        <PageTitle>Seller testimonials</PageTitle>
+        <PageSub>
           Approve to publish on the buyer homepage. Unpublish keeps approval but
           hides from the site.
-        </Subtitle>
+        </PageSub>
         <Toolbar>
           <SearchWrap>
             <FiSearch />
@@ -149,7 +164,7 @@ export default function TestimonialsPage() {
             <option value="rejected">Rejected</option>
           </FilterSelect>
         </Toolbar>
-      </Header>
+      </IntroHeader>
 
       <Stats>
         <Stat>
@@ -389,23 +404,8 @@ export default function TestimonialsPage() {
 const Wrap = styled.div`
   padding: 1.5rem;
   max-width: 1400px;
-`;
-
-const Header = styled.div`
-  margin-bottom: 1.5rem;
-`;
-
-const Title = styled.h1`
-  margin: 0 0 0.35rem;
-  font-size: 1.5rem;
-  color: #0f172a;
-`;
-
-const Subtitle = styled.p`
-  margin: 0 0 1rem;
-  color: #64748b;
-  font-size: 0.9rem;
-  line-height: 1.45;
+  min-height: 100vh;
+  background: ${T.bodyBg};
 `;
 
 const Toolbar = styled.div`

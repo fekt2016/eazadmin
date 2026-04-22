@@ -6,29 +6,30 @@ import styled from 'styled-components';
 import { useAdminTickets } from '../../shared/hooks/useSupport';
 import { STATUS_COLORS, PRIORITY_COLORS } from '../../features/support/supportTypes';
 import { PATHS } from '../../routes/routePath';
+import { PageHeader, PageTitle, PageSub } from '../../shared/components/page/PageHeader';
+
+const T = {
+  primary: 'var(--color-primary-600)',
+  primaryLight: 'var(--color-primary-500)',
+  primaryBg: 'var(--color-primary-100)',
+  border: 'var(--color-border)',
+  cardBg: 'var(--color-card-bg)',
+  bodyBg: 'var(--color-body-bg)',
+  text: 'var(--color-grey-900)',
+  textMuted: 'var(--color-grey-500)',
+  textLight: 'var(--color-grey-400)',
+  radius: 'var(--border-radius-xl)',
+  radiusSm: 'var(--border-radius-md)',
+  shadow: 'var(--shadow-sm)',
+  shadowMd: 'var(--shadow-md)',
+};
 
 const Container = styled.div`
   max-width: 160rem;
   margin: 0 auto;
   padding: 3rem 2.4rem;
   min-height: 100vh;
-  background: #fafbfc;
-`;
-
-const Header = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 3rem;
-  flex-wrap: wrap;
-  gap: 1.6rem;
-`;
-
-const Title = styled.h1`
-  font-size: 2.4rem;
-  font-weight: 700;
-  color: #1a202c;
-  margin: 0;
+  background: ${T.bodyBg};
 `;
 
 const FiltersBar = styled.div`
@@ -37,11 +38,11 @@ const FiltersBar = styled.div`
   margin-bottom: 2.4rem;
   flex-wrap: wrap;
   align-items: center;
-  background: #ffffff;
+  background: ${T.cardBg};
   padding: 1.6rem;
-  border-radius: 1.2rem;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border-radius: ${T.radius};
+  border: 1px solid ${T.border};
+  box-shadow: ${T.shadow};
 `;
 
 const SearchInput = styled.div`
@@ -69,8 +70,8 @@ const Input = styled.input`
   
   &:focus {
     outline: none;
-    border-color: #3B82F6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: var(--color-primary-600);
+    box-shadow: 0 0 0 3px rgba(187, 108, 2, 0.1);
   }
 `;
 
@@ -85,16 +86,16 @@ const FilterSelect = styled.select`
   
   &:focus {
     outline: none;
-    border-color: #3B82F6;
+    border-color: var(--color-primary-600);
   }
 `;
 
 const TicketsTable = styled.div`
-  background: #ffffff;
-  border-radius: 1.2rem;
-  border: 1px solid #e2e8f0;
+  background: ${T.cardBg};
+  border-radius: ${T.radius};
+  border: 1px solid ${T.border};
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: ${T.shadow};
 `;
 
 const TableHeader = styled.div`
@@ -102,13 +103,13 @@ const TableHeader = styled.div`
   grid-template-columns: 1fr 1.5fr 1fr 1fr 1fr 1fr 1fr;
   gap: 1.6rem;
   padding: 1.6rem 2.4rem;
-  background: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
+  background: ${T.bodyBg};
+  border-bottom: 1px solid ${T.border};
   font-weight: 600;
-  font-size: 0.875rem;
-  color: #64748b;
+  font-size: var(--text-xs);
+  color: ${T.textMuted};
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   
   @media (max-width: 1200px) {
     display: none;
@@ -120,13 +121,13 @@ const TicketRow = styled(motion.div)`
   grid-template-columns: 1fr 1.5fr 1fr 1fr 1fr 1fr 1fr;
   gap: 1.6rem;
   padding: 1.6rem 2.4rem;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid ${T.border};
   cursor: pointer;
   transition: all 0.2s ease;
   align-items: center;
   
   &:hover {
-    background: #f8fafc;
+    background: ${T.bodyBg};
   }
   
   &:last-child {
@@ -167,7 +168,7 @@ const CellLabel = styled.span`
 const TicketNumber = styled.div`
   font-size: 0.875rem;
   font-weight: 600;
-  color: #3B82F6;
+  color: var(--color-primary-600);
   font-family: 'Courier New', monospace;
 `;
 
@@ -242,23 +243,23 @@ const StatsBar = styled.div`
 `;
 
 const StatCard = styled.div`
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 1.2rem;
+  background: ${T.cardBg};
+  border: 1px solid ${T.border};
+  border-radius: ${T.radius};
   padding: 1.6rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: ${T.shadow};
 `;
 
 const StatValue = styled.div`
   font-size: 2rem;
   font-weight: 700;
-  color: #1a202c;
+  color: ${T.text};
   margin-bottom: 0.4rem;
 `;
 
 const StatLabel = styled.div`
   font-size: 0.875rem;
-  color: #64748b;
+  color: ${T.textMuted};
 `;
 
 /**
@@ -365,19 +366,14 @@ const AdminTicketsPage = () => {
 
   return (
     <Container>
-      <Header>
+      <PageHeader>
         <div>
-          <Title>All Support Tickets</Title>
-          <p style={{ 
-            margin: '0.8rem 0 0 0', 
-            color: '#64748b', 
-            fontSize: '1rem',
-            fontWeight: '400'
-          }}>
+          <PageTitle>All Support Tickets</PageTitle>
+          <PageSub>
             View and manage all support tickets from buyers, sellers, and admins. Click any ticket to reply.
-          </p>
+          </PageSub>
         </div>
-      </Header>
+      </PageHeader>
 
       <FiltersBar>
         <SearchInput>

@@ -75,15 +75,15 @@ const useSellerAdmin = (pageParam = 1, limit = 10) => {
     },
   });
 
-  // Backend handleFactory.getAll returns: { status: 'success', results: [...], meta: {...} }
-  // Axios response structure: response = { data: { status: 'success', results: [...], meta: {...} } }
-  // So sellers = axios response, sellers.data = { status: 'success', results: [...], meta: {...} }
-  // Check for nested data structure (some APIs wrap it in data.data)
-  const sellersData = sellers?.data?.data || sellers?.data || {};
-  
+  // Backend getAllSeller returns: { status: 'success', results: N, meta: {...}, data: { results: [...] } }
+  // Axios response structure: sellers.data = { status, results: N, meta: {...}, data: { results: [...] } }
+  // So meta lives at sellers.data.meta, and the array lives at sellers.data.data.results
+  const sellersBody = sellers?.data || {};                      // { status, results: N, meta, data: { results } }
+  const sellersData = sellersBody?.data || sellersBody;         // { results: [...] }
+
   // Ensure results is always an array
   const results = Array.isArray(sellersData?.results) ? sellersData.results : [];
-  const meta = sellersData?.meta || {
+  const meta = sellersBody?.meta || {
     total: 0,
     totalPages: 1,
     currentPage: page,
@@ -94,7 +94,6 @@ const useSellerAdmin = (pageParam = 1, limit = 10) => {
   const updateStatus = useMutation({
     mutationFn: (statusData) => adminApi.updateSellerStatus(statusData),
     onSuccess: (data, variables) => {
-      console.log("Status updated successfully:", data);
       queryClient.invalidateQueries(["admin", "sellers"]);
       if (variables?.sellerId) {
         queryClient.invalidateQueries(["admin", "seller", variables.sellerId, "details"]);
@@ -104,7 +103,6 @@ const useSellerAdmin = (pageParam = 1, limit = 10) => {
   const updateSeller = useMutation({
     mutationFn: ({ id, data }) => adminApi.updateSeller(id, data),
     onSuccess: (data) => {
-      console.log("Seller updated successfully:", data);
       // Invalidate the sellers query
       queryClient.invalidateQueries(["admin", "sellers"]);
     },
@@ -163,12 +161,6 @@ export const usePayoutVerificationDetails = (sellerId) => {
     queryFn: async () => {
       try {
         const response = await adminApi.getPayoutVerificationDetails(sellerId);
-        console.log('[usePayoutVerificationDetails] ✅ Fetched payout verification data:', {
-          sellerId,
-          hasData: !!response,
-          responseStructure: response,
-          paymentMethodRecords: response?.data?.data?.seller?.paymentMethodRecords?.length || 0,
-        });
         return response;
       } catch (error) {
         console.error('[usePayoutVerificationDetails] ❌ Error fetching payout verification:', {
@@ -179,7 +171,6 @@ export const usePayoutVerificationDetails = (sellerId) => {
         });
         // Don't throw - return empty structure to prevent blocking
         if (error.isTimeout || error.code === 'ECONNABORTED') {
-          console.warn('[usePayoutVerificationDetails] ⚠️ Request timed out, returning empty structure');
           return {
             data: {
               status: 'success',

@@ -4,6 +4,15 @@ import styled from "styled-components";
 import { FaStore, FaMoneyBillWave, FaLock, FaClock, FaCheckCircle, FaTimesCircle } from "react-icons/fa";
 import useSellerAdmin from "../../shared/hooks/useSellerAdmin";
 import { PATHS } from "../../routes/routePaths";
+import {
+  PageHeader,
+  PageTitle,
+  PageSub,
+} from "../../shared/components/page/PageHeader";
+
+const T = {
+  bodyBg: "var(--color-body-bg)",
+};
 
 const SellerBalancesPage = () => {
   const navigate = useNavigate();
@@ -56,17 +65,19 @@ const SellerBalancesPage = () => {
 
   return (
     <Container>
-      <Header>
-        <Title>
-          <FaMoneyBillWave style={{ marginRight: "0.75rem" }} />
-          Seller Balances
-        </Title>
-        <Description>View and manage all seller account balances</Description>
-      </Header>
+      <PageHeader>
+        <div>
+          <PageTitle>
+            <FaMoneyBillWave style={{ marginRight: "0.75rem" }} />
+            Seller Balances
+          </PageTitle>
+          <PageSub>View and manage all seller account balances</PageSub>
+        </div>
+      </PageHeader>
 
       <StatsGrid>
         <StatCard>
-          <StatIcon style={{ background: "#3b82f620", color: "#3b82f6" }}>
+          <StatIcon style={{ background: "rgba(187, 108, 2, 0.13)", color: "var(--color-primary-600)" }}>
             <FaStore />
           </StatIcon>
           <StatInfo>
@@ -273,26 +284,8 @@ export default SellerBalancesPage;
 // Styled Components
 const Container = styled.div`
   padding: 2rem;
-  background-color: #f5f7fb;
+  background: ${T.bodyBg};
   min-height: 100vh;
-`;
-
-const Header = styled.div`
-  margin-bottom: 2rem;
-`;
-
-const Title = styled.h1`
-  font-size: 2rem;
-  font-weight: 700;
-  color: #1e293b;
-  display: flex;
-  align-items: center;
-  margin-bottom: 0.5rem;
-`;
-
-const Description = styled.p`
-  color: #64748b;
-  font-size: 1rem;
 `;
 
 const StatsGrid = styled.div`
@@ -351,8 +344,8 @@ const SearchInput = styled.input`
   font-size: 0.875rem;
   &:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: var(--color-primary-600);
+    box-shadow: 0 0 0 3px rgba(187, 108, 2, 0.1);
   }
 `;
 
@@ -395,7 +388,7 @@ const TableHeader = styled.th`
 
 const SortIndicator = styled.span`
   margin-left: 0.5rem;
-  color: #3b82f6;
+  color: var(--color-primary-600);
 `;
 
 const TableCell = styled.td`
@@ -458,7 +451,7 @@ const StatusBadge = styled.div`
 
 const ActionButton = styled.button`
   padding: 0.5rem 1rem;
-  background-color: #3b82f6;
+  background-color: var(--color-primary-600);
   color: white;
   border: none;
   border-radius: 0.375rem;
@@ -467,7 +460,7 @@ const ActionButton = styled.button`
   cursor: pointer;
   transition: background-color 0.2s;
   &:hover {
-    background-color: #2563eb;
+    background-color: var(--color-primary-600);
   }
 `;
 
@@ -482,14 +475,14 @@ const Pagination = styled.div`
 const PaginationButton = styled.button`
   padding: 0.5rem 1rem;
   border: 1px solid #e2e8f0;
-  background-color: ${(props) => (props.$active ? "#3b82f6" : "white")};
+  background-color: ${(props) => (props.$active ? "var(--color-primary-600)" : "white")};
   color: ${(props) => (props.$active ? "white" : "#475569")};
   border-radius: 0.375rem;
   font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.2s;
   &:hover:not(:disabled) {
-    background-color: ${(props) => (props.$active ? "#2563eb" : "#f1f5f9")};
+    background-color: ${(props) => (props.$active ? "var(--color-primary-600)" : "#f1f5f9")};
   }
   &:disabled {
     opacity: 0.5;
@@ -513,7 +506,7 @@ const ItemsPerPageSelect = styled.select`
   cursor: pointer;
   &:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: var(--color-primary-600);
   }
 `;
 

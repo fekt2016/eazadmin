@@ -2,7 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import adminUserApi from '../services/adminUserApi';
 import { useState, useEffect } from "react";
 
-const useAdminsAdmin = (page = 1, limit = 10) => {
+const useAdminsAdmin = (page = 1, limit = 10, options = {}) => {
+  const { enabled = true } = options;
   const [searchValue, setSearchValue] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
   const [sort, setSort] = useState("createdAt:desc");
@@ -26,6 +27,7 @@ const useAdminsAdmin = (page = 1, limit = 10) => {
     error,
   } = useQuery({
     queryKey: ["admin", "admins", page, limit, appliedSearch, sort],
+    enabled,
     queryFn: async () => {
       try {
         const params = {
@@ -41,7 +43,6 @@ const useAdminsAdmin = (page = 1, limit = 10) => {
       } catch (error) {
         // If timeout or network error, return empty result instead of throwing
         if (error.isTimeout || error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-          console.warn('[useAdminsAdmin] Request timed out, returning empty result:', error);
           return {
             data: {
               status: 'success',
@@ -68,28 +69,23 @@ const useAdminsAdmin = (page = 1, limit = 10) => {
   // Axios response structure: response = { data: { status: 'success', results: [...], meta: {...} } }
   // So admins = axios response, admins.data = { status: 'success', results: [...], meta: {...} }
   // Check for nested data structure (some APIs wrap it in data.data)
-  const adminsData = admins?.data?.data || admins?.data || {};
-  
-  // Ensure results is always an array
-  const results = Array.isArray(adminsData?.results) ? adminsData.results : [];
-  const meta = adminsData?.meta || {
+  const emptyMeta = {
     total: 0,
     totalPages: 1,
     currentPage: page,
     itemsPerPage: limit,
   };
+  // When disabled, ignore React Query cache so non-superadmins never see a stale admin list
+  // (e.g. after logout / role change in the same SPA session).
+  const adminsDataRaw = admins?.data?.data || admins?.data || {};
+  const adminsData = enabled ? adminsDataRaw : { results: [], meta: emptyMeta };
+
+  // Ensure results is always an array
+  const results = Array.isArray(adminsData?.results) ? adminsData.results : [];
+  const meta = adminsData?.meta || emptyMeta;
   
-  // Debug logging (remove in production)
   if (error) {
     console.error('[useAdminsAdmin] Error fetching admins:', error);
-  }
-  if (admins && results.length === 0 && meta.total === 0) {
-    console.log('[useAdminsAdmin] No admins found. Response structure:', {
-      admins,
-      adminsData,
-      results,
-      meta,
-    });
   }
 
   // Update admin mutation
@@ -111,8 +107,8 @@ const useAdminsAdmin = (page = 1, limit = 10) => {
   return {
     admins: { results, meta },
     totalAdmins: meta.total || 0,
-    isLoading,
-    error,
+    isLoading: Boolean(enabled && isLoading),
+    error: enabled ? error : undefined,
     updateAdmin,
     deleteAdmin,
     setSearchValue,

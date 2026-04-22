@@ -217,7 +217,7 @@ const Intro = styled.div`
 
   svg {
     flex-shrink: 0;
-    color: var(--color-primary, #2563eb);
+    color: var(--color-primary-600);
   }
 `;
 
@@ -241,7 +241,7 @@ const AnalyticsHeader = styled.div`
   }
 
   svg {
-    color: var(--color-primary, #2563eb);
+    color: var(--color-primary-600);
     font-size: 1.25rem;
   }
 `;
@@ -320,7 +320,7 @@ const TabsHeader = styled.div`
 const TabButton = styled.button`
   appearance: none;
   border: 1px solid var(--color-grey-200, #e5e7eb);
-  background: ${(p) => (p.$active ? "var(--color-primary, #2563eb)" : "white")};
+  background: ${(p) => (p.$active ? "var(--color-primary-600)" : "white")};
   color: ${(p) => (p.$active ? "white" : "var(--color-grey-800, #374151)")};
   border-radius: 10px;
   padding: 0.55rem 0.9rem;
@@ -329,7 +329,7 @@ const TabButton = styled.button`
   font-size: 0.875rem;
 
   &:hover {
-    border-color: var(--color-primary, #2563eb);
+    border-color: var(--color-primary-600);
   }
 `;
 

@@ -15,7 +15,8 @@ export const useAdminStats = () => {
     refetchOnWindowFocus: true,
     refetchOnMount: true,
     retry: (failureCount, error) => {
-      // Don't retry when backend is unreachable (connection refused)
+      // Don't retry on auth errors or network errors
+      if (error?.response?.status === 401 || error?.response?.status === 403) return false;
       if (error?.isNetworkError) return false;
       return failureCount < 2;
     },

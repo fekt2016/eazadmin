@@ -19,13 +19,24 @@ import {
 } from '../../shared/hooks/useSupport';
 import { STATUS_COLORS, PRIORITY_COLORS } from '../../features/support/supportTypes';
 import { PATHS } from '../../routes/routePath';
+import { PageTitle } from '../../shared/components/page/PageHeader';
+
+const T = {
+  border: 'var(--color-border)',
+  cardBg: 'var(--color-card-bg)',
+  bodyBg: 'var(--color-body-bg)',
+  text: 'var(--color-grey-900)',
+  textMuted: 'var(--color-grey-500)',
+  radius: 'var(--border-radius-xl)',
+  shadow: 'var(--shadow-sm)',
+};
 
 const Container = styled.div`
   max-width: 120rem;
   margin: 0 auto;
   padding: 3rem 2rem;
   min-height: 100vh;
-  background: #fafbfc;
+  background: ${T.bodyBg};
 `;
 
 const BackButton = styled(motion.button)`
@@ -44,25 +55,23 @@ const BackButton = styled(motion.button)`
   transition: all 0.2s ease;
   
   &:hover {
-    border-color: #3B82F6;
-    color: #3B82F6;
+    border-color: var(--color-primary-600);
+    color: var(--color-primary-600);
   }
 `;
 
 const TicketHeader = styled.div`
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 1.2rem;
+  background: ${T.cardBg};
+  border: 1px solid ${T.border};
+  border-radius: ${T.radius};
   padding: 2.4rem;
   margin-bottom: 2.4rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: ${T.shadow};
 `;
 
-const TicketTitle = styled.h1`
-  font-size: 2rem;
-  font-weight: 700;
-  color: #1a202c;
+const TicketPageTitle = styled(PageTitle)`
   margin: 0 0 1.6rem 0;
+  font-size: var(--text-2xl);
 `;
 
 const TicketMeta = styled.div`
@@ -81,7 +90,7 @@ const MetaItem = styled.div`
 const MetaLabel = styled.span`
   font-size: 0.75rem;
   font-weight: 600;
-  color: #64748b;
+  color: ${T.textMuted};
   text-transform: uppercase;
   letter-spacing: 0.05em;
 `;
@@ -89,7 +98,7 @@ const MetaLabel = styled.span`
 const MetaValue = styled.span`
   font-size: 0.9375rem;
   font-weight: 500;
-  color: #1a202c;
+  color: ${T.text};
 `;
 
 const Badge = styled.span`
@@ -110,7 +119,7 @@ const AdminControls = styled.div`
   gap: 1.6rem;
   flex-wrap: wrap;
   padding-top: 2.4rem;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid ${T.border};
 `;
 
 const ControlGroup = styled.div`
@@ -138,8 +147,8 @@ const ControlSelect = styled.select`
   
   &:focus {
     outline: none;
-    border-color: #3B82F6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: var(--color-primary-600);
+    box-shadow: 0 0 0 3px rgba(187, 108, 2, 0.1);
   }
 `;
 
@@ -171,7 +180,7 @@ const MessageContent = styled.div`
   padding: 1.2rem 1.6rem;
   border-radius: 1.2rem;
   background: ${props => {
-    if (props.$isAdmin) return '#3B82F6';
+    if (props.$isAdmin) return 'var(--color-primary-600)';
     if (props.$isInternal) return '#FEF3C7';
     return '#f1f5f9';
   }};
@@ -220,8 +229,8 @@ const TextArea = styled.textarea`
   
   &:focus {
     outline: none;
-    border-color: #3B82F6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: var(--color-primary-600);
+    box-shadow: 0 0 0 3px rgba(187, 108, 2, 0.1);
   }
 `;
 
@@ -241,7 +250,7 @@ const CheckboxLabel = styled.label`
 `;
 
 const SubmitButton = styled(motion.button)`
-  background: #3B82F6;
+  background: var(--color-primary-600);
   color: #ffffff;
   border: none;
   padding: 1.2rem 2.4rem;
@@ -255,9 +264,9 @@ const SubmitButton = styled(motion.button)`
   gap: 0.8rem;
   
   &:hover:not(:disabled) {
-    background: #2563EB;
+    background: var(--color-primary-600);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 4px 12px rgba(187, 108, 2, 0.3);
   }
   
   &:disabled {
@@ -447,7 +456,7 @@ const AdminTicketDetailPage = () => {
       </BackButton>
 
       <TicketHeader>
-        <TicketTitle>{ticket.title}</TicketTitle>
+        <TicketPageTitle>{ticket.title}</TicketPageTitle>
         <TicketMeta>
           <MetaItem>
             <MetaLabel>Ticket Number</MetaLabel>

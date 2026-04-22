@@ -29,11 +29,39 @@ import adminSellerApi from '../../shared/services/adminSellerApi';
 import { EAZSHOP_SELLER_ID, PLATFORM_STORE_NAME } from '../../shared/constants/systemConstants';
 import { normalizeApiResponse } from '../../shared/utils/apiUtils';
 import ConfirmationModal from '../../shared/components/Modal/ConfirmationModal';
+import {
+  PageHeader as SharedPageHeader,
+  PageTitle,
+  HeaderActions,
+} from '../../shared/components/page/PageHeader';
+
+const T = {
+  primary: 'var(--color-primary-600)',
+  primaryLight: 'var(--color-primary-500)',
+  primaryBg: 'var(--color-primary-100)',
+  border: 'var(--color-border)',
+  cardBg: 'var(--color-card-bg)',
+  bodyBg: 'var(--color-body-bg)',
+  text: 'var(--color-grey-900)',
+  textMuted: 'var(--color-grey-500)',
+  textLight: 'var(--color-grey-400)',
+  radius: 'var(--border-radius-xl)',
+  radiusSm: 'var(--border-radius-md)',
+  shadow: 'var(--shadow-sm)',
+  shadowMd: 'var(--shadow-md)',
+};
+
+const DetailPageHeader = styled(SharedPageHeader)`
+  padding: 1.5rem;
+  background: ${T.cardBg};
+  border: 1px solid ${T.border};
+  border-radius: ${T.radius};
+  box-shadow: ${T.shadow};
+`;
 
 const OrderDetail = () => {
   const { id: orderId } = useParams();
   const { data: orderData, refetch: refetchOrder } = useGetOrderById(orderId);
-  console.log("[OrderDetail] Order data:", orderData);
   const queryClient = useQueryClient();
   const confirmPaymentMutation = useConfirmPayment();
   const updateOrderStatusMutation = useUpdateOrderStatus();
@@ -100,7 +128,7 @@ const OrderDetail = () => {
       }
       const sellerOrderList = rawOrder.sellerOrder || [];
       // Format dates (use rawOrder as source of truth)
-      const createdAt = new Date((rawOrder.createdAt ?? orderform?.createdAt));
+      const createdAt = new Date(rawOrder.createdAt);
       const formattedDate = createdAt.toLocaleDateString("en-US", {
         year: "numeric",
         month: "long",
@@ -124,7 +152,7 @@ const OrderDetail = () => {
       };
 
       // Transform order items – use product ref when present, fallback to snapshot fields
-      const items = (rawOrder.orderItems || orderform?.orderItems || []).map((item, index) => {
+      const items = (rawOrder.orderItems || []).map((item, index) => {
         const name = item.product?.name ?? item.productName ?? "Product";
         const price = item.price ?? item.product?.price ?? 0;
         const sku = item.sku ?? item.product?.defaultSku ?? "N/A";
@@ -148,15 +176,14 @@ const OrderDetail = () => {
 
       // Calculate totals
       const subtotal = items.reduce((sum, item) => sum + item.total, 0);
-      const shipping = (sellerOrderList?.[0]?.shippingCost ?? rawOrder.sellerOrder?.[0]?.shippingCost ?? orderform?.sellerOrder?.[0]?.shippingCost) || 0;
-      const tax = (rawOrder.tax ?? orderform?.tax) || 0;
+      const shipping = (sellerOrderList?.[0]?.shippingCost ?? rawOrder.sellerOrder?.[0]?.shippingCost) || 0;
+      const tax = rawOrder.tax || 0;
       const total = subtotal + shipping + tax;
 
       const currentStatus = (rawOrder.currentStatus || rawOrder.orderStatus || rawOrder.status || "").toString().toLowerCase();
       const isDelivered = currentStatus === "delivered" || currentStatus === "delievered";
 
-      const trackingNumber =
-        rawOrder.trackingNumber ?? orderform?.trackingNumber ?? null;
+      const trackingNumber = rawOrder.trackingNumber ?? null;
 
       // Backend uses both 'paid' and 'completed' for payment status (e.g. Paystack webhook sets 'completed')
       const rawPaymentStatus = (rawOrder.paymentStatus || "pending").toString().toLowerCase();
@@ -176,8 +203,8 @@ const OrderDetail = () => {
           : rawOrder.currentStatus || rawOrder.orderStatus || rawOrder.status || "pending";
 
       setOrder({
-        id: rawOrder._id ?? orderform?.id,
-        orderNumber: rawOrder.orderNumber ?? orderform?.orderNumber,
+        id: rawOrder._id,
+        orderNumber: rawOrder.orderNumber,
         trackingNumber: trackingNumber && String(trackingNumber).trim() ? String(trackingNumber).trim() : null,
         date: formattedDate,
         time: formattedTime,
@@ -278,54 +305,10 @@ const OrderDetail = () => {
           .filter(Boolean),
       });
 
-      console.log("[OrderDetail] Raw API response:", orderData);
-      console.log("[OrderDetail] Extracted order document (rawOrder):", rawOrder);
-      console.log("[OrderDetail] Formatted order summary:", {
-        id: rawOrder._id ?? rawOrder.id,
-        orderNumber: rawOrder.orderNumber,
-        customer: { name: rawOrder.user?.name ?? "—", email: rawOrder.user?.email ?? "—", phone: rawOrder.user?.phone ?? "—" },
-        shippingAddress: rawOrder.shippingAddress,
-        itemsCount: items.length,
-        summary: { subtotal, shipping, tax, total },
-        status: rawOrder.orderStatus ?? rawOrder.status,
-        paymentStatus: rawOrder.paymentStatus,
-        sellersCount: (sellerOrderList || []).length,
-      });
-
       setStatus(displayStatus);
     }
   }, [orderData]);
 
-  useEffect(() => {
-    if (order) {
-      console.log("[OrderDetail] Order:", order);
-    }
-  }, [order]);
-
-  // Log each seller's information (e.g. for orders with 2 sellers)
-  useEffect(() => {
-    if (!order?.sellers?.length) return;
-    const sellersInfo = order.sellers.map((s, index) => {
-      const fetched = s.sellerId ? sellerById[String(s.sellerId)] : null;
-      return {
-        index: index + 1,
-        sellerId: s.sellerId,
-        name: fetched?.name ?? s.name,
-        shopName: fetched?.shopName ?? s.shopName,
-        email: fetched?.email ?? s.email,
-        subtotal: s.subtotal,
-        total: s.total,
-        shippingCost: s.shippingCost,
-        status: s.status,
-        payoutStatus: s.payoutStatus,
-        fromFetch: !!fetched,
-      };
-    });
-    console.log(`[OrderDetail] Sellers (${sellersInfo.length}):`, sellersInfo);
-    sellersInfo.forEach((info, i) => {
-      console.log(`[OrderDetail] Seller ${i + 1}:`, info);
-    });
-  }, [order?.sellers, sellerById]);
 
   const handleStatusChange = async (newStatus) => {
     try {
@@ -423,7 +406,7 @@ const OrderDetail = () => {
 
   return (
     <OrderDetailContainer>
-      <PageHeader>
+      <DetailPageHeader>
         <HeaderInfo>
           <PageTitle>Order #{order.orderNumber ?? "—"}</PageTitle>
           <OrderDate>
@@ -448,7 +431,7 @@ const OrderDetail = () => {
             <FaPen /> Edit Order
           </PrimaryButton>
         </HeaderActions>
-      </PageHeader>
+      </DetailPageHeader>
 
       <StatusCard>
         <StatusInfo>
@@ -690,7 +673,7 @@ const OrderDetail = () => {
                       <SellerContact style={{ marginTop: "0.25rem" }}>
                         <Link
                           to={`/dashboard/${PATHS.SELLERDETAIL.replace(":id", sellerIdStr)}`}
-                          style={{ color: "#4361ee", fontSize: "0.875rem" }}
+                          style={{ color: "#bb6c02", fontSize: "0.875rem" }}
                         >
                           View seller →
                         </Link>
@@ -796,38 +779,20 @@ const LoadingContainer = styled.div`
   align-items: center;
   height: 100vh;
   font-size: 1.5rem;
-  color: #4f46e5;
+  color: ${T.primary};
 `;
 
 const OrderDetailContainer = styled.div`
   padding: 2rem;
-  background-color: #f8fafc;
+  background-color: ${T.bodyBg};
   max-width: 1400px;
   margin: 0 auto;
   font-family: var(--font-body);
 `;
 
-const PageHeader = styled.div`
-  padding: 1.5rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 1.5rem;
-  flex-wrap: wrap;
-  gap: 1rem;
-  background-color: #f8fafc;
-`;
-
 const HeaderInfo = styled.div`
   flex: 1;
   min-width: 300px;
-`;
-
-const PageTitle = styled.h1`
-  font-size: 1.8rem;
-  font-weight: 800;
-  color: #1e293b;
-  margin-bottom: 0.5rem;
 `;
 
 const OrderDate = styled.p`
@@ -845,12 +810,6 @@ const TrackingNumberRow = styled.p`
   color: #64748b;
   font-size: 0.95rem;
   margin-top: 0.25rem;
-`;
-
-const HeaderActions = styled.div`
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
 `;
 
 const ActionButton = styled.button`
@@ -874,13 +833,13 @@ const ActionButton = styled.button`
 `;
 
 const PrimaryButton = styled(ActionButton)`
-  background-color: #4f46e5;
-  border-color: #4f46e5;
+  background-color: ${T.primary};
+  border-color: ${T.primary};
   color: white;
 
   &:hover {
-    background-color: #4338ca;
-    border-color: #4338ca;
+    background-color: var(--color-primary-700);
+    border-color: var(--color-primary-700);
   }
 `;
 
@@ -1053,7 +1012,7 @@ const EditButton = styled.button`
   right: 0.5rem;
   background: none;
   border: none;
-  color: #4f46e5;
+  color: ${T.primary};
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
@@ -1087,7 +1046,7 @@ const NoteTextarea = styled.textarea`
 
 const SaveButton = styled.button`
   align-self: flex-end;
-  background-color: #4f46e5;
+  background-color: ${T.primary};
   color: white;
   border: none;
   border-radius: 0.375rem;
@@ -1097,7 +1056,7 @@ const SaveButton = styled.button`
   transition: background-color 0.2s;
 
   &:hover {
-    background-color: #4338ca;
+    background-color: var(--color-primary-700);
   }
 `;
 
@@ -1363,8 +1322,8 @@ const SellerTypeBadge = styled.span`
   border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 600;
-  background: ${(p) => (p.$type === 'eazshop' ? '#dbeafe' : '#f1f5f9')};
-  color: ${(p) => (p.$type === 'eazshop' ? '#1d4ed8' : '#475569')};
+  background: ${(p) => (p.$type === 'eazshop' ? 'var(--color-primary-100)' : '#f1f5f9')};
+  color: ${(p) => (p.$type === 'eazshop' ? 'var(--color-primary-700)' : '#475569')};
 `;
 
 const SellerAmounts = styled.div`
@@ -1484,7 +1443,8 @@ const TimelineDot = styled.div`
   justify-content: center;
   z-index: 1;
 
-  background-color: ${(props) => (props.completed ? "#4f46e5" : "#e2e8f0")};
+  background-color: ${(props) =>
+    props.completed ? T.primary : "#e2e8f0"};
   color: ${(props) => (props.completed ? "white" : "transparent")};
 
   svg {

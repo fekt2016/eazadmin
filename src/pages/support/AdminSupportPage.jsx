@@ -292,7 +292,7 @@ const AdminSupportPage = () => {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             style={{
-              background: '#3B82F6',
+              background: 'var(--color-primary-600)',
               color: '#ffffff',
               display: 'inline-flex',
               alignItems: 'center',

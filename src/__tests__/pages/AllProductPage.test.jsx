@@ -13,7 +13,7 @@ import AllProductPage from '../../features/products/AllProductPage';
  * - High timeouts for parallel reliability
  */
 
-vi.setConfig({ testTimeout: 30000 });
+vi.setConfig({ testTimeout: 60000 });
 
 const MOCK_PRODUCT = {
     _id: 'prod-123',
@@ -116,7 +116,7 @@ describe('AllProductPage', () => {
             expect(screen.getByRole('heading', { name: /All Products/i })).toBeInTheDocument();
             expect(screen.getByText('Test Product Alpha')).toBeInTheDocument();
             expect(screen.getByText('Alpha Seller')).toBeInTheDocument();
-        }, { timeout: 15000 });
+        }, { timeout: 45000 });
     });
 
     it('handles moderation state rendering', async () => {

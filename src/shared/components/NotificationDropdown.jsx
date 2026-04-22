@@ -80,7 +80,7 @@ const NotificationDropdown = ({ unreadCount }) => {
   const getNotificationColor = (type) => {
     switch (type) {
       case 'order':
-        return '#007bff';
+        return 'var(--color-primary-600)';
       case 'delivery':
         return '#17a2b8';
       case 'payout':
@@ -148,29 +148,11 @@ const NotificationDropdown = ({ unreadCount }) => {
     }
   };
 
-  // Debug: Log unreadCount to verify it's being passed correctly
-  useEffect(() => {
-    console.log('[EazAdmin NotificationDropdown] 🔔 unreadCount prop:', {
-      unreadCount,
-      type: typeof unreadCount,
-      isNumber: typeof unreadCount === 'number',
-      isGreaterThanZero: unreadCount > 0,
-      willShowBadge: unreadCount > 0,
-    });
-  }, [unreadCount]);
-
   return (
     <DropdownContainer ref={dropdownRef}>
       <IconButton onClick={() => setIsOpen(!isOpen)} title="Notifications">
         <FaBell />
-        {/* TEMP DEBUG: Always show badge to test rendering */}
-        {process.env.NODE_ENV === 'development' && (
-          <NotificationBadge style={{ background: 'orange' }}>
-            {unreadCount > 0 ? (unreadCount > 99 ? '99+' : unreadCount) : '0'}
-          </NotificationBadge>
-        )}
-        {/* PRODUCTION: Only show if count > 0 */}
-        {process.env.NODE_ENV !== 'development' && unreadCount > 0 && (
+        {unreadCount > 0 && (
           <NotificationBadge>{unreadCount > 99 ? '99+' : unreadCount}</NotificationBadge>
         )}
       </IconButton>
@@ -324,7 +306,7 @@ const DropdownHeader = styled.div`
 `;
 
 const UnreadBadge = styled.span`
-  background: #007bff;
+  background: var(--color-primary-600);
   color: white;
   padding: 0.25rem 0.75rem;
   border-radius: 12px;
@@ -350,8 +332,7 @@ const NotificationItem = styled.div`
   border-bottom: 1px solid #f3f4f6;
 
   ${props => props.unread && `
-    background: #f0f7ff;
-    border-left: 3px solid #007bff;
+    background: var(--color-primary-50);
   `}
 
   &:hover {
@@ -408,7 +389,7 @@ const UnreadDot = styled.div`
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #007bff;
+  background: var(--color-primary-600);
   flex-shrink: 0;
   margin-top: 0.5rem;
 `;
@@ -470,7 +451,7 @@ const ViewAllButton = styled.button`
   padding: 0.625rem;
   background: transparent;
   border: none;
-  color: #007bff;
+  color: var(--color-primary-600);
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;

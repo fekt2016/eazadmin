@@ -55,7 +55,7 @@ const TimelineIcon = styled.div`
       case 'rejected':
         return '#fee2e2';
       case 'completed':
-        return '#dbeafe';
+        return 'var(--color-primary-100)';
       default:
         return '#e5e7eb';
     }
@@ -69,7 +69,7 @@ const TimelineIcon = styled.div`
       case 'rejected':
         return '#991b1b';
       case 'completed':
-        return '#1e40af';
+        return 'var(--color-primary-700)';
       default:
         return '#374151';
     }

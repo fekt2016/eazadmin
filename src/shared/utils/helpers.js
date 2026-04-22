@@ -1,9 +1,6 @@
-import { jwtDecode } from "jwt-decode";
 
 export const formatCurrency = (value) =>
-  new Intl.NumberFormat("en", { style: "currency", currency: "USD" }).format(
-    value
-  );
+  `GH₵${Number(value || 0).toFixed(2)}`;
 
 export function formatDate(dateStr) {
   const date = new Intl.DateTimeFormat("en", {
@@ -74,24 +71,6 @@ export function formatTime(date) {
   }).format(new Date(date));
 }
 
-/**
- * @deprecated LEGACY: Not used anywhere. Auth is cookie-only (admin_jwt);
- * do not use JWT in localStorage. Kept only for reference; safe to remove.
- */
-export function returnRole(token) {
-  if (token) {
-    const decodeToken = jwtDecode(token);
-    const expireTime = new Date(decodeToken.exp) * 1000;
-
-    if (new Date(Date.now()) > expireTime) {
-      localStorage.removeItem("token");
-      return "";
-    }
-    return decodeToken;
-  }
-  return "";
-}
-
 // export const generateSKU = ({ productName, index }) => {
 //   // Handle undefined/empty productName
 //   const prefix = productName
@@ -159,15 +138,15 @@ export const getUserFriendlyErrorMessage = (
 
 
 // utils/phoneValidation.js
+// Ghana mobile: MTN 024/054/055/059/025; Telecel 020/050; AT 023/026/027/056/057
 const networks = {
-  MTN: ["24", "54", "55", "59", "50"],
-  Telecel: ["27", "57", "28", "20"],
-  AirtelTigo: ["26", "56", "23"],
+  MTN: ['24', '54', '55', '59', '25'],
+  Telecel: ['20', '50'],
+  AirtelTigo: ['23', '26', '27', '56', '57'],
 };
 
 export const validateGhanaPhone = (phone) => {
   const cleanedPhone = phone.replace(/\D/g, "");
-  console.log("cleanedPhone", cleanedPhone);
 
   // Validate length
   if (cleanedPhone.length < 10 || cleanedPhone.length > 12) {
@@ -182,7 +161,7 @@ export const validateGhanaPhone = (phone) => {
   }
 
   // Validate Ghanaian format
-  if (!/^0(24|54|55|59|20|50|27|57|26|56|23|28|57)\d{7}$/.test(localNumber)) {
+  if (!/^0(20|23|24|25|26|27|50|54|55|56|57|59)\d{7}$/.test(localNumber)) {
     return { valid: false, message: "Invalid Ghanaian number format" };
   }
 

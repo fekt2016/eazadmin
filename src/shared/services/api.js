@@ -2,10 +2,6 @@ import axios from "axios";
 
 // Determine base URL based on subdomain
 const getBaseURL = () => {
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
-  }
-
   if (typeof window !== "undefined") {
     const hostParts = window.location.hostname.split(".");
 
@@ -16,7 +12,12 @@ const getBaseURL = () => {
       window.location.hostname.startsWith("192.168.") ||
       window.location.hostname.startsWith("10.")
     ) {
-      return "http://localhost:4000/api/v1";
+      const host = window.location.hostname;
+      return `http://${host}:4000/api/v1`;
+    }
+
+    if (import.meta.env.VITE_API_URL) {
+      return import.meta.env.VITE_API_URL;
     }
 
     // Admin subdomain handling
@@ -34,6 +35,33 @@ const getBaseURL = () => {
 
 const baseURL = getBaseURL();
 
+// Grace period after login: suppress 401 redirects to prevent false "session expired"
+// messages caused by race conditions right after login.
+// Uses sessionStorage so the flag survives window.location.href page reloads.
+const GRACE_KEY = '_adminLoginGrace';
+const GRACE_DURATION = 20000; // 20 seconds
+
+let _loginGraceTimer = null;
+
+export const markRecentLogin = () => {
+  if (typeof sessionStorage !== 'undefined') {
+    sessionStorage.setItem(GRACE_KEY, String(Date.now() + GRACE_DURATION));
+    // Clear any stale "session expired" message so it doesn't show after login
+    sessionStorage.removeItem('eazadmin_login_message');
+  }
+  if (_loginGraceTimer) clearTimeout(_loginGraceTimer);
+  _loginGraceTimer = setTimeout(() => {
+    if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(GRACE_KEY);
+    _loginGraceTimer = null;
+  }, GRACE_DURATION);
+};
+
+export const isLoginGraceActive = () => {
+  if (typeof sessionStorage === 'undefined') return false;
+  const expiry = parseInt(sessionStorage.getItem(GRACE_KEY) || '0', 10);
+  return Date.now() < expiry;
+};
+
 // Only these routes are public - all others require authentication
 const PUBLIC_ROUTES = [
   "/auth/login",
@@ -41,7 +69,7 @@ const PUBLIC_ROUTES = [
   "/auth/forgot-password",
   "/auth/reset-password",
   "/admin/login",
-  "/admin/register",
+  "/admin/signup",
   "/admin/forgot-password",
   "/admin/reset-password",
 ];
@@ -51,6 +79,8 @@ const api = axios.create({
   withCredentials: true,
   timeout: 15000, // Reduced timeout for better UX
 });
+
+let csrfRefreshPromise = null;
 
 // Helper functions
 const getRelativePath = (url) => {
@@ -73,8 +103,45 @@ const normalizePath = (path) => {
   return normalized.startsWith("/") ? normalized : `/${normalized}`;
 };
 
+const getCookieByName = (name) => {
+  if (typeof document === "undefined") return null;
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(";").shift();
+  return null;
+};
+
+const fetchCsrfToken = async () => {
+  if (typeof window === "undefined") return null;
+
+  const existingToken = getCookieByName("csrf-token");
+  if (existingToken) return existingToken;
+
+  if (!csrfRefreshPromise) {
+    csrfRefreshPromise = (async () => {
+      try {
+        const tokenResponse = await fetch(`${baseURL}/csrf-token`, {
+          method: "GET",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+        });
+
+        if (!tokenResponse.ok) return null;
+        const tokenData = await tokenResponse.json();
+        return getCookieByName("csrf-token") || tokenData?.csrfToken || null;
+      } catch {
+        return null;
+      } finally {
+        csrfRefreshPromise = null;
+      }
+    })();
+  }
+
+  return csrfRefreshPromise;
+};
+
 // Request interceptor
-api.interceptors.request.use((config) => {
+api.interceptors.request.use(async (config) => {
   // Strip trailing slashes from path so backend route matching works (e.g. GET /seller not GET /seller/)
   if (config.url && typeof config.url === 'string' && !config.url.startsWith('http')) {
     const [path, query] = config.url.split('?');
@@ -99,14 +166,13 @@ api.interceptors.request.use((config) => {
     config.timeout = 30000; // 30 seconds for auth endpoints
   }
 
-  // SECURITY: Cookie-only authentication - no token storage
+  // SECURITY: Cookie-only authentication
   // Cookies are automatically sent via withCredentials: true
-  // Backend reads from req.cookies.admin_jwt (or seller_jwt/main_jwt based on route)
+  // Backend reads from req.cookies.admin_jwt
 
   // Add platform header (non-sensitive metadata)
   config.headers["x-platform"] = "eazadmin";
 
-  // Add subdomain information for admin context (non-sensitive metadata)
   if (typeof window !== "undefined") {
     config.headers["X-admin-Subdomain"] =
       window.location.hostname.split(".")[0] || "default";
@@ -115,41 +181,19 @@ api.interceptors.request.use((config) => {
   // CSRF token handling for state-changing requests (POST, PATCH, PUT, DELETE)
   const method = config.method?.toUpperCase();
   if (method && ['POST', 'PATCH', 'PUT', 'DELETE'].includes(method) && !isPublicRoute) {
-    // Read CSRF token from cookie (synchronous)
-    let csrfToken = null;
-    if (typeof document !== "undefined") {
-      const getCookie = (name) => {
-        const value = `; ${document.cookie}`;
-        const parts = value.split(`; ${name}=`);
-        if (parts.length === 2) return parts.pop().split(';').shift();
-        return null;
-      };
-      csrfToken = getCookie('csrf-token');
-    }
-
-    // If token not found in cookie, try to get it from localStorage (fallback)
-    // This handles cases where cookie isn't readable due to domain/cross-origin issues
-    if (!csrfToken && typeof window !== "undefined") {
-      csrfToken = localStorage.getItem('csrf-token');
+    let csrfToken = getCookieByName("csrf-token");
+    if (!csrfToken) {
+      csrfToken = await fetchCsrfToken();
     }
 
     if (csrfToken) {
       config.headers['X-CSRF-Token'] = csrfToken;
-      if (import.meta.env.DEV) {
-        console.debug(`[API] CSRF token added to ${method} ${normalizedPath}`);
-      }
-    } else {
-      // If token is still missing, this will cause a 403 error
-      // The response interceptor will handle it and suggest refresh/re-login
-      if (import.meta.env.DEV) {
-        console.warn(`[API] ⚠️ CSRF token not found in cookie or localStorage for ${method} ${normalizedPath}`);
-        console.warn(`[API] ⚠️ This may cause a 403 error. User may need to refresh the page or log in again.`);
-      }
+    } else if (import.meta.env.DEV) {
+      console.warn(`[API] ⚠️ CSRF token not found in cookie for ${method} ${normalizedPath}`);
     }
   }
 
-  // Use Vite's import.meta.env.DEV or fallback to __DEV__ if polyfilled
-  const isDev = import.meta.env.DEV || (typeof __DEV__ !== "undefined" && __DEV__);
+  const isDev = Boolean(import.meta.env.DEV);
 
   if (isPublicRoute) {
     if (isDev) {
@@ -168,21 +212,27 @@ api.interceptors.request.use((config) => {
 // Response interceptor
 api.interceptors.response.use(
   (response) => {
-    // Store CSRF token from response cookie if available (for cross-origin cookie issues)
-    // This is a fallback for when cookies aren't readable due to domain/cross-origin issues
-    if (response.headers['set-cookie']) {
-      const csrfCookie = response.headers['set-cookie']
-        .find(cookie => cookie.startsWith('csrf-token='));
-      if (csrfCookie && typeof window !== "undefined") {
-        const tokenMatch = csrfCookie.match(/csrf-token=([^;]+)/);
-        if (tokenMatch && tokenMatch[1]) {
-          localStorage.setItem('csrf-token', tokenMatch[1]);
-        }
-      }
-    }
+    // CSRF token is set as a cookie by the backend — no localStorage needed
     return response;
   },
   async (error) => {
+    // React Query `cancelQueries` / navigation aborts in-flight requests — not a failure.
+    // Without this, `console.error` logs "API Error: canceled" with status undefined.
+    const msg = typeof error?.message === 'string' ? error.message.trim().toLowerCase() : '';
+    const isCanceled =
+      error?.code === 'ERR_CANCELED' ||
+      error?.name === 'CanceledError' ||
+      error?.name === 'AbortError' ||
+      axios.isCancel?.(error) === true ||
+      error?.config?.signal?.aborted === true ||
+      msg === 'canceled' ||
+      msg === 'cancelled' ||
+      // DOMException / browser: "The user aborted a request."
+      (!error?.response && msg && (msg.includes('aborted') || msg.includes('user aborted')));
+    if (isCanceled) {
+      return Promise.reject(error);
+    }
+
     // Handle CSRF token errors (403)
     if (error.response?.status === 403) {
       const errorCode = error.response?.data?.code;
@@ -191,31 +241,18 @@ api.interceptors.response.use(
       // Try to fetch CSRF token from endpoint as fallback
       if (errorCode === 'CSRF_TOKEN_MISSING' || errorCode === 'CSRF_TOKEN_MISMATCH') {
         try {
+          const originalRequest = error.config;
+          if (originalRequest?._csrfRetried) {
+            return Promise.reject(error);
+          }
           // Attempt to get CSRF token from API endpoint (use fetch to avoid circular dependency)
-          const tokenResponse = await fetch(`${baseURL}/csrf-token`, {
-            method: 'GET',
-            credentials: 'include', // Include cookies
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          });
-
-          if (tokenResponse.ok) {
-            const tokenData = await tokenResponse.json();
-
-            if (tokenData?.csrfToken) {
-              // Store token in localStorage as fallback
-              if (typeof window !== "undefined") {
-                localStorage.setItem('csrf-token', tokenData.csrfToken);
-              }
-
-              // Retry the original request with new token
-              const originalRequest = error.config;
-              originalRequest.headers['X-CSRF-Token'] = tokenData.csrfToken;
-
+          const refreshedCsrfToken = await fetchCsrfToken();
+          if (refreshedCsrfToken && originalRequest) {
+              // Retry the original request with the fresh CSRF token
+              originalRequest._csrfRetried = true;
+              originalRequest.headers['X-CSRF-Token'] = refreshedCsrfToken;
               console.log("[API] CSRF token refreshed, retrying request");
               return api(originalRequest);
-            }
           }
         } catch (tokenError) {
           console.warn("[API] Failed to fetch CSRF token:", tokenError);
@@ -225,12 +262,7 @@ api.interceptors.response.use(
 
       // If session expired (cookie missing), suggest re-login
       if (errorCode === 'SESSION_EXPIRED') {
-        console.warn("[API] CSRF token expired - session may have expired");
-        // Clear localStorage token as well
-        if (typeof window !== "undefined") {
-          localStorage.removeItem('csrf-token');
-        }
-        // Don't auto-redirect, let the component handle it
+        console.warn("[API] CSRF token expired - possible session expiry");
         return Promise.reject({
           ...error,
           isSessionExpired: true,
@@ -241,13 +273,7 @@ api.interceptors.response.use(
       // If CSRF token is missing or mismatched, suggest refresh
       if (errorCode === 'CSRF_TOKEN_MISSING' || errorCode === 'CSRF_TOKEN_MISMATCH') {
         console.warn("[API] CSRF token issue - user should refresh page");
-        // Clear potentially stale token
-        if (typeof window !== "undefined") {
-          localStorage.removeItem('csrf-token');
-        }
-        // Suggest page refresh to get new token
         if (typeof window !== "undefined" && !window.location.pathname.includes('/login')) {
-          // Only suggest refresh if not already on login page
           return Promise.reject({
             ...error,
             needsRefresh: true,
@@ -261,44 +287,47 @@ api.interceptors.response.use(
     const status = error.response?.status;
     const message = error.response?.data?.message || "";
     const requestUrl = error.config?.url || "";
-    const isAuthCheckRequest =
-      typeof requestUrl === "string" &&
-      (requestUrl === "/admin/me" || requestUrl.endsWith("/admin/me"));
-    const isAdminSessionRequired =
-      status === 401 && (message.includes("Admin session required") || message.includes("admin panel"));
-    const isWrongRole =
-      status === 403 && message.includes("Required role: admin") && message.includes("Your role: user");
-    // Only redirect to login when the auth-check request (/admin/me) fails with 401 – not on 401 from other endpoints (e.g. GET /promotional-discounts)
-    const isUnauthenticatedAdmin = status === 401 && isAuthCheckRequest;
-    // Do not full-page redirect when the failed request is GET /admin/me – let ProtectedRoute handle it via <Navigate> so the app stays in React
-    const shouldRedirect =
-      isAdminSessionRequired || isWrongRole || (isUnauthenticatedAdmin && !isAuthCheckRequest);
 
+    // The /admin/me auth-check endpoint's 401 is handled by the useAuth queryFn
+    const isAuthCheckRequest = requestUrl.includes('/admin/me');
 
-    if (shouldRedirect) {
-      const isLoginPage = window.location.pathname === "/" || window.location.pathname === "/login";
-      if (typeof window !== "undefined" && !isLoginPage) {
-        console.warn("[API] REDIRECT CAUSE: 401/403 on auth or session – redirecting to login", {
-          status,
-          requestUrl,
-          pathname: window.location.pathname,
-          isAuthCheckRequest,
-        });
-        sessionStorage.setItem(
-          "eazadmin_login_message",
-          isWrongRole || isAdminSessionRequired ? "Please log in with your admin account." : "Session expired. Please log in again."
-        );
-        window.location.href = "/";
+    // Session logout routes: useAuth onError already navigates; don't double-redirect.
+    const isLogoutRequest = requestUrl.includes('/sessions/') && requestUrl.includes('/logout');
+
+    // On 401 or wrong-role 403 — redirect to login
+    if ((status === 401 || (status === 403 && message.includes("Role"))) && !isAuthCheckRequest && !isLogoutRequest) {
+      if (typeof window !== "undefined") {
+        const isLoginPage = window.location.pathname === "/" || window.location.pathname === "/login";
+        if (!isLoginPage) {
+          // Suppress if within the post-login grace period
+          if (isLoginGraceActive()) {
+            console.warn(`[API] ${status} on ${requestUrl} — suppressed redirect (grace period active)`);
+            return Promise.reject(error);
+          }
+          // Suppress if there is a cached admin — single-route 401 is likely transient.
+          // Let ProtectedRoute handle a real session expiry via /admin/me.
+          try {
+            const { default: queryClient } = await import('../../api/queryClient');
+            const cachedAdmin = queryClient.getQueryData(['adminAuth']);
+            if (cachedAdmin) {
+              console.warn(`[API] ${status} on ${requestUrl} — suppressed (admin cached), invalidating auth`);
+              queryClient.invalidateQueries({ queryKey: ['adminAuth'] });
+              return Promise.reject(error);
+            }
+          } catch {
+            // queryClient import failed — fall through to redirect
+          }
+          console.warn(`[API] ${status} on ${requestUrl} — redirecting to login`);
+          sessionStorage.setItem(
+            "eazadmin_login_message",
+            status === 401 ? "Session expired. Please log in again." : "Access denied. Please log in with an admin account."
+          );
+          window.location.href = "/";
+        }
       }
       return Promise.reject(error);
     }
 
-    // Handle other 401 – let useAuth handle retry/refresh
-    if (status === 401) {
-      console.warn("[API] 401 Unauthorized - letting useAuth handle retry/refresh");
-      const errorMessage = message || "Unauthorized";
-      console.warn(`[API] Auth error: ${errorMessage}`);
-    }
 
     // Handle network errors (backend not running / connection refused)
     if (!error.response && (error.message === 'Network Error' || error.code === 'ERR_NETWORK' || error.code === 'ECONNREFUSED')) {
@@ -332,6 +361,12 @@ api.interceptors.response.use(
     // Handle other errors
     const errorMessage =
       error.response?.data?.message || error.message || "Request failed";
+
+    // Last-chance: some Axios/React Query versions omit ERR_CANCELED but still set message.
+    const em = String(errorMessage).trim().toLowerCase();
+    if (em === 'canceled' || em === 'cancelled') {
+      return Promise.reject(error);
+    }
 
     // Don't log 404 errors as they're often expected (e.g., when trying multiple endpoints)
     // Only log if it's not a 404 or if it's a critical error

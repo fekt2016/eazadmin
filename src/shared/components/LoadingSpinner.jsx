@@ -30,14 +30,14 @@ const OuterRing = styled.div`
     (theme?.colors?.primary) || 
     'var(--color-primary-500)' || 
     'var(--primary)' || 
-    '#3b82f6'
+    'var(--color-primary-600)'
   };
   border-right-color: ${({ $color, theme }) => 
     $color || 
     (theme?.colors?.primary) || 
     'var(--color-primary-500)' || 
     'var(--primary)' || 
-    '#3b82f6'
+    'var(--color-primary-600)'
   };
   animation: ${dualRingSpin} 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
   width: ${({ $size = "md" }) => {
@@ -75,7 +75,7 @@ const InnerRing = styled.div`
     (theme?.colors?.primary) || 
     'var(--color-primary-500)' || 
     'var(--primary)' || 
-    '#3b82f6'
+    'var(--color-primary-600)'
   };
   border-right-color: ${({ $color, theme }) => 
     $color ? 'transparent' : 
@@ -267,8 +267,8 @@ export const PageSpinner = styled.div`
   height: 60px;
   border-radius: 50%;
   border: 3px solid transparent;
-  border-top-color: var(--primary, var(--color-primary-500, #3b82f6));
-  border-right-color: var(--primary, var(--color-primary-500, #3b82f6));
+  border-top-color: var(--primary, var(--color-primary-600));
+  border-right-color: var(--primary, var(--color-primary-600));
   border-bottom-color: var(--gray-200, var(--color-grey-200, #e5e7eb));
   border-left-color: var(--gray-200, var(--color-grey-200, #e5e7eb));
   animation: ${spin} 0.8s linear infinite;

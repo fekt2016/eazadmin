@@ -40,7 +40,7 @@ const Breadcrumbs = styled.div`
 
 const BreadcrumbItem = styled.div`
   font-size: 0.95rem;
-  color: ${(props) => (props.$active ? "#3498db" : "#7f8c8d")};
+  color: ${(props) => (props.$active ? "var(--color-primary-600)" : "#7f8c8d")};
   font-weight: ${(props) => (props.$active ? "500" : "normal")};
   cursor: pointer;
   transition: color 0.2s;

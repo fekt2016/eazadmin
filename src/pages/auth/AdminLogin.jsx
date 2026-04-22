@@ -6,9 +6,10 @@ import { toast } from "react-toastify";
 import useAuth from "../../shared/hooks/useAuth";
 import Logo from "../../shared/components/Logo";
 import { LoadingSpinner } from "../../shared/components/LoadingSpinner";
+import { PageTitle, PageSub } from "../../shared/components/page/PageHeader";
 
 // Allowed admin roles
-const ALLOWED_ROLES = ["superadmin", "admin", "moderator"];
+const ALLOWED_ROLES = ["superadmin", "admin", "support_agent"];
 
 export default function AdminLogin() {
   const navigate = useNavigate();
@@ -108,8 +109,8 @@ export default function AdminLogin() {
         </LogoContainer>
 
         <WelcomeSection>
-          <Title>Login</Title>
-          <Subtitle>Sign in to manage your platform</Subtitle>
+          <AuthTitle>Login</AuthTitle>
+          <PageSub>Sign in to manage your platform</PageSub>
         </WelcomeSection>
 
         <Form onSubmit={handleSubmit}>
@@ -189,11 +190,6 @@ export default function AdminLogin() {
               "Sign in"
             )}
           </LoginButton>
-
-          <RegisterLink>
-            Need an admin account?{" "}
-            <Link to="/register">Create one here</Link>
-          </RegisterLink>
         </Form>
       </LoginCard>
 
@@ -232,7 +228,7 @@ const LoginContainer = styled.div`
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  background: linear-gradient(135deg, #eef2ff 0%, #f7faff 50%, #f0f9ff 100%);
+  background: linear-gradient(135deg, var(--color-body-bg) 0%, var(--color-primary-100) 50%, var(--color-primary-50) 100%);
   position: relative;
   overflow: hidden;
 `;
@@ -292,18 +288,10 @@ const WelcomeSection = styled.div`
   margin-bottom: 2.5rem;
 `;
 
-const Title = styled.h1`
+const AuthTitle = styled(PageTitle)`
   font-size: 2rem;
-  font-weight: 700;
-  color: #1e293b;
-  margin-bottom: 0.5rem;
   letter-spacing: -0.5px;
-`;
-
-const Subtitle = styled.p`
-  font-size: 1rem;
-  color: #64748b;
-  font-weight: 400;
+  margin: 0 0 0.5rem 0;
 `;
 
 const Form = styled.form`
@@ -340,7 +328,7 @@ const Input = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #2563eb;
+    border-color: var(--color-primary-600);
     background: white;
     box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
   }
@@ -371,12 +359,12 @@ const PasswordToggle = styled.button`
   z-index: 1;
 
   &:hover {
-    color: #2563eb;
+    color: var(--color-primary-600);
   }
 
   &:focus {
     outline: none;
-    color: #2563eb;
+    color: var(--color-primary-600);
   }
 `;
 
@@ -397,7 +385,7 @@ const Checkbox = styled.input`
   width: 1.125rem;
   height: 1.125rem;
   cursor: pointer;
-  accent-color: #2563eb;
+  accent-color: var(--color-primary-600);
 `;
 
 const CheckboxLabel = styled.label`
@@ -408,36 +396,21 @@ const CheckboxLabel = styled.label`
 `;
 
 const ForgotPasswordLink = styled.a`
-  color: #2563eb;
+  color: var(--color-primary-600);
   text-decoration: none;
   font-weight: 500;
   transition: color 0.2s ease;
 
   &:hover {
-    color: #1d4ed8;
+    color: var(--color-primary-700);
     text-decoration: underline;
-  }
-`;
-
-const RegisterLink = styled.p`
-  text-align: center;
-  font-size: 0.9rem;
-  color: #64748b;
-  margin-top: 0.25rem;
-
-  a {
-    color: #2563eb;
-    text-decoration: none;
-    font-weight: 500;
-    transition: color 0.2s ease;
-    &:hover { color: #1d4ed8; text-decoration: underline; }
   }
 `;
 
 const LoginButton = styled.button`
   width: 100%;
   padding: 1rem;
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  background: linear-gradient(135deg, var(--color-primary-600) 0%, var(--color-primary-700) 100%);
   color: white;
   border: none;
   border-radius: 12px;
@@ -452,7 +425,7 @@ const LoginButton = styled.button`
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 
   &:hover:not(:disabled) {
-    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+    background: linear-gradient(135deg, var(--color-primary-700) 0%, var(--color-primary-800) 100%);
     transform: translateY(-2px);
     box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
   }

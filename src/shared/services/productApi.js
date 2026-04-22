@@ -25,26 +25,12 @@ export const productService = {
     };
     
     try {
-      console.log('[productApi] Fetching products with params:', queryParams);
-      
       // Increase timeout for product list requests (may take longer with many products)
-      const response = await api.get("/product", { 
+      const response = await api.get("/product", {
         params: queryParams,
         timeout: 30000, // 30 seconds for product list requests
       });
-      
-      console.log('[productApi] ✅ Response received:', {
-        status: response.status,
-        statusText: response.statusText,
-        hasData: !!response.data,
-        dataKeys: response.data ? Object.keys(response.data) : [],
-        results: response.data?.results,
-        total: response.data?.total,
-        hasNestedData: !!response.data?.data,
-        nestedDataType: response.data?.data ? (Array.isArray(response.data.data) ? 'array' : typeof response.data.data) : 'null',
-        nestedDataLength: Array.isArray(response.data?.data) ? response.data.data.length : 'not array',
-      });
-      
+
       // The backend returns: { status: 'success', results: number, total: number, data: { data: products[] } }
       return response.data;
     } catch (error) {
@@ -87,8 +73,6 @@ export const productService = {
 
       return response.data;
     } catch (err) {
-      console.log("Product creation error:", err);
-
       const apiError = new Error(err.response?.data?.message || err.message);
       apiError.status = err.response?.status || 500;
       apiError.details = err.response?.data?.errors;
@@ -204,11 +188,9 @@ export const productService = {
   // Admin product moderation functions
   approveProduct: async (productId, notes) => {
     try {
-      console.log('[productApi] Approving product:', { productId, notes, url: `/admin/products/${productId}/approve` });
       const response = await api.patch(`/admin/products/${productId}/approve`, {
         notes: notes || "",
       });
-      console.log('[productApi] ✅ Approval response:', response.data);
       return response.data;
     } catch (error) {
       console.error('[productApi] ❌ Approval error:', {

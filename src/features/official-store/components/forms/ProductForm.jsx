@@ -31,16 +31,6 @@ const ProductForm = ({ initialData, onSubmit, isSubmitting, mode = "add", onForm
       data?.data ||
       [];
 
-    // Debug logging (only in development)
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[ProductForm] Categories data structure:', {
-        hasData: !!data,
-        dataKeys: data ? Object.keys(data) : [],
-        categoriesCount: categories.length,
-        firstCategory: categories[0],
-      });
-    }
-
     return Array.isArray(categories) ? categories : [];
   }, [data]);
 
@@ -50,13 +40,6 @@ const ProductForm = ({ initialData, onSubmit, isSubmitting, mode = "add", onForm
       parentCategoriesData?.categories ||
       parentCategoriesData?.data ||
       [];
-
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[ProductForm] Parent categories from endpoint:', {
-        hasData: !!parentCategoriesData,
-        parentCategoriesCount: Array.isArray(parents) ? parents.length : 0,
-      });
-    }
 
     return Array.isArray(parents) ? parents : [];
   }, [parentCategoriesData]);
@@ -610,7 +593,7 @@ const SectionTitle = styled.h3`
 `;
 
 const SubmitButton = styled.button`
-  background: #3182ce;
+  background: var(--color-primary-600);
   color: white;
   border: none;
   border-radius: 6px;

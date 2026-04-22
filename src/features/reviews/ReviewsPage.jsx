@@ -1,10 +1,19 @@
 import styled from "styled-components";
+import {
+  PageHeader,
+  PageTitle,
+  HeaderActions,
+} from "../../shared/components/page/PageHeader";
 import { FiEdit, FiEye, FiSearch, FiTrash2, FiStar, FiCheck, FiX, FiFlag, FiEyeOff } from "react-icons/fi";
 import { useMemo, useState } from "react";
 import { LoadingSpinner } from "../../shared/components/LoadingSpinner";
 import useReview from "../../shared/hooks/useReview";
 import { toast } from "react-toastify";
 import { ConfirmationModal } from "../../shared/components/Modal/ConfirmationModal";
+
+const T = {
+  bodyBg: "var(--color-body-bg)",
+};
 
 export default function ReviewsPage() {
   const {
@@ -216,9 +225,9 @@ export default function ReviewsPage() {
 
   return (
     <DashboardContainer>
-      <Header>
-        <Title>Reviews Management</Title>
-        <Controls>
+      <PageHeader>
+        <PageTitle>Reviews Management</PageTitle>
+        <HeaderActions>
           <SearchContainer>
             <SearchIcon />
             <SearchInput
@@ -248,8 +257,8 @@ export default function ReviewsPage() {
             <option value="rejected">Rejected</option>
             <option value="flagged">Flagged</option>
           </FilterSelect>
-        </Controls>
-      </Header>
+        </HeaderActions>
+      </PageHeader>
 
       <StatsContainer>
         <StatCard>
@@ -618,30 +627,8 @@ export default function ReviewsPage() {
 // Styled Components
 const DashboardContainer = styled.div`
   padding: 2rem;
-  background-color: #f8fafc;
+  background: ${T.bodyBg};
   min-height: 100vh;
-`;
-
-const Header = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
-  gap: 1rem;
-`;
-
-const Title = styled.h1`
-  font-size: 1.8rem;
-  color: #1e293b;
-  margin: 0;
-  font-weight: 700;
-`;
-
-const Controls = styled.div`
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
 `;
 
 const SearchContainer = styled.div`

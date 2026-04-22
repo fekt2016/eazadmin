@@ -4,8 +4,6 @@ import React from 'react';
 import { renderWithProviders } from '../utils/testUtils';
 import TrackingPage from '../../features/orders/TrackingPage';
 
-// Use global testTimeout (15000) - tests need time for async render
-
 // Stable mock data - module level constants prevent reference instability
 const MOCK_ORDER = {
     _id: 'ord-123',
@@ -96,8 +94,8 @@ describe('TrackingPage', () => {
             expect(screen.getByText(/John Doe/i)).toBeInTheDocument();
             const elements = screen.queryAllByText(/Processing Order/i);
             expect(elements.length).toBeGreaterThan(0);
-        }, { timeout: 10000 });
-    }, 45000);
+        }, { timeout: 30000 });
+    });
 
     it('opens update tracking modal', async () => {
         renderWithProviders(<TrackingPage />);

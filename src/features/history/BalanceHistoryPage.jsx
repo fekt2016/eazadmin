@@ -5,6 +5,23 @@ import { FaWallet, FaStore, FaFilter, FaSearch, FaDownload, FaHistory } from 're
 import { Link } from 'react-router-dom';
 import { LoadingSpinner } from '../../shared/components/LoadingSpinner';
 import api from '../../shared/services/api';
+import { PageHeader, PageTitle, PageSub } from '../../shared/components/page/PageHeader';
+
+const T = {
+  primary: 'var(--color-primary-600)',
+  primaryLight: 'var(--color-primary-500)',
+  primaryBg: 'var(--color-primary-100)',
+  border: 'var(--color-border)',
+  cardBg: 'var(--color-card-bg)',
+  bodyBg: 'var(--color-body-bg)',
+  text: 'var(--color-grey-900)',
+  textMuted: 'var(--color-grey-500)',
+  textLight: 'var(--color-grey-400)',
+  radius: 'var(--border-radius-xl)',
+  radiusSm: 'var(--border-radius-md)',
+  shadow: 'var(--shadow-sm)',
+  shadowMd: 'var(--shadow-md)',
+};
 
 const BalanceHistoryPage = () => {
   const [activeTab, setActiveTab] = useState('wallet'); // 'wallet' | 'revenue' | 'transactions'
@@ -214,7 +231,7 @@ const BalanceHistoryPage = () => {
       TOPUP: '#10b981',
       PAYSTACK_TOPUP: '#10b981',
       ORDER_DEBIT: '#ef4444',
-      REFUND_CREDIT: '#3b82f6',
+      REFUND_CREDIT: 'var(--color-primary-600)',
       ADMIN_ADJUST: '#f59e0b',
       TRANSFER: '#8b5cf6',
       // Revenue types
@@ -254,13 +271,15 @@ const BalanceHistoryPage = () => {
 
   return (
     <PageContainer>
-      <Header>
-        <Title>
-          <FaHistory />
-          <h1>Balance History Management</h1>
-        </Title>
-        <Subtitle>View and manage buyer wallet, seller revenue, and seller transactions</Subtitle>
-      </Header>
+      <PageHeader>
+        <div>
+          <PageTitle>
+            <FaHistory />
+            Balance History Management
+          </PageTitle>
+          <PageSub>View and manage buyer wallet, seller revenue, and seller transactions</PageSub>
+        </div>
+      </PageHeader>
 
       <TabsContainer>
         <TabButton
@@ -567,35 +586,8 @@ const PageContainer = styled.div`
   padding: 2rem;
   max-width: 1600px;
   margin: 0 auto;
-`;
-
-const Header = styled.div`
-  margin-bottom: 2rem;
-`;
-
-const Title = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 0.5rem;
-
-  svg {
-    font-size: 2rem;
-    color: var(--color-primary-600);
-  }
-
-  h1 {
-    font-size: 2.4rem;
-    font-weight: 700;
-    color: var(--color-grey-900);
-    margin: 0;
-  }
-`;
-
-const Subtitle = styled.p`
-  color: var(--color-grey-600);
-  font-size: 1.4rem;
-  margin: 0;
+  min-height: 100vh;
+  background-color: ${T.bodyBg};
 `;
 
 const TabsContainer = styled.div`
@@ -629,11 +621,12 @@ const TabButton = styled.button`
 `;
 
 const FiltersCard = styled.div`
-  background: white;
-  border-radius: var(--border-radius-lg);
+  background: ${T.cardBg};
+  border: 1px solid ${T.border};
+  border-radius: ${T.radius};
+  box-shadow: ${T.shadow};
   padding: 2rem;
   margin-bottom: 2rem;
-  box-shadow: var(--shadow-sm);
 `;
 
 const FiltersHeader = styled.div`
@@ -821,7 +814,7 @@ const Reference = styled.code`
 
 const OrderLink = styled(Link)`
   font-size: 1.2rem;
-  color: var(--color-primary-600, #2563eb);
+  color: var(--color-primary-600);
   text-decoration: none;
   font-weight: 600;
 

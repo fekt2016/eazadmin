@@ -61,7 +61,6 @@ const CategoryCardComponent = ({
             src={category?.image}
             alt={category?.name}
             onError={(e) => {
-              console.log("error", e);
               e.target.onerror = null;
               e.target.src = "https://placehold.co/150x150?text=Error";
             }}
@@ -192,23 +191,10 @@ const CategoryCardComponent = ({
       {hasChildren && (
         <ViewSubButton
           onClick={() => {
-            console.log('[CategoryListView] View All Sub-categories clicked:', {
-              categoryId: category._id,
-              categoryName: category.name,
-              subCount,
-              subcategories: subcategories.map(s => ({ name: s.name, _id: s._id })),
-            });
-            setFilters((prev) => {
-              const newFilters = {
-                ...prev,
-                parentFilter: category._id.toString(),
-              };
-              console.log('[CategoryListView] Setting filter:', {
-                oldFilter: prev.parentFilter,
-                newFilter: newFilters.parentFilter,
-              });
-              return newFilters;
-            });
+            setFilters((prev) => ({
+              ...prev,
+              parentFilter: category._id.toString(),
+            }));
           }}
         >
           View All Sub-categories
@@ -363,7 +349,7 @@ const SubcategoryList = styled.div`
 const SubcategoryItem = styled.span`
   padding: 0.4rem 0.8rem;
   background-color: rgba(52, 152, 219, 0.1);
-  color: #3498db;
+  color: var(--color-primary-600);
   border-radius: 6px;
   font-size: 0.85rem;
   cursor: pointer;
@@ -386,8 +372,8 @@ const CategoryActions = styled.div`
 const ActionButton = styled.button`
   padding: 0.6rem 1rem;
   background-color: transparent;
-  color: #3498db;
-  border: 1px solid #3498db;
+  color: var(--color-primary-600);
+  border: 1px solid var(--color-primary-600);
   border-radius: 6px;
   font-size: 0.9rem;
   font-weight: 500;

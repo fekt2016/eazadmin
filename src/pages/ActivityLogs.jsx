@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import styled from "styled-components";
 import {
   FaSearch,
@@ -19,11 +19,36 @@ import { LoadingSpinner } from "../shared/components/LoadingSpinner";
 import DeviceSessionsPage from "../features/sessions/DeviceSessionsPage";
 import { ConfirmationModal } from "../shared/components/Modal/ConfirmationModal";
 import { HOMEPAGE_EVENT_LABELS } from "../shared/constants/homepageExperimentEvents";
+import {
+  PageHeader,
+  PageTitle,
+  PageSub,
+  HeaderActions,
+} from "../shared/components/page/PageHeader";
+import useAuth from "../shared/hooks/useAuth";
+
+const T = {
+  primary: "var(--color-primary-600)",
+  primaryLight: "var(--color-primary-500)",
+  primaryBg: "var(--color-primary-100)",
+  border: "var(--color-border)",
+  cardBg: "var(--color-card-bg)",
+  bodyBg: "var(--color-body-bg)",
+  text: "var(--color-grey-900)",
+  textMuted: "var(--color-grey-500)",
+  textLight: "var(--color-grey-400)",
+  radius: "var(--border-radius-xl)",
+  radiusSm: "var(--border-radius-md)",
+  shadow: "var(--shadow-sm)",
+  shadowMd: "var(--shadow-md)",
+};
 
 const Container = styled.div`
   padding: 2rem;
   max-width: 1600px;
   margin: 0 auto;
+  min-height: 100vh;
+  background-color: ${T.bodyBg};
 `;
 
 const TabsContainer = styled.div`
@@ -50,26 +75,6 @@ const TabButton = styled.button`
 
   &:hover {
     color: #1a1a1a;
-  }
-`;
-
-const Header = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-`;
-
-const TitleSection = styled.div`
-  h1 {
-    font-size: 2rem;
-    font-weight: 600;
-    color: #2c3e50;
-    margin: 0 0 0.5rem 0;
-  }
-  p {
-    color: #7f8c8d;
-    margin: 0;
   }
 `;
 
@@ -135,8 +140,8 @@ const FilterButton = styled.button`
   transition: all 0.2s;
 
   &:hover {
-    border-color: #3498db;
-    color: #3498db;
+    border-color: var(--color-primary-600);
+    color: var(--color-primary-600);
   }
 `;
 
@@ -225,7 +230,11 @@ const Badge = styled.span`
 const RoleBadge = styled(Badge)`
   background: ${(props) => {
     if (props.role === "admin") return "#e74c3c";
-    if (props.role === "seller") return "#3498db";
+    if (props.role === "superadmin") return "#8e44ad";
+    if (props.role === "support_agent" || props.role === "moderator") {
+      return "#3498db";
+    }
+    if (props.role === "seller") return "var(--color-primary-600)";
     return "#2ecc71";
   }};
   color: white;
@@ -291,8 +300,8 @@ const PageButton = styled.button`
   transition: all 0.2s;
 
   &:hover:not(:disabled) {
-    border-color: #3498db;
-    color: #3498db;
+    border-color: var(--color-primary-600);
+    color: var(--color-primary-600);
   }
 
   &:disabled {
@@ -301,17 +310,17 @@ const PageButton = styled.button`
   }
 
   &.active {
-    background: #3498db;
+    background: var(--color-primary-600);
     color: white;
-    border-color: #3498db;
+    border-color: var(--color-primary-600);
   }
 `;
 
 const InsightGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.75rem;
-  margin-bottom: 1rem;
+  gap: 0.55rem;
+  margin-bottom: 0.75rem;
 
   @media (max-width: 980px) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -322,38 +331,39 @@ const InsightCard = styled.div`
   background: white;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
-  padding: 0.85rem 1rem;
+  padding: 0.65rem 0.75rem;
 `;
 
 const InsightLabel = styled.div`
   color: #7f8c8d;
-  font-size: 0.8rem;
-  margin-bottom: 0.35rem;
+  font-size: 0.74rem;
+  margin-bottom: 0.25rem;
 `;
 
 const InsightValue = styled.div`
   color: #2c3e50;
-  font-size: 1.1rem;
+  font-size: 0.95rem;
   font-weight: 700;
+  line-height: 1.3;
 `;
 
 const InsightSub = styled.div`
   color: #7f8c8d;
-  font-size: 0.78rem;
-  margin-top: 0.2rem;
+  font-size: 0.72rem;
+  margin-top: 0.12rem;
 `;
 
 const InsightTrendRow = styled.div`
-  margin-top: 0.65rem;
+  margin-top: 0.45rem;
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 0.35rem;
+  gap: 0.25rem;
 `;
 
 const InsightTrendItem = styled.div`
   border: 1px solid #eef2f7;
   border-radius: 6px;
-  padding: 0.3rem 0.25rem;
+  padding: 0.2rem 0.2rem;
   text-align: center;
   background: ${({ $intensity = 0 }) =>
     `rgba(52, 152, 219, ${0.08 + $intensity * 0.2})`};
@@ -363,13 +373,13 @@ const InsightTrendItem = styled.div`
 
 const InsightTrendDate = styled.div`
   color: #94a3b8;
-  font-size: 0.65rem;
-  margin-bottom: 0.15rem;
+  font-size: 0.6rem;
+  margin-bottom: 0.08rem;
 `;
 
 const InsightTrendValue = styled.div`
   color: #1e293b;
-  font-size: 0.72rem;
+  font-size: 0.66rem;
   font-weight: 700;
 `;
 
@@ -467,7 +477,9 @@ const formatActivityDescription = (description) => {
   const [, eventName = '', variant = '', metadata = ''] = rawScreen.split(':');
   const readableEvent = HOMEPAGE_EVENT_LABELS[eventName]
     || `Unmapped homepage event (${eventName || 'unknown'})`;
-  const readableVariant = variant ? `Variant ${variant}` : null;
+  const readableVariant = variant
+    ? `Variant ${formatHomepageVariant(variant)}`
+    : null;
   const readableMetadata = metadata
     ? metadata.replace(/[-_]/g, ' ')
     : null;
@@ -475,6 +487,31 @@ const formatActivityDescription = (description) => {
   return [readableEvent, readableVariant, readableMetadata]
     .filter(Boolean)
     .join(' | ');
+};
+
+const formatHomepageVariant = (rawVariant) => {
+  if (!rawVariant || typeof rawVariant !== 'string') return 'Unknown';
+
+  const upper = rawVariant.toUpperCase();
+  const knownVariants = {
+    SELLER_DASH: 'Seller Dash',
+    SELLER_GUEST: 'Seller Guest',
+    ADMIN_DASH: 'Admin Dash',
+    A_BUYER_AUTH: 'A (Buyer Auth)',
+    A_BUYER_GUEST: 'A (Buyer Guest)',
+    B_BUYER_AUTH: 'B (Buyer Auth)',
+    B_BUYER_GUEST: 'B (Buyer Guest)',
+  };
+
+  if (knownVariants[upper]) {
+    return knownVariants[upper];
+  }
+
+  return upper
+    .split('_')
+    .filter(Boolean)
+    .map((part) => part.charAt(0) + part.slice(1).toLowerCase())
+    .join(' ');
 };
 
 const parseHomepageScreenEvent = (description) => {
@@ -494,6 +531,18 @@ const parseHomepageScreenEvent = (description) => {
 const DEFAULT_LIMIT = 50;
 
 export default function ActivityLogs() {
+  const { adminData } = useAuth();
+  const admin = useMemo(
+    () =>
+      adminData?.data?.data?.data ||
+      adminData?.data?.data ||
+      adminData?.data ||
+      adminData ||
+      null,
+    [adminData],
+  );
+  const isSuperadmin = admin?.role === "superadmin";
+
   const [activeTab, setActiveTab] = useState('activity-logs'); // 'activity-logs' | 'device-sessions'
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -516,11 +565,18 @@ export default function ActivityLogs() {
     return null;
   }, [startDate, endDate]);
 
+  useEffect(() => {
+    if (!isSuperadmin && activeTab === "device-sessions") {
+      setActiveTab("activity-logs");
+    }
+  }, [isSuperadmin, activeTab]);
+
   const {
     logs,
     total,
     totalPages,
     isLoading,
+    stats,
     deleteLog,
     deleteAllLogs,
     cleanupOldLogs,
@@ -548,12 +604,23 @@ export default function ActivityLogs() {
         },
         {}
       );
+      const byRole = (homepageExperimentStats.byRole || []).reduce(
+        (acc, item) => {
+          acc[item.role] = {
+            impressions: item.impressions || 0,
+            interactions: item.interactions || 0,
+          };
+          return acc;
+        },
+        {}
+      );
 
       return {
         impressions: homepageExperimentStats.impressions || 0,
         interactions: homepageExperimentStats.interactions || 0,
         ctr: homepageExperimentStats.ctr || 0,
         byVariant,
+        byRole,
         byDay: homepageExperimentStats.byDay || [],
       };
     }
@@ -585,15 +652,70 @@ export default function ActivityLogs() {
       }
       return acc;
     }, {});
+    const byRole = logs.reduce((acc, log) => {
+      const parsed = parseHomepageScreenEvent(log.description);
+      if (!parsed) return acc;
+      const roleKey = log?.role || 'guest';
+      if (!acc[roleKey]) {
+        acc[roleKey] = { impressions: 0, interactions: 0 };
+      }
+      if (parsed.eventName === 'variant_seen') {
+        acc[roleKey].impressions += 1;
+      } else {
+        acc[roleKey].interactions += 1;
+      }
+      return acc;
+    }, {});
 
     return {
       impressions,
       interactions,
       ctr,
       byVariant,
+      byRole,
       byDay: [],
     };
   }, [homepageExperimentStats, logs]);
+
+  const loginInsights = useMemo(() => {
+    const backendStats = stats?.loginStats;
+    if (backendStats) {
+      return {
+        buyerLogins: backendStats.buyerLogins || 0,
+        sellerLogins: backendStats.sellerLogins || 0,
+        adminLogins: backendStats.adminLogins || 0,
+        totalLogins: backendStats.totalLogins || 0,
+        buyerSharePct: backendStats.buyerSharePct || 0,
+        sellerSharePct: backendStats.sellerSharePct || 0,
+        adminSharePct: backendStats.adminSharePct || 0,
+        buyerUniqueUsers: backendStats.buyerUniqueUsers || 0,
+        sellerUniqueUsers: backendStats.sellerUniqueUsers || 0,
+        adminUniqueUsers: backendStats.adminUniqueUsers || 0,
+      };
+    }
+
+    // Fallback to current page data if backend stats are unavailable.
+    const loginLogs = logs.filter(
+      (log) => log?.action === 'LOGIN' || log?.activityType === 'LOGIN'
+    );
+    const buyerLogins = loginLogs.filter((log) => log?.role === 'buyer').length;
+    const sellerLogins = loginLogs.filter((log) => log?.role === 'seller').length;
+    const adminLogins = loginLogs.filter((log) => log?.role === 'admin').length;
+    const totalLogins = loginLogs.length;
+
+    return {
+      buyerLogins,
+      sellerLogins,
+      adminLogins,
+      totalLogins,
+      buyerSharePct: totalLogins > 0 ? (buyerLogins / totalLogins) * 100 : 0,
+      sellerSharePct: totalLogins > 0 ? (sellerLogins / totalLogins) * 100 : 0,
+      adminSharePct: totalLogins > 0 ? (adminLogins / totalLogins) * 100 : 0,
+      buyerUniqueUsers: 0,
+      sellerUniqueUsers: 0,
+      adminUniqueUsers: 0,
+    };
+  }, [stats, logs]);
 
   const handleDelete = (logId) => {
     setDeleteModalState({ isOpen: true, type: 'single', logId });
@@ -652,13 +774,17 @@ export default function ActivityLogs() {
 
   return (
     <Container>
-      <Header>
-        <TitleSection>
-          <h1>Activity & Sessions</h1>
-          <p>Monitor all user activities and device sessions across the platform</p>
-        </TitleSection>
-        {activeTab === 'activity-logs' && (
-          <div style={{ display: "flex", gap: "0.5rem" }}>
+      <PageHeader>
+        <div>
+          <PageTitle>Activity & Sessions</PageTitle>
+          <PageSub>
+            {isSuperadmin
+              ? "Monitor all user activities and device sessions across the platform"
+              : "Monitor user activities across the platform (read-only)"}
+          </PageSub>
+        </div>
+        {isSuperadmin && activeTab === "activity-logs" && (
+          <HeaderActions>
             <ActionButton
               onClick={() => cleanupOldLogs(90)}
               style={{ background: "#95a5a6" }}
@@ -668,26 +794,28 @@ export default function ActivityLogs() {
             <ActionButton onClick={handleDeleteAll} disabled={isDeletingAll}>
               <FaTrash /> Clear All Logs
             </ActionButton>
-          </div>
+          </HeaderActions>
         )}
-      </Header>
+      </PageHeader>
 
-      <TabsContainer>
-        <TabButton
-          type="button"
-          $active={activeTab === 'activity-logs'}
-          onClick={() => setActiveTab('activity-logs')}
-        >
-          Activity Logs
-        </TabButton>
-        <TabButton
-          type="button"
-          $active={activeTab === 'device-sessions'}
-          onClick={() => setActiveTab('device-sessions')}
-        >
-          Device Sessions
-        </TabButton>
-      </TabsContainer>
+      {isSuperadmin ? (
+        <TabsContainer>
+          <TabButton
+            type="button"
+            $active={activeTab === 'activity-logs'}
+            onClick={() => setActiveTab('activity-logs')}
+          >
+            Activity Logs
+          </TabButton>
+          <TabButton
+            type="button"
+            $active={activeTab === 'device-sessions'}
+            onClick={() => setActiveTab('device-sessions')}
+          >
+            Device Sessions
+          </TabButton>
+        </TabsContainer>
+      ) : null}
 
       {activeTab === 'activity-logs' && (
         <>
@@ -792,7 +920,7 @@ export default function ActivityLogs() {
                   {Object.entries(homepageInsights.byVariant)
                     .map(
                       ([variant, counts]) =>
-                        `${variant}: ${counts.impressions}/${counts.interactions}`
+                        `${formatHomepageVariant(variant)}: ${counts.impressions}/${counts.interactions}`
                     )
                     .join(' | ')}
                 </InsightValue>
@@ -825,6 +953,83 @@ export default function ActivityLogs() {
                   </InsightTrendRow>
                 )}
               </InsightCard>
+              <InsightCard>
+                <InsightLabel>Buyer actions</InsightLabel>
+                <InsightValue>
+                  {(homepageInsights.byRole?.buyer?.impressions || 0)}/
+                  {(homepageInsights.byRole?.buyer?.interactions || 0)}
+                </InsightValue>
+                <InsightSub>Impressions/interactions for buyers</InsightSub>
+              </InsightCard>
+              <InsightCard>
+                <InsightLabel>Seller actions</InsightLabel>
+                <InsightValue>
+                  {(homepageInsights.byRole?.seller?.impressions || 0)}/
+                  {(homepageInsights.byRole?.seller?.interactions || 0)}
+                </InsightValue>
+                <InsightSub>Impressions/interactions for sellers</InsightSub>
+              </InsightCard>
+              <InsightCard>
+                <InsightLabel>Admin actions</InsightLabel>
+                <InsightValue>
+                  {(homepageInsights.byRole?.admin?.impressions || 0)}/
+                  {(homepageInsights.byRole?.admin?.interactions || 0)}
+                </InsightValue>
+                <InsightSub>Impressions/interactions for admins</InsightSub>
+              </InsightCard>
+            </InsightGrid>
+          )}
+
+          {loginInsights && (
+            <InsightGrid>
+              <InsightCard>
+                <InsightLabel>Buyer logins</InsightLabel>
+                <InsightValue>{loginInsights.buyerLogins}</InsightValue>
+                <InsightSub>
+                  {loginInsights.buyerUniqueUsers > 0
+                    ? `${loginInsights.buyerUniqueUsers} unique buyers`
+                    : 'Login events in selected period'}
+                </InsightSub>
+              </InsightCard>
+              <InsightCard>
+                <InsightLabel>Seller logins</InsightLabel>
+                <InsightValue>{loginInsights.sellerLogins}</InsightValue>
+                <InsightSub>
+                  {loginInsights.sellerUniqueUsers > 0
+                    ? `${loginInsights.sellerUniqueUsers} unique sellers`
+                    : 'Login events in selected period'}
+                </InsightSub>
+              </InsightCard>
+              <InsightCard>
+                <InsightLabel>Buyer login share</InsightLabel>
+                <InsightValue>{loginInsights.buyerSharePct.toFixed(1)}%</InsightValue>
+                <InsightSub>
+                  Of {loginInsights.totalLogins} total login events
+                </InsightSub>
+              </InsightCard>
+              <InsightCard>
+                <InsightLabel>Seller login share</InsightLabel>
+                <InsightValue>{loginInsights.sellerSharePct.toFixed(1)}%</InsightValue>
+                <InsightSub>
+                  Of {loginInsights.totalLogins} total login events
+                </InsightSub>
+              </InsightCard>
+              <InsightCard>
+                <InsightLabel>Admin logins</InsightLabel>
+                <InsightValue>{loginInsights.adminLogins}</InsightValue>
+                <InsightSub>
+                  {loginInsights.adminUniqueUsers > 0
+                    ? `${loginInsights.adminUniqueUsers} unique admins`
+                    : 'Login events in selected period'}
+                </InsightSub>
+              </InsightCard>
+              <InsightCard>
+                <InsightLabel>Admin login share</InsightLabel>
+                <InsightValue>{loginInsights.adminSharePct.toFixed(1)}%</InsightValue>
+                <InsightSub>
+                  Of {loginInsights.totalLogins} total login events
+                </InsightSub>
+              </InsightCard>
             </InsightGrid>
           )}
 
@@ -839,7 +1044,7 @@ export default function ActivityLogs() {
                   <TableHeaderCell>Platform</TableHeaderCell>
                   <TableHeaderCell>IP Address</TableHeaderCell>
                   <TableHeaderCell>Timestamp</TableHeaderCell>
-                  <TableHeaderCell>Actions</TableHeaderCell>
+                  <TableHeaderCell>{isSuperadmin ? "Actions" : "View"}</TableHeaderCell>
                 </tr>
               </TableHeader>
               <TableBody>
@@ -873,13 +1078,15 @@ export default function ActivityLogs() {
                         <IconButton onClick={() => handleViewDetails(log)}>
                           <FaEye />
                         </IconButton>
-                        <IconButton
-                          className="delete"
-                          onClick={() => handleDelete(log._id)}
-                          disabled={isDeleting}
-                        >
-                          <FaTrash />
-                        </IconButton>
+                        {isSuperadmin ? (
+                          <IconButton
+                            className="delete"
+                            onClick={() => handleDelete(log._id)}
+                            disabled={isDeleting}
+                          >
+                            <FaTrash />
+                          </IconButton>
+                        ) : null}
                       </ActionButtonCell>
                     </TableRow>
                   ))
@@ -999,7 +1206,7 @@ export default function ActivityLogs() {
         </>
       )}
 
-      {activeTab === 'device-sessions' && (
+      {isSuperadmin && activeTab === 'device-sessions' && (
         <DeviceSessionsPage embedded />
       )}
 

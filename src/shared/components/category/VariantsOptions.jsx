@@ -311,9 +311,9 @@ const Input = styled.input`
   transition: border-color 0.2s;
 
   &:focus {
-    border-color: #3b82f6;
+    border-color: var(--color-primary-600);
     outline: none;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    box-shadow: 0 0 0 3px rgba(187, 108, 2, 0.15);
   }
 `;
 
@@ -326,9 +326,9 @@ const Select = styled.select`
   transition: border-color 0.2s;
 
   &:focus {
-    border-color: #3b82f6;
+    border-color: var(--color-primary-600);
     outline: none;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    box-shadow: 0 0 0 3px rgba(187, 108, 2, 0.15);
   }
 `;
 
@@ -362,7 +362,7 @@ const OptionInputGroup = styled.div`
 `;
 
 const AddButton = styled.button`
-  background: #3b82f6;
+  background: var(--color-primary-600);
   color: white;
   border: none;
   border-radius: 6px;
@@ -375,7 +375,7 @@ const AddButton = styled.button`
   transition: background 0.2s;
 
   &:hover {
-    background: #2563eb;
+    background: var(--color-primary-600);
   }
 
   &:disabled {
@@ -496,7 +496,7 @@ const ButtonGroup = styled.div`
 `;
 
 const SubmitButton = styled.button`
-  background: #3b82f6;
+  background: var(--color-primary-600);
   color: white;
   border: none;
   border-radius: 6px;
@@ -510,6 +510,6 @@ const SubmitButton = styled.button`
   transition: background 0.2s;
 
   &:hover {
-    background: #2563eb;
+    background: var(--color-primary-600);
   }
 `;

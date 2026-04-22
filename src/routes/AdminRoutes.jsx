@@ -1,12 +1,12 @@
-import { Route, Routes, Navigate } from "react-router-dom";
+import { Route, Routes, Navigate, useLocation } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { PATHS } from "./routePath";
 import PageSpinner from '../components/common/PageSpinner';
 import ProtectedRoute from "../routes/protectedRoute";
+import AdminStandaloneMessage from "../shared/components/AdminStandaloneMessage";
 
 const ProductDetail = lazy(() => import("../features/products/ProductDetail"));
 const AdminLogin = lazy(() => import("../pages/auth/AdminLogin"));
-const AdminRegister = lazy(() => import("../pages/auth/AdminRegister"));
 const ForgotPasswordPage = lazy(() => import("../features/auth/ForgotPasswordPage"));
 const ResetPasswordPage = lazy(() => import("../features/auth/ResetPasswordPage"));
 const Dashboard = lazy(() => import("../features/Dashboard"));
@@ -51,45 +51,61 @@ const AdminTicketDetailPage = lazy(() => import("../pages/support/AdminTicketDet
 const SitemapPage = lazy(() => import("../pages/sitemap/SitemapPage"));
 const AdminNotificationsPage = lazy(() => import("../pages/notifications/AdminNotificationsPage"));
 const AdminCouponDiscountPage = lazy(() => import("../pages/coupons/AdminCouponDiscountPage"));
-const AdsManagementPage = lazy(() => import("../pages/ads/AdsManagementPage"));
+const PromosListPage = lazy(() => import("../pages/promos/PromosListPage"));
+const PromoCreatePage = lazy(() => import("../pages/promos/PromoCreatePage"));
+const PromoDetailPage = lazy(() => import("../pages/promos/PromoDetailPage"));
+const PromoEditPage = lazy(() => import("../pages/promos/PromoEditPage"));
 const TaxReportPage = lazy(() => import("../features/tax/TaxReportPage"));
 const StatusVideosPage = lazy(() => import("../features/status-videos/StatusVideosPage"));
+const AdminLiveChatPage = lazy(() => import("../features/chat/AdminLiveChatPage"));
+const AdminSettingsPage = lazy(() => import("../pages/settings/AdminSettingsPage"));
 
-const AdminCatchAll = () => {
-  const currentPath = window.location.pathname;
-
-  // For unknown admin routes, show 404
-  return (
-    <div style={{ padding: '50px', textAlign: 'center' }}>
-      <h1>404 - Admin Route Not Found</h1>
-      <p>This is the admin dashboard. The route you're looking for may be in the main customer app.</p>
-      <p style={{ marginTop: '20px', color: '#666' }}>
-        Current path: <code>{currentPath}</code>
-      </p>
-    </div>
-  );
-};
+const AdminCatchAll = () => (
+  <AdminStandaloneMessage
+    title="Page not found"
+    description="This URL is not part of the admin dashboard. Use the sidebar or open the dashboard home."
+    primaryTo="/dashboard"
+    primaryLabel="Dashboard"
+    secondaryTo="/"
+    secondaryLabel="Back to sign-in"
+    showPath
+  />
+);
 
 const AccountPendingPage = () => (
-  <div style={{ padding: '50px', textAlign: 'center' }}>
-    <h1>Account Pending</h1>
-    <p>Your admin account is currently pending approval.</p>
-  </div>
+  <AdminStandaloneMessage
+    title="Account pending"
+    description="Your admin account is awaiting approval. Try again after a platform administrator activates your access."
+    primaryTo="/"
+    primaryLabel="Back to sign-in"
+  />
 );
 
 const AccountInactivePage = () => (
-  <div style={{ padding: '50px', textAlign: 'center' }}>
-    <h1>Account Inactive</h1>
-    <p>Your admin account has been deactivated. Please contact an administrator.</p>
-  </div>
+  <AdminStandaloneMessage
+    title="Account inactive"
+    description="Your admin account has been deactivated. Contact a platform administrator if you need help."
+    primaryTo="/"
+    primaryLabel="Back to sign-in"
+  />
 );
 
-const UnauthorizedPage = () => (
-  <div style={{ padding: '50px', textAlign: 'center' }}>
-    <h1>Unauthorized</h1>
-    <p>You do not have permission to access this page.</p>
-  </div>
-);
+const UnauthorizedPage = () => {
+  const { state } = useLocation();
+  const detail = typeof state?.error === 'string' ? state.error : null;
+  return (
+    <AdminStandaloneMessage
+      title="Unauthorized"
+      description={
+        detail
+          ? `You do not have permission to access this page. ${detail}`
+          : 'You do not have permission to access this page.'
+      }
+      primaryTo="/"
+      primaryLabel="Back to sign-in"
+    />
+  );
+};
 
 export default function AdminRoutes() {
   return (
@@ -98,8 +114,6 @@ export default function AdminRoutes() {
         {/* Admin login route - both / and /login so /login does not 404 */}
         <Route path={PATHS.LOGIN} element={<AdminLogin />} />
         <Route path="/login" element={<AdminLogin />} />
-        <Route path={PATHS.REGISTER} element={<AdminRegister />} />
-        <Route path="/register" element={<AdminRegister />} />
 
         {/* Password reset routes */}
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -145,10 +159,6 @@ export default function AdminRoutes() {
             element={<OrdersPage />}
           />
           <Route
-            path={PATHS.ORDER_DETAIL}
-            element={<OrderDetail />}
-          />
-          <Route
             path={PATHS.PRODUCTS}
             element={<AllProductPage />}
           />
@@ -162,7 +172,7 @@ export default function AdminRoutes() {
           />
           <Route
             path={PATHS.ADS}
-            element={<AdsManagementPage />}
+            element={<Navigate to={PATHS.PROMOS} replace />}
           />
           <Route
             path={PATHS.STATUS_VIDEOS}
@@ -304,12 +314,40 @@ export default function AdminRoutes() {
             element={<AdminNotificationsPage />}
           />
           <Route
+            path={PATHS.FLASH_DEALS}
+            element={<Navigate to={PATHS.PROMOS} replace />}
+          />
+          <Route
+            path={PATHS.PROMOS}
+            element={<PromosListPage />}
+          />
+          <Route
+            path={PATHS.PROMO_NEW}
+            element={<PromoCreatePage />}
+          />
+          <Route
+            path={PATHS.PROMO_DETAIL}
+            element={<PromoDetailPage />}
+          />
+          <Route
+            path={PATHS.PROMO_EDIT}
+            element={<PromoEditPage />}
+          />
+          <Route
             path={PATHS.COUPONS}
             element={<AdminCouponDiscountPage />}
           />
           <Route
             path={PATHS.TAX}
             element={<TaxReportPage />}
+          />
+          <Route
+            path={PATHS.LIVE_CHAT}
+            element={<AdminLiveChatPage />}
+          />
+          <Route
+            path={PATHS.SETTINGS}
+            element={<AdminSettingsPage />}
           />
         </Route>
         <Route

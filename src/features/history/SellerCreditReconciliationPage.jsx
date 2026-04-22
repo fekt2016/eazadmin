@@ -3,6 +3,15 @@ import styled from 'styled-components';
 import { useMutation } from '@tanstack/react-query';
 import { FaTools, FaSearch, FaPlay, FaCheckCircle } from 'react-icons/fa';
 import { orderService } from '../../shared/services/orderApi';
+import {
+  PageHeader,
+  PageTitle,
+  PageSub,
+} from '../../shared/components/page/PageHeader';
+
+const T = {
+  bodyBg: 'var(--color-body-bg)',
+};
 
 /**
  * Which tax reconciliation actions are allowed for this order (matches backend rules).
@@ -196,16 +205,18 @@ const SellerCreditReconciliationPage = () => {
 
   return (
     <PageContainer>
-      <Header>
-        <Title>
-          <FaTools />
-          <h1>Seller Credit Reconciliation</h1>
-        </Title>
-        <Subtitle>
-          Detect and fix delivered orders where revenue history exists but seller credit
-          transaction is missing.
-        </Subtitle>
-      </Header>
+      <PageHeader>
+        <div>
+          <PageTitle as="div" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <FaTools style={{ fontSize: '2rem', color: 'var(--color-primary-600)' }} />
+            <span>Seller Credit Reconciliation</span>
+          </PageTitle>
+          <PageSub>
+            Detect and fix delivered orders where revenue history exists but seller credit
+            transaction is missing.
+          </PageSub>
+        </div>
+      </PageHeader>
 
       <Card>
         <CardTitle>
@@ -396,35 +407,8 @@ const PageContainer = styled.div`
   padding: 2rem;
   max-width: 1200px;
   margin: 0 auto;
-`;
-
-const Header = styled.div`
-  margin-bottom: 2rem;
-`;
-
-const Title = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 0.5rem;
-
-  svg {
-    font-size: 2rem;
-    color: var(--color-primary-600);
-  }
-
-  h1 {
-    font-size: 2.4rem;
-    font-weight: 700;
-    color: var(--color-grey-900);
-    margin: 0;
-  }
-`;
-
-const Subtitle = styled.p`
-  color: var(--color-grey-600);
-  font-size: 1.4rem;
-  margin: 0;
+  min-height: 100vh;
+  background: ${T.bodyBg};
 `;
 
 const Card = styled.div`

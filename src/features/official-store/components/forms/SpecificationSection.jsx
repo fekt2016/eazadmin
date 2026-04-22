@@ -107,7 +107,7 @@ const Input = styled.input`
   transition: border-color 0.2s;
 
   &:focus {
-    border-color: #3182ce;
+    border-color: var(--color-primary-600);
     outline: none;
     box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5);
   }

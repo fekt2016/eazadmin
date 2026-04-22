@@ -10,6 +10,7 @@ import {
   FaUndo,
   FaUserAlt,
   FaUserShield,
+  FaHeadset,
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import styled from "styled-components";
@@ -192,7 +193,12 @@ export const RoleCell = ({ value }) => {
   const getIcon = () => {
     switch (value) {
       case "admin":
-        return <FaUserShield style={{ color: "#4361EE" }} />;
+        return <FaUserShield style={{ color: "#bb6c02" }} />;
+      case "superadmin":
+        return <FaUserShield style={{ color: "#8e44ad" }} />;
+      case "support_agent":
+      case "moderator":
+        return <FaHeadset style={{ color: "#3498db" }} />;
       case "seller":
         return <FaStore style={{ color: "#F8961E" }} />;
       case "user":
@@ -202,15 +208,27 @@ export const RoleCell = ({ value }) => {
     }
   };
 
+  const label =
+    value === "support_agent"
+      ? "Support Agent"
+      : value === "superadmin"
+        ? "Super Admin"
+        : value === "moderator"
+          ? "Support Agent"
+          : value
+            ? value.charAt(0).toUpperCase() + value.slice(1).replace(/_/g, " ")
+            : "—";
+
   return (
     <RoleBadge>
       {getIcon()}
-      <span>{value.charAt(0).toUpperCase() + value.slice(1)}</span>
+      <span>{label}</span>
     </RoleBadge>
   );
 };
 
 export const StatusCell = ({ value }) => {
+  if (!value) return <span style={{ color: "#aaa" }}>—</span>;
   return (
     <StatusBadge status={value}>
       {value === "active" ? <FaCheckCircle /> : <FaTimesCircle />}
@@ -370,13 +388,24 @@ export const OrderCountCell = ({ value, row }) => {
   );
 };
 
+export const ReferralCell = ({ value, row }) => {
+  const referralValue =
+    (typeof value === 'string' && value.trim()) ||
+    (typeof row?.referral === 'string' && row.referral.trim()) ||
+    (typeof row?.referredBy === 'string' && row.referredBy.trim()) ||
+    (typeof row?.referrer === 'string' && row.referrer.trim()) ||
+    '—';
+
+  return <span>{referralValue}</span>;
+};
+
 const ActionButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 5px;
   padding: 8px 12px;
-  background: #4361ee;
+  background: #bb6c02;
   color: white;
   border: none;
   border-radius: 8px;
@@ -505,7 +534,7 @@ const UserAvatar = styled.div`
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: #4361ee;
+  background: #bb6c02;
   color: white;
   display: flex;
   align-items: center;
@@ -536,7 +565,7 @@ const UserEmail = styled.div`
 
 const VendorTag = styled.span`
   background: #f0f2ff;
-  color: #4361ee;
+  color: #bb6c02;
   padding: 4px 10px;
   border-radius: 20px;
   font-size: 12px;
@@ -611,7 +640,7 @@ const ActionIconLink = styled(Link)`
   width: 36px;
   height: 36px;
   border-radius: 8px;
-  background: #4361ee;
+  background: #bb6c02;
   color: white;
   cursor: pointer;
   transition: all 0.3s;
@@ -620,7 +649,7 @@ const ActionIconLink = styled(Link)`
   &:hover {
     background: #3a56d4;
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
+    box-shadow: 0 4px 12px rgba(187, 108, 2, 0.25);
   }
 
   svg {
@@ -654,7 +683,7 @@ const OrderCountBadge = styled.div`
   font-size: 14px;
   font-weight: 600;
   background: #e8f4f8;
-  color: #4361ee;
+  color: #bb6c02;
   min-width: 50px;
   text-align: center;
 `;

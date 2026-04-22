@@ -16,6 +16,27 @@ import {
   useUpdatePlatformSettings,
   usePlatformSettingsAuditLogs,
 } from "../../shared/hooks/usePlatformSettings";
+import {
+  PageHeader as PageHeaderBar,
+  PageTitle,
+  PageSub,
+} from "../../shared/components/page/PageHeader";
+
+const T = {
+  primary: "var(--color-primary-600)",
+  primaryLight: "var(--color-primary-500)",
+  primaryBg: "var(--color-primary-100)",
+  border: "var(--color-border)",
+  cardBg: "var(--color-card-bg)",
+  bodyBg: "var(--color-body-bg)",
+  text: "var(--color-grey-900)",
+  textMuted: "var(--color-grey-500)",
+  textLight: "var(--color-grey-400)",
+  radius: "var(--border-radius-xl)",
+  radiusSm: "var(--border-radius-md)",
+  shadow: "var(--shadow-sm)",
+  shadowMd: "var(--shadow-md)",
+};
 
 const formatCurrency = (amount) =>
   `GH₵${(amount || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -123,15 +144,17 @@ const TaxReportPage = () => {
 
   return (
     <PageContainer>
-      <PageHeader>
-        <Title>
-          <FaFileInvoiceDollar />
-          Tax & VAT
-        </Title>
-        <Subtitle>
-          Configure tax rates, platform fees, and view VAT collected and withheld.
-        </Subtitle>
-      </PageHeader>
+      <PageHeaderBar>
+        <div>
+          <PageTitle>
+            <FaFileInvoiceDollar />
+            Tax & VAT
+          </PageTitle>
+          <PageSub>
+            Configure tax rates, platform fees, and view VAT collected and withheld.
+          </PageSub>
+        </div>
+      </PageHeaderBar>
 
       <TabsContainer>
         <Tab
@@ -522,29 +545,14 @@ export default TaxReportPage;
 const PageContainer = styled.div`
   max-width: 1200px;
   margin: 0 auto;
-`;
-
-const PageHeader = styled.header`
-  margin-bottom: 1.5rem;
-`;
-
-const Title = styled.h1`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 1.5rem;
-  margin: 0;
-`;
-
-const Subtitle = styled.p`
-  color: #6b7280;
-  margin-top: 0.25rem;
-  font-size: 0.9375rem;
+  padding: 2rem;
+  min-height: 100vh;
+  background-color: ${T.bodyBg};
 `;
 
 const TabsContainer = styled.div`
   display: flex;
-  border-bottom: 1px solid #e9ecef;
+  border-bottom: 1px solid ${T.border};
   margin-bottom: 25px;
   padding: 0 5px;
 `;
@@ -557,26 +565,27 @@ const Tab = styled.div`
   gap: 8px;
   font-weight: 500;
   border-bottom: 3px solid transparent;
-  color: ${({ active }) => (active ? "#4361EE" : "#8D99AE")};
-  border-bottom-color: ${({ active }) => (active ? "#4361EE" : "transparent")};
+  color: ${({ active }) => (active ? "#bb6c02" : "#8D99AE")};
+  border-bottom-color: ${({ active }) => (active ? "#bb6c02" : "transparent")};
   transition: all 0.3s;
 
   &:hover {
-    color: #4361ee;
+    color: #bb6c02;
   }
 `;
 
 const Card = styled.div`
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background: ${T.cardBg};
+  border: 1px solid ${T.border};
+  border-radius: ${T.radius};
+  box-shadow: ${T.shadow};
   margin-bottom: 1.5rem;
   overflow: hidden;
 `;
 
 const CardHeader = styled.div`
   padding: 1.5rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid ${T.border};
 `;
 
 const CardTitle = styled.h2`
@@ -634,7 +643,7 @@ const Input = styled.input`
   font-size: 1rem;
   &:focus {
     outline: none;
-    border-color: #2563eb;
+    border-color: var(--color-primary-600);
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
   }
 `;
@@ -682,13 +691,13 @@ const SaveButton = styled.button`
   justify-content: center;
   gap: 0.5rem;
   padding: 0.75rem 1.5rem;
-  background: #2563eb;
+  background: var(--color-primary-600);
   color: white;
   border: none;
   border-radius: 6px;
   font-weight: 500;
   cursor: pointer;
-  &:hover:not(:disabled) { background: #1d4ed8; }
+  &:hover:not(:disabled) { background: var(--color-primary-700); }
   &:disabled { opacity: 0.5; cursor: wait; }
 `;
 
@@ -800,7 +809,7 @@ const RefreshButton = styled.button`
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  background: #2563eb;
+  background: var(--color-primary-600);
   color: white;
   border: none;
   border-radius: 6px;
@@ -820,7 +829,7 @@ const SummaryGrid = styled.div`
 
 const SummaryCard = styled.div`
   padding: 1rem;
-  background: ${(p) => (p.highlight ? "#eff6ff" : "#f9fafb")};
+  background: ${(p) => (p.highlight ? "var(--color-primary-50)" : "#f9fafb")};
   border-radius: 8px;
   border: 1px solid ${(p) => (p.highlight ? "#93c5fd" : "#e5e7eb")};
 `;
@@ -951,10 +960,10 @@ const ModalButton = styled.button`
   ${({ variant }) =>
     variant === "primary"
       ? `
-    background: #2563eb;
+    background: var(--color-primary-600);
     color: white;
     border: none;
-    &:hover { background: #1d4ed8; }
+    &:hover { background: var(--color-primary-700); }
   `
       : `
     background: white;
