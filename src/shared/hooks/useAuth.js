@@ -12,7 +12,8 @@ function clearAuthData() {
   // Backend logout endpoint clears the cookie
   // Only clear non-sensitive localStorage items if needed
   if (typeof window !== "undefined") {
-    localStorage.removeItem("current_role"); // Non-sensitive role preference only
+    localStorage.removeItem("current_role");
+    localStorage.removeItem("admin_access_token"); // Remove fallback token
   }
 }
 
@@ -84,24 +85,23 @@ export default function useAuth() {
   const login = useMutation({
     mutationFn: authApi.login,
     onSuccess: (response) => {
-      // SECURITY: Token is in HTTP-only cookie, NOT in response
-      // Backend sets cookie automatically - no token storage needed
+      // SECURITY: Cookie-only authentication is preferred, but for production cross-subdomain
+      // support (admin.saiisai.com) we store a fallback token in localStorage.
       const user = response.data?.user || response.data?.data?.user || response.data;
+      const accessToken = response.data?.accessToken || response.data?.data?.accessToken;
 
-      // Store non-sensitive role preference only
       if (typeof window !== "undefined") {
         localStorage.setItem("current_role", "admin");
+        if (accessToken) {
+          localStorage.setItem("admin_access_token", accessToken);
+        }
       }
 
-      // Activate grace period to suppress spurious "session expired" redirects
-      // that can occur during the brief window right after login completes.
+      // Activate grace period
       markRecentLogin();
 
-      // Cancel any in-flight GET /admin/me request from the login page.
-      // Without this, a 401 response arriving after navigation to /dashboard
-      // triggers the interceptor redirect ("session expired") even though login succeeded.
       queryClient.cancelQueries({ queryKey: ["adminAuth"] });
-      queryClient.setQueryData(["adminAuth"], user); // Set user object directly
+      queryClient.setQueryData(["adminAuth"], user);
     },
   });
 

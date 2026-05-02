@@ -200,10 +200,18 @@ api.interceptors.request.use(async (config) => {
       console.log(`Public route: ${normalizedPath}, cookie will be sent automatically if available`);
     }
   } else {
-    // Protected route - cookie will be sent automatically via withCredentials: true
-    if (isDev) {
-      console.debug(`Cookie will be sent automatically for ${normalizedPath}`);
+  // Protected route - cookie will be sent automatically via withCredentials: true
+  // FALLBACK: Attach Authorization header for cross-subdomain production robustness
+  if (typeof window !== "undefined") {
+    const fallbackToken = localStorage.getItem("admin_access_token");
+    if (fallbackToken && !config.headers["Authorization"]) {
+      config.headers["Authorization"] = `Bearer ${fallbackToken}`;
     }
+  }
+
+  if (isDev) {
+    console.debug(`Cookie will be sent automatically for ${normalizedPath}${localStorage.getItem("admin_access_token") ? " (Header fallback included)" : ""}`);
+  }
   }
 
   return config;
